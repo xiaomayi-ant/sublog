@@ -1,30 +1,51 @@
 ---
-// ArtRiverHero — a code-rendered watercolor shoreline inspired by luminous coastal studies.
+// ArtRiverHero — portrait watercolor artwork with an editorial copy column.
 ---
 
 <section class="shore-hero" aria-labelledby="home-title">
-  <canvas id="art-river" aria-hidden="true" data-art-form="watercolor-shore"></canvas>
-  <div class="paper-light" aria-hidden="true"></div>
-
   <div class="hero-frame">
-    <div class="hero-register meta" aria-hidden="true">
-      <span>WATER / STUDY 001</span>
-      <span>TIDE · LIGHT · TIME</span>
-    </div>
-
     <div class="hero-copy">
-      <p class="hero-kicker meta">Personal research &amp; building</p>
+      <p class="hero-kicker meta">Water / Personal field notes</p>
       <h1 id="home-title">时间如水。</h1>
-      <p>记录正在形成的想法，构建可以被使用的东西。</p>
+
+      <div class="hero-description">
+        <p>这里是 Sumoer 的个人研究与构建空间。</p>
+        <p>
+          我关注智能系统、界面，以及人在技术中的判断。把未定型的想法写下来，也把可以被使用的东西做出来。
+        </p>
+      </div>
+
+      <nav class="hero-links" aria-label="首页主要入口">
+        <a href="/research">
+          <span>阅读研究</span>
+          <span class="link-en meta" aria-hidden="true">Research</span>
+        </a>
+        <a href="/projects">
+          <span>查看项目</span>
+          <span class="link-en meta" aria-hidden="true">Projects</span>
+        </a>
+      </nav>
+
+      <p class="hero-note meta" aria-hidden="true">Observe · make · let flow</p>
     </div>
 
-    <div class="hero-foot meta" aria-hidden="true">
-      <span>OBSERVE</span>
-      <span class="foot-dot"></span>
-      <span>MAKE</span>
-      <span class="foot-dot"></span>
-      <span>LET FLOW</span>
-    </div>
+    <figure class="shore-art" data-preserves-aspect="1122:1402">
+      <img
+        class="shore-artwork"
+        src="/images/hero-watercolor-shore-v1.webp"
+        alt=""
+        width="1122"
+        height="1402"
+        loading="eager"
+        decoding="async"
+        fetchpriority="high"
+      />
+      <canvas id="shore-light" aria-hidden="true" data-art-form="light-overlay"></canvas>
+      <figcaption class="meta" aria-hidden="true">
+        <span>Water study · 001</span>
+        <span>Light / tide / time</span>
+      </figcaption>
+    </figure>
   </div>
 </section>
 
@@ -34,411 +55,306 @@
     min-height: min(49rem, calc(100svh - 5.25rem));
     margin-inline: calc(50% - 50vw);
     overflow: hidden;
-    isolation: isolate;
-    background: #fff4df;
-    border-block: 1px solid rgba(34, 74, 84, 0.12);
+    background:
+      radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.92), transparent 27%),
+      linear-gradient(112deg, #fffaf0 0%, #fbf4e6 60%, #f3eadb 100%);
+    border-block: 1px solid rgba(23, 62, 70, 0.11);
   }
 
-  #art-river,
-  .paper-light {
+  .shore-hero::before {
     position: absolute;
     inset: 0;
-    width: 100%;
-    height: 100%;
-  }
-
-  #art-river {
-    z-index: -2;
-  }
-
-  .paper-light {
-    z-index: -1;
+    content: '';
     pointer-events: none;
-    background:
-      radial-gradient(circle at 16% 14%, rgba(255, 255, 255, 0.78), transparent 24%),
-      linear-gradient(90deg, rgba(255, 250, 236, 0.18), transparent 44%),
-      repeating-linear-gradient(
-        102deg,
-        rgba(24, 67, 73, 0.018) 0,
-        rgba(24, 67, 73, 0.018) 1px,
-        transparent 1px,
-        transparent 4px
-      );
-    mix-blend-mode: soft-light;
+    opacity: 0.34;
+    background-image: repeating-linear-gradient(
+      102deg,
+      rgba(23, 62, 70, 0.018) 0,
+      rgba(23, 62, 70, 0.018) 1px,
+      transparent 1px,
+      transparent 4px
+    );
+    mix-blend-mode: multiply;
   }
 
   .hero-frame {
     position: relative;
+    display: grid;
+    grid-template-columns: minmax(25rem, 1fr) auto;
+    align-items: center;
+    gap: clamp(4rem, 8vw, 8rem);
     width: min(100% - 5rem, 76rem);
     min-height: inherit;
     margin-inline: auto;
-    padding-block: clamp(2rem, 5vh, 4rem);
-  }
-
-  .hero-register {
-    display: flex;
-    justify-content: space-between;
-    color: rgba(21, 58, 63, 0.52);
-  }
-
-  .hero-register span:last-child {
-    color: rgba(235, 255, 249, 0.72);
-    text-shadow: 0 1px 10px rgba(17, 87, 95, 0.18);
+    padding-block: clamp(2rem, 4vh, 3rem);
   }
 
   .hero-copy {
-    position: absolute;
-    top: clamp(6.25rem, 15vh, 9.25rem);
-    left: 0;
-    width: min(38vw, 29rem);
+    position: relative;
+    z-index: 2;
+    max-width: 33rem;
+    padding-top: 1rem;
   }
 
   .hero-kicker {
-    margin-bottom: 1.2rem;
-    color: #278f93;
+    margin-bottom: 1.4rem;
+    color: #2b8f94;
   }
 
   h1 {
-    font-size: clamp(3.5rem, 6.4vw, 6.6rem);
+    font-size: clamp(4rem, 7vw, 7rem);
     font-weight: 500;
-    line-height: 0.95;
-    letter-spacing: -0.06em;
+    line-height: 0.94;
+    letter-spacing: -0.065em;
     color: #173e46;
   }
 
-  .hero-copy > p:last-child {
-    max-width: 24rem;
-    margin-top: 1.5rem;
+  .hero-description {
+    display: grid;
+    gap: 0.72rem;
+    max-width: 29rem;
+    margin-top: 2rem;
     font-family: var(--font-serif);
-    font-size: clamp(1rem, 1.35vw, 1.22rem);
-    line-height: 1.85;
-    color: rgba(23, 62, 70, 0.72);
+    color: rgba(23, 62, 70, 0.74);
   }
 
-  .hero-foot {
-    position: absolute;
-    left: 0;
-    bottom: clamp(2rem, 5vh, 4rem);
+  .hero-description p:first-child {
+    font-size: clamp(1.1rem, 1.5vw, 1.3rem);
+    color: #173e46;
+  }
+
+  .hero-description p:last-child {
+    max-width: 27rem;
+    font-size: clamp(0.95rem, 1.15vw, 1.06rem);
+    line-height: 1.9;
+  }
+
+  .hero-links {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: 29rem;
+    margin-top: 2.4rem;
+    border-block: 1px solid rgba(23, 62, 70, 0.18);
+  }
+
+  .hero-links a {
+    position: relative;
     display: flex;
-    align-items: center;
-    gap: 0.85rem;
-    color: rgba(23, 62, 70, 0.56);
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.92rem 1rem 0.92rem 0;
+    color: #173e46;
+    text-decoration: none;
   }
 
-  .foot-dot {
-    width: 3px;
-    height: 3px;
-    border-radius: 50%;
-    background: #7acdcc;
+  .hero-links a + a {
+    padding-left: 1rem;
+    border-left: 1px solid rgba(23, 62, 70, 0.18);
   }
 
-  @media (max-width: 46rem) {
-    .shore-hero {
-      min-height: 42rem;
-    }
+  .hero-links a::after {
+    position: absolute;
+    right: 1rem;
+    bottom: -1px;
+    left: 0;
+    height: 2px;
+    content: '';
+    background: #66c7c3;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform var(--duration-slow) var(--ease-out);
+  }
 
+  .hero-links a + a::after {
+    left: 1rem;
+  }
+
+  .hero-links a:hover::after,
+  .hero-links a:focus-visible::after {
+    transform: scaleX(1);
+  }
+
+  .link-en {
+    font-size: 0.63rem;
+    color: rgba(23, 62, 70, 0.46);
+  }
+
+  .hero-note {
+    margin-top: 1.35rem;
+    color: rgba(23, 62, 70, 0.42);
+  }
+
+  .shore-art {
+    --drift-x: 0px;
+    --drift-y: 0px;
+    position: relative;
+    width: auto;
+    height: min(77vh, 42.5rem);
+    aspect-ratio: 1122 / 1402;
+    margin: 0;
+    overflow: hidden;
+    background: #bfe8df;
+    box-shadow:
+      0 2.5rem 5rem rgba(36, 103, 107, 0.13),
+      0 0 0 1px rgba(255, 255, 255, 0.62);
+  }
+
+  .shore-art::after {
+    position: absolute;
+    inset: 0;
+    content: '';
+    pointer-events: none;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+  }
+
+  .shore-artwork {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: translate3d(var(--drift-x), var(--drift-y), 0) scale(1.018);
+    transition: transform 900ms var(--ease-out);
+    will-change: transform;
+  }
+
+  #shore-light {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    opacity: 0.46;
+    mix-blend-mode: screen;
+  }
+
+  figcaption {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    justify-content: space-between;
+    padding: 0.8rem 0.9rem;
+    color: rgba(255, 255, 255, 0.72);
+    text-shadow: 0 1px 10px rgba(29, 101, 106, 0.24);
+    background: linear-gradient(transparent, rgba(34, 112, 112, 0.12));
+  }
+
+  @media (max-width: 58rem) {
     .hero-frame {
-      width: min(100% - 2.5rem, 76rem);
+      grid-template-columns: minmax(20rem, 1fr) auto;
+      gap: 2.5rem;
+      width: min(100% - 3rem, 76rem);
     }
 
-    .hero-register span:last-child {
-      display: none;
-    }
-
-    .hero-copy {
-      top: 5.5rem;
-      width: min(82vw, 28rem);
+    .shore-art {
+      height: min(70vh, 37rem);
     }
 
     h1 {
-      max-width: 4em;
-      font-size: clamp(3.45rem, 16vw, 5.3rem);
+      font-size: clamp(3.6rem, 8vw, 5.5rem);
     }
 
-    .hero-copy > p:last-child {
-      max-width: min(76vw, 23rem);
+    .hero-description p:first-child {
+      font-size: 1.05rem;
+    }
+  }
+
+  @media (max-width: 44rem) {
+    .shore-hero {
+      min-height: auto;
+    }
+
+    .hero-frame {
+      grid-template-columns: 1fr;
+      gap: 2.75rem;
+      width: min(100% - 2.5rem, 34rem);
+      padding-block: 4rem 2.5rem;
+    }
+
+    .hero-copy {
+      max-width: none;
+      padding-top: 0;
+    }
+
+    h1 {
+      font-size: clamp(3.65rem, 17vw, 5.4rem);
+    }
+
+    .hero-description,
+    .hero-links {
+      max-width: none;
+    }
+
+    .shore-art {
+      justify-self: end;
+      width: min(86vw, 28rem);
+      height: auto;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .shore-artwork {
+      transform: none;
+    }
+
+    #shore-light {
+      opacity: 0.32;
     }
   }
 </style>
 
 <script>
-  const canvas = document.getElementById('art-river') as HTMLCanvasElement | null;
+  const hero = document.querySelector('.shore-hero') as HTMLElement | null;
+  const artwork = document.querySelector('.shore-art') as HTMLElement | null;
+  const canvas = document.getElementById('shore-light') as HTMLCanvasElement | null;
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-  if (canvas) {
-    const artCanvas = canvas;
-    const ctx = artCanvas.getContext('2d', { alpha: false });
+  if (hero && artwork && canvas) {
+    const heroElement = hero;
+    const artworkElement = artwork;
+    const lightCanvas = canvas;
+    const ctx = lightCanvas.getContext('2d');
     let width = 0;
     let height = 0;
     let dpr = 1;
     let raf = 0;
     let visible = true;
 
-    const waterBlooms = Array.from({ length: 72 }, (_, index) => ({
-      x: 0.38 + ((index * 0.193) % 0.7),
-      y: (index * 0.317) % 1,
-      radiusX: 0.024 + (index % 7) * 0.0065,
-      radiusY: 0.018 + (index % 5) * 0.006,
-      phase: index * 1.71,
-      tone: index % 4,
+    const glints = Array.from({ length: 22 }, (_, index) => ({
+      x: 0.08 + ((index * 0.237) % 0.84),
+      y: 0.06 + ((index * 0.173) % 0.84),
+      size: 2 + (index % 5) * 1.2,
+      phase: index * 1.87,
+      alpha: 0.12 + (index % 4) * 0.035,
     }));
-
-    const lightCells = Array.from({ length: 64 }, (_, index) => ({
-      x: 0.35 + ((index * 0.227) % 0.72),
-      y: (index * 0.149) % 1,
-      radius: 6 + (index % 6) * 3.5,
-      phase: index * 2.13,
-      alpha: 0.1 + (index % 4) * 0.03,
-    }));
-
-    const foamPearls = Array.from({ length: 24 }, (_, index) => ({
-      y: 0.03 + ((index * 0.091) % 0.94),
-      offset: 9 + (index % 4) * 8,
-      radius: 1.5 + (index % 5) * 0.75,
-      phase: index * 1.37,
-    }));
-
-    function shoreX(y: number, time: number, offset = 0) {
-      const ny = y / Math.max(height, 1);
-      const diagonal = width * (0.46 - ny * 0.21);
-      const longCurve = Math.sin(ny * Math.PI * 1.45 + 0.58) * width * 0.045;
-      const scallop = Math.sin(ny * Math.PI * 6.4 + time * 0.00012) * width * 0.009;
-      const breath = Math.sin(time * 0.00016 + ny * Math.PI * 3.2) * 5;
-      return diagonal + longCurve + scallop + breath + offset;
-    }
-
-    function makeWaterPath(time: number) {
-      const path = new Path2D();
-      const samples = 84;
-      path.moveTo(shoreX(0, time), 0);
-      path.lineTo(width, 0);
-      path.lineTo(width, height);
-      path.lineTo(shoreX(height, time), height);
-
-      for (let index = samples; index >= 0; index -= 1) {
-        const y = (index / samples) * height;
-        path.lineTo(shoreX(y, time), y);
-      }
-
-      path.closePath();
-      return path;
-    }
-
-    function traceShore(time: number, offset: number) {
-      if (!ctx) return;
-      const samples = 96;
-      ctx.beginPath();
-      for (let index = 0; index <= samples; index += 1) {
-        const y = (index / samples) * height;
-        const x = shoreX(y, time, offset);
-        if (index === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-    }
-
-    function drawSand() {
-      if (!ctx) return;
-      const sand = ctx.createLinearGradient(0, 0, width * 0.52, height);
-      sand.addColorStop(0, '#fffaf0');
-      sand.addColorStop(0.52, '#fff0d7');
-      sand.addColorStop(1, '#f5d8b7');
-      ctx.fillStyle = sand;
-      ctx.fillRect(0, 0, width, height);
-
-      const warmth = ctx.createRadialGradient(
-        width * 0.17,
-        height * 0.7,
-        0,
-        width * 0.17,
-        height * 0.7,
-        width * 0.5,
-      );
-      warmth.addColorStop(0, 'rgba(255, 211, 166, 0.2)');
-      warmth.addColorStop(1, 'rgba(255, 244, 223, 0)');
-      ctx.fillStyle = warmth;
-      ctx.fillRect(0, 0, width, height);
-    }
-
-    function drawWater(time: number, waterPath: Path2D) {
-      if (!ctx) return;
-      const water = ctx.createLinearGradient(width * 0.22, height, width, 0);
-      water.addColorStop(0, '#c6eee2');
-      water.addColorStop(0.28, '#8ddbd4');
-      water.addColorStop(0.62, '#64c7cb');
-      water.addColorStop(1, '#55b6c9');
-
-      ctx.save();
-      ctx.fillStyle = water;
-      ctx.fill(waterPath);
-      ctx.clip(waterPath);
-
-      ctx.globalCompositeOperation = 'soft-light';
-      for (const bloom of waterBlooms) {
-        const driftX = Math.sin(time * 0.00007 + bloom.phase) * 12;
-        const driftY = Math.cos(time * 0.00006 + bloom.phase) * 8;
-        const x = bloom.x * width + driftX;
-        const y = bloom.y * height + driftY;
-        const radiusX = bloom.radiusX * width;
-        const radiusY = bloom.radiusY * height;
-        const colors = [
-          ['rgba(255, 236, 186, 0.25)', 'rgba(255, 246, 218, 0)'],
-          ['rgba(232, 255, 237, 0.29)', 'rgba(214, 247, 233, 0)'],
-          ['rgba(26, 139, 167, 0.2)', 'rgba(39, 159, 178, 0)'],
-          ['rgba(166, 238, 219, 0.32)', 'rgba(180, 241, 222, 0)'],
-        ];
-        const palette = colors[bloom.tone] ?? colors[0]!;
-
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.rotate(Math.sin(bloom.phase) * 0.46);
-        ctx.beginPath();
-        const points = 15;
-        const edge = Array.from({ length: points }, (_, point) => {
-          const angle = (point / points) * Math.PI * 2;
-          const irregular =
-            0.82 +
-            Math.sin(point * 2.41 + bloom.phase) * 0.13 +
-            Math.cos(point * 4.17 - bloom.phase) * 0.08;
-          return {
-            x: Math.cos(angle) * radiusX * irregular,
-            y: Math.sin(angle) * radiusY * irregular,
-          };
-        });
-        const first = edge[0]!;
-        const second = edge[1]!;
-        ctx.moveTo((first.x + second.x) / 2, (first.y + second.y) / 2);
-        for (let point = 1; point <= points; point += 1) {
-          const current = edge[point % points]!;
-          const next = edge[(point + 1) % points]!;
-          ctx.quadraticCurveTo(
-            current.x,
-            current.y,
-            (current.x + next.x) / 2,
-            (current.y + next.y) / 2,
-          );
-        }
-        ctx.closePath();
-        const pigment = ctx.createRadialGradient(
-          -radiusX * 0.16,
-          -radiusY * 0.12,
-          0,
-          0,
-          0,
-          Math.max(radiusX, radiusY),
-        );
-        pigment.addColorStop(0, palette[0]);
-        pigment.addColorStop(0.7, palette[0]);
-        pigment.addColorStop(1, palette[1]);
-        ctx.fillStyle = pigment;
-        ctx.shadowColor = palette[0];
-        ctx.shadowBlur = Math.min(26, radiusY * 0.42);
-        ctx.fill();
-        ctx.restore();
-      }
-
-      ctx.globalCompositeOperation = 'screen';
-      for (const cell of lightCells) {
-        const x = cell.x * width + Math.sin(time * 0.00011 + cell.phase) * 9;
-        const y = cell.y * height + Math.cos(time * 0.00009 + cell.phase) * 7;
-        const pulse = 0.82 + Math.sin(time * 0.0008 + cell.phase) * 0.18;
-        const radius = cell.radius * pulse;
-
-        ctx.beginPath();
-        for (let point = 0; point <= 9; point += 1) {
-          const angle = (point / 9) * Math.PI * 2;
-          const irregular = 0.78 + Math.sin(point * 2.7 + cell.phase) * 0.2;
-          const px = x + Math.cos(angle) * radius * irregular * 1.5;
-          const py = y + Math.sin(angle) * radius * irregular;
-          if (point === 0) ctx.moveTo(px, py);
-          else ctx.lineTo(px, py);
-        }
-        ctx.closePath();
-        ctx.strokeStyle = `rgba(244, 255, 246, ${cell.alpha})`;
-        ctx.lineWidth = 1.25;
-        ctx.stroke();
-      }
-
-      const submergedSand = ctx.createRadialGradient(
-        width * 0.46,
-        height * 0.22,
-        0,
-        width * 0.46,
-        height * 0.22,
-        width * 0.32,
-      );
-      submergedSand.addColorStop(0, 'rgba(255, 235, 184, 0.34)');
-      submergedSand.addColorStop(0.46, 'rgba(255, 240, 198, 0.12)');
-      submergedSand.addColorStop(1, 'rgba(255, 245, 214, 0)');
-      ctx.fillStyle = submergedSand;
-      ctx.fillRect(0, 0, width, height);
-
-      ctx.restore();
-    }
-
-    function drawFoam(time: number) {
-      if (!ctx) return;
-
-      ctx.save();
-      traceShore(time, 8);
-      ctx.strokeStyle = 'rgba(245, 255, 249, 0.48)';
-      ctx.lineWidth = 34;
-      ctx.lineCap = 'round';
-      ctx.shadowColor = 'rgba(255, 255, 255, 0.62)';
-      ctx.shadowBlur = 22;
-      ctx.stroke();
-
-      traceShore(time, 2);
-      ctx.strokeStyle = 'rgba(255, 255, 252, 0.88)';
-      ctx.lineWidth = 8;
-      ctx.shadowBlur = 10;
-      ctx.stroke();
-
-      traceShore(time, 18);
-      ctx.strokeStyle = 'rgba(245, 255, 248, 0.64)';
-      ctx.lineWidth = 2.4;
-      ctx.setLineDash([24, 7, 5, 11, 38, 9]);
-      ctx.lineDashOffset = -time * 0.009;
-      ctx.shadowBlur = 0;
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      traceShore(time, 34);
-      ctx.strokeStyle = 'rgba(250, 255, 250, 0.3)';
-      ctx.lineWidth = 1.6;
-      ctx.setLineDash([10, 10, 3, 18, 20, 13]);
-      ctx.lineDashOffset = time * 0.006;
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      for (const pearl of foamPearls) {
-        const y =
-          pearl.y * height +
-          Math.sin(time * 0.00019 + pearl.phase) * Math.min(12, height * 0.016);
-        const x = shoreX(y, time, pearl.offset);
-        const pulse = 0.8 + Math.sin(time * 0.0011 + pearl.phase) * 0.2;
-        ctx.beginPath();
-        ctx.ellipse(x, y, pearl.radius * 1.8 * pulse, pearl.radius * pulse, -0.28, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(255, 255, 250, 0.76)';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      }
-
-      ctx.restore();
-    }
 
     function draw(time: number) {
       if (!ctx || !width || !height) return;
-      drawSand();
-      const waterPath = makeWaterPath(time);
-      drawWater(time, waterPath);
-      drawFoam(time);
+      ctx.clearRect(0, 0, width, height);
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
 
-      const haze = ctx.createLinearGradient(0, 0, width, 0);
-      haze.addColorStop(0, 'rgba(255, 251, 239, 0.2)');
-      haze.addColorStop(0.28, 'rgba(255, 250, 236, 0.06)');
-      haze.addColorStop(0.62, 'rgba(255, 255, 255, 0)');
-      ctx.fillStyle = haze;
+      for (const glint of glints) {
+        const x = glint.x * width + Math.sin(time * 0.00008 + glint.phase) * 4;
+        const y = glint.y * height + Math.cos(time * 0.00007 + glint.phase) * 5;
+        const pulse = 0.72 + Math.sin(time * 0.0007 + glint.phase) * 0.28;
+
+        ctx.beginPath();
+        ctx.ellipse(x, y, glint.size * 2.4, glint.size * 0.72, -0.34, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 255, 244, ${glint.alpha * pulse})`;
+        ctx.fill();
+      }
+
+      const sheenX = width * (0.35 + Math.sin(time * 0.000045) * 0.08);
+      const sheenY = height * (0.3 + Math.cos(time * 0.000038) * 0.06);
+      const sheen = ctx.createRadialGradient(sheenX, sheenY, 0, sheenX, sheenY, width * 0.42);
+      sheen.addColorStop(0, 'rgba(255, 251, 215, 0.08)');
+      sheen.addColorStop(0.52, 'rgba(221, 255, 243, 0.025)');
+      sheen.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      ctx.fillStyle = sheen;
       ctx.fillRect(0, 0, width, height);
+      ctx.restore();
     }
 
     function loop(time: number) {
@@ -447,12 +363,12 @@
     }
 
     function resize() {
-      const rect = artCanvas.getBoundingClientRect();
+      const rect = lightCanvas.getBoundingClientRect();
       dpr = Math.min(window.devicePixelRatio || 1, 2);
       width = Math.max(1, Math.round(rect.width));
       height = Math.max(1, Math.round(rect.height));
-      artCanvas.width = Math.round(width * dpr);
-      artCanvas.height = Math.round(height * dpr);
+      lightCanvas.width = Math.round(width * dpr);
+      lightCanvas.height = Math.round(height * dpr);
       ctx?.setTransform(dpr, 0, 0, dpr, 0, 0);
       draw(0);
     }
@@ -461,6 +377,20 @@
       cancelAnimationFrame(raf);
       if (visible && !reduceMotion.matches) raf = requestAnimationFrame(loop);
       else draw(0);
+    }
+
+    function moveArtwork(event: PointerEvent) {
+      if (reduceMotion.matches) return;
+      const rect = heroElement.getBoundingClientRect();
+      const x = ((event.clientX - rect.left) / rect.width - 0.5) * -7;
+      const y = ((event.clientY - rect.top) / rect.height - 0.5) * -5;
+      artworkElement.style.setProperty('--drift-x', `${x.toFixed(2)}px`);
+      artworkElement.style.setProperty('--drift-y', `${y.toFixed(2)}px`);
+    }
+
+    function resetArtwork() {
+      artworkElement.style.setProperty('--drift-x', '0px');
+      artworkElement.style.setProperty('--drift-y', '0px');
     }
 
     const observer = new IntersectionObserver(
@@ -472,7 +402,9 @@
     );
 
     resize();
-    observer.observe(artCanvas);
+    observer.observe(lightCanvas);
+    heroElement.addEventListener('pointermove', moveArtwork);
+    heroElement.addEventListener('pointerleave', resetArtwork);
     window.addEventListener('resize', resize);
     reduceMotion.addEventListener('change', syncMotion);
   }

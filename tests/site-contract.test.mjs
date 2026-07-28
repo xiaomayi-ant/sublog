@@ -159,13 +159,15 @@ test('the shared layout provides keyboard navigation affordances', async () => {
   assert.match(css, /:focus-visible/);
 });
 
-test('the home hero renders an accessible watercolor shoreline without a full-width river band', async () => {
+test('the home hero preserves a portrait watercolor artwork beside the copy', async () => {
   const home = await readRoute('/');
 
   assert.match(
     home,
-    /<canvas id="art-river" aria-hidden="true" data-art-form="watercolor-shore"[^>]*><\/canvas>/,
+    /<img class="shore-artwork" src="\/images\/hero-watercolor-shore-v1\.webp" alt="" width="1122" height="1402"[^>]*>/,
   );
+  assert.match(home, /data-preserves-aspect="1122:1402"/);
+  await access(path.join(distRoot, 'images/hero-watercolor-shore-v1.webp'));
   assert.match(home, /时间如水/);
-  assert.doesNotMatch(home, /data-flow-direction="left-to-right"|id="river"|id="star-field"/);
+  assert.doesNotMatch(home, /data-art-form="watercolor-shore"|data-flow-direction="left-to-right"/);
 });

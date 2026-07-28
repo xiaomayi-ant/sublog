@@ -59,11 +59,9 @@ try {
       },
     },
     {
-      name: 'missing-watercolor-shore-contract',
+      name: 'missing-watercolor-artwork',
       apply: async (distDir) => {
-        const home = path.join(distDir, 'index.html');
-        const html = await readFile(home, 'utf8');
-        await writeFile(home, html.replace('id="art-river"', 'id="removed-art-river"'));
+        await rm(path.join(distDir, 'images/hero-watercolor-shore-v1.webp'));
       },
     },
   ];
