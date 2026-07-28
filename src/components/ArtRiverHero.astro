@@ -29,22 +29,25 @@
       <p class="hero-note meta" aria-hidden="true">Observe · make · let flow</p>
     </div>
 
-    <figure class="shore-art" data-preserves-aspect="1122:1402">
-      <img
-        class="shore-artwork"
-        src="/images/hero-watercolor-shore-v1.webp"
-        alt=""
-        width="1122"
-        height="1402"
-        loading="eager"
-        decoding="async"
-        fetchpriority="high"
-      />
+    <figure
+      class="shore-art"
+      data-preserves-aspect="1122:1402"
+      data-edge-treatment="feathered"
+    >
+      <div class="artwork-drift">
+        <img
+          class="shore-artwork"
+          src="/images/hero-watercolor-shore-v1.webp"
+          alt=""
+          width="1122"
+          height="1402"
+          loading="eager"
+          decoding="async"
+          fetchpriority="high"
+        />
+      </div>
+      <div class="shore-wash" aria-hidden="true"></div>
       <canvas id="shore-light" aria-hidden="true" data-art-form="light-overlay"></canvas>
-      <figcaption class="meta" aria-hidden="true">
-        <span>Water study · 001</span>
-        <span>Light / tide / time</span>
-      </figcaption>
     </figure>
   </div>
 </section>
@@ -186,35 +189,86 @@
   }
 
   .shore-art {
-    --drift-x: 0px;
-    --drift-y: 0px;
     position: relative;
     width: auto;
     height: min(77vh, 42.5rem);
     aspect-ratio: 1122 / 1402;
     margin: 0;
     overflow: hidden;
-    background: #bfe8df;
-    box-shadow:
-      0 2.5rem 5rem rgba(36, 103, 107, 0.13),
-      0 0 0 1px rgba(255, 255, 255, 0.62);
+    background: transparent;
+    -webkit-mask-image:
+      linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(0, 0, 0, 0.3) 4%,
+        #000 12%,
+        #000 91%,
+        rgba(0, 0, 0, 0.38) 97%,
+        transparent 100%
+      ),
+      linear-gradient(
+        180deg,
+        transparent 0%,
+        rgba(0, 0, 0, 0.45) 5%,
+        #000 12%,
+        #000 90%,
+        rgba(0, 0, 0, 0.3) 96%,
+        transparent 100%
+      );
+    -webkit-mask-composite: source-in;
+    mask-image:
+      linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(0, 0, 0, 0.3) 4%,
+        #000 12%,
+        #000 91%,
+        rgba(0, 0, 0, 0.38) 97%,
+        transparent 100%
+      ),
+      linear-gradient(
+        180deg,
+        transparent 0%,
+        rgba(0, 0, 0, 0.45) 5%,
+        #000 12%,
+        #000 90%,
+        rgba(0, 0, 0, 0.3) 96%,
+        transparent 100%
+      );
+    mask-composite: intersect;
   }
 
-  .shore-art::after {
+  .artwork-drift {
+    --drift-x: 0px;
+    --drift-y: 0px;
     position: absolute;
-    inset: 0;
-    content: '';
-    pointer-events: none;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+    inset: -1.8%;
+    transform: translate3d(var(--drift-x), var(--drift-y), 0);
+    transition: transform 900ms var(--ease-out);
+    will-change: transform;
   }
 
   .shore-artwork {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transform: translate3d(var(--drift-x), var(--drift-y), 0) scale(1.018);
-    transition: transform 900ms var(--ease-out);
+    animation: watercolor-breathe 15s ease-in-out infinite alternate;
     will-change: transform;
+  }
+
+  .shore-wash {
+    position: absolute;
+    inset: -24%;
+    pointer-events: none;
+    opacity: 0.42;
+    background:
+      radial-gradient(circle at 32% 28%, rgba(255, 248, 201, 0.38), transparent 24%),
+      radial-gradient(circle at 68% 58%, rgba(202, 255, 239, 0.25), transparent 28%),
+      radial-gradient(circle at 42% 78%, rgba(255, 255, 255, 0.2), transparent 18%);
+    filter: blur(18px);
+    mix-blend-mode: screen;
+    animation: wash-drift 13s ease-in-out infinite alternate;
+    will-change: transform, opacity;
   }
 
   #shore-light {
@@ -223,21 +277,30 @@
     width: 100%;
     height: 100%;
     pointer-events: none;
-    opacity: 0.46;
+    opacity: 0.64;
     mix-blend-mode: screen;
   }
 
-  figcaption {
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    display: flex;
-    justify-content: space-between;
-    padding: 0.8rem 0.9rem;
-    color: rgba(255, 255, 255, 0.72);
-    text-shadow: 0 1px 10px rgba(29, 101, 106, 0.24);
-    background: linear-gradient(transparent, rgba(34, 112, 112, 0.12));
+  @keyframes watercolor-breathe {
+    0% {
+      transform: translate3d(-0.35%, 0.15%, 0) scale(1.025);
+    }
+
+    100% {
+      transform: translate3d(0.45%, -0.45%, 0) scale(1.045);
+    }
+  }
+
+  @keyframes wash-drift {
+    0% {
+      opacity: 0.32;
+      transform: translate3d(-4%, -2%, 0) rotate(-2deg);
+    }
+
+    100% {
+      opacity: 0.54;
+      transform: translate3d(5%, 4%, 0) rotate(2deg);
+    }
   }
 
   @media (max-width: 58rem) {
@@ -294,7 +357,12 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .shore-artwork {
+    .shore-artwork,
+    .shore-wash {
+      animation: none;
+    }
+
+    .artwork-drift {
       transform: none;
     }
 
@@ -306,7 +374,7 @@
 
 <script>
   const hero = document.querySelector('.shore-hero') as HTMLElement | null;
-  const artwork = document.querySelector('.shore-art') as HTMLElement | null;
+  const artwork = document.querySelector('.artwork-drift') as HTMLElement | null;
   const canvas = document.getElementById('shore-light') as HTMLCanvasElement | null;
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
@@ -321,12 +389,12 @@
     let raf = 0;
     let visible = true;
 
-    const glints = Array.from({ length: 22 }, (_, index) => ({
+    const glints = Array.from({ length: 30 }, (_, index) => ({
       x: 0.08 + ((index * 0.237) % 0.84),
       y: 0.06 + ((index * 0.173) % 0.84),
       size: 2 + (index % 5) * 1.2,
       phase: index * 1.87,
-      alpha: 0.12 + (index % 4) * 0.035,
+      alpha: 0.14 + (index % 4) * 0.04,
     }));
 
     function draw(time: number) {
@@ -344,6 +412,30 @@
         ctx.ellipse(x, y, glint.size * 2.4, glint.size * 0.72, -0.34, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(255, 255, 244, ${glint.alpha * pulse})`;
         ctx.fill();
+      }
+
+      for (let ribbon = 0; ribbon < 4; ribbon += 1) {
+        const baseY = height * (0.14 + ribbon * 0.16);
+        const endX = width * (0.9 - ribbon * 0.045);
+        ctx.beginPath();
+
+        for (let index = 0; index <= 28; index += 1) {
+          const x = (index / 28) * endX;
+          const y =
+            baseY +
+            Math.sin(index * 0.62 + time * 0.00034 + ribbon * 1.7) * (2.5 + ribbon) +
+            Math.cos(index * 0.21 + ribbon) * 2;
+          if (index === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+
+        ctx.strokeStyle = `rgba(255, 255, 244, ${0.055 + ribbon * 0.012})`;
+        ctx.lineWidth = 0.9 + ribbon * 0.18;
+        ctx.lineCap = 'round';
+        ctx.setLineDash([18 + ribbon * 5, 22, 5, 16]);
+        ctx.lineDashOffset = -time * (0.004 + ribbon * 0.001);
+        ctx.stroke();
+        ctx.setLineDash([]);
       }
 
       const sheenX = width * (0.35 + Math.sin(time * 0.000045) * 0.08);
@@ -382,8 +474,8 @@
     function moveArtwork(event: PointerEvent) {
       if (reduceMotion.matches) return;
       const rect = heroElement.getBoundingClientRect();
-      const x = ((event.clientX - rect.left) / rect.width - 0.5) * -7;
-      const y = ((event.clientY - rect.top) / rect.height - 0.5) * -5;
+      const x = ((event.clientX - rect.left) / rect.width - 0.5) * -4;
+      const y = ((event.clientY - rect.top) / rect.height - 0.5) * -3;
       artworkElement.style.setProperty('--drift-x', `${x.toFixed(2)}px`);
       artworkElement.style.setProperty('--drift-y', `${y.toFixed(2)}px`);
     }

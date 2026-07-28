@@ -167,7 +167,9 @@ test('the home hero preserves a portrait watercolor artwork beside the copy', as
     /<img class="shore-artwork" src="\/images\/hero-watercolor-shore-v1\.webp" alt="" width="1122" height="1402"[^>]*>/,
   );
   assert.match(home, /data-preserves-aspect="1122:1402"/);
+  assert.match(home, /data-edge-treatment="feathered"/);
   await access(path.join(distRoot, 'images/hero-watercolor-shore-v1.webp'));
   assert.match(home, /时间如水/);
+  assert.doesNotMatch(home, /Water study · 001|Light \/ tide \/ time/i);
   assert.doesNotMatch(home, /data-art-form="watercolor-shore"|data-flow-direction="left-to-right"/);
 });

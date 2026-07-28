@@ -64,6 +64,14 @@ try {
         await rm(path.join(distDir, 'images/hero-watercolor-shore-v1.webp'));
       },
     },
+    {
+      name: 'hard-edge-watercolor-artwork',
+      apply: async (distDir) => {
+        const home = path.join(distDir, 'index.html');
+        const html = await readFile(home, 'utf8');
+        await writeFile(home, html.replace('data-edge-treatment="feathered"', 'data-edge-treatment="hard"'));
+      },
+    },
   ];
 
   const survivors = [];
@@ -84,7 +92,7 @@ try {
     throw new Error(`Unexplained surviving contract mutations: ${survivors.join(', ')}`);
   }
 
-  console.log('mutation_changed: 4 killed / 0 unexplained');
+  console.log('mutation_changed: 5 killed / 0 unexplained');
 } finally {
   await rm(mutationRoot, { recursive: true });
 }
