@@ -69,7 +69,21 @@ try {
       apply: async (distDir) => {
         const home = path.join(distDir, 'index.html');
         const html = await readFile(home, 'utf8');
-        await writeFile(home, html.replace('data-edge-treatment="feathered"', 'data-edge-treatment="hard"'));
+        await writeFile(
+          home,
+          html.replace('data-edge-treatment="organic-feathered"', 'data-edge-treatment="hard"'),
+        );
+      },
+    },
+    {
+      name: 'missing-sunlight-focus',
+      apply: async (distDir) => {
+        const home = path.join(distDir, 'index.html');
+        const html = await readFile(home, 'utf8');
+        await writeFile(
+          home,
+          html.replace('data-color-focus="sunlight-diagonal"', 'data-color-focus="none"'),
+        );
       },
     },
   ];
@@ -92,7 +106,7 @@ try {
     throw new Error(`Unexplained surviving contract mutations: ${survivors.join(', ')}`);
   }
 
-  console.log('mutation_changed: 5 killed / 0 unexplained');
+  console.log('mutation_changed: 6 killed / 0 unexplained');
 } finally {
   await rm(mutationRoot, { recursive: true });
 }

@@ -2,7 +2,13 @@
 // ArtRiverHero — portrait watercolor artwork with an editorial copy column.
 ---
 
-<section class="shore-hero" aria-labelledby="home-title">
+<section
+  class="shore-hero"
+  aria-labelledby="home-title"
+  data-surface="pure-white"
+  data-color-focus="sunlight-diagonal"
+  data-motion-rhythm="6s-breathe-3s-highlight"
+>
   <div class="hero-frame">
     <div class="hero-copy">
       <p class="hero-kicker meta">Water / Personal field notes</p>
@@ -32,7 +38,7 @@
     <figure
       class="shore-art"
       data-preserves-aspect="1122:1402"
-      data-edge-treatment="feathered"
+      data-edge-treatment="organic-feathered"
     >
       <div class="artwork-drift">
         <img
@@ -58,9 +64,7 @@
     min-height: min(49rem, calc(100svh - 5.25rem));
     margin-inline: calc(50% - 50vw);
     overflow: hidden;
-    background:
-      radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.92), transparent 27%),
-      linear-gradient(112deg, #fffaf0 0%, #fbf4e6 60%, #f3eadb 100%);
+    background: #fff;
     border-block: 1px solid rgba(23, 62, 70, 0.11);
   }
 
@@ -69,15 +73,28 @@
     inset: 0;
     content: '';
     pointer-events: none;
-    opacity: 0.34;
-    background-image: repeating-linear-gradient(
-      102deg,
-      rgba(23, 62, 70, 0.018) 0,
-      rgba(23, 62, 70, 0.018) 1px,
-      transparent 1px,
-      transparent 4px
-    );
-    mix-blend-mode: multiply;
+    opacity: 0.86;
+    background:
+      linear-gradient(
+        132deg,
+        rgba(246, 184, 55, 0.2) 0%,
+        rgba(252, 210, 111, 0.13) 18%,
+        rgba(255, 234, 178, 0.055) 36%,
+        transparent 57%
+      ),
+      radial-gradient(
+        ellipse 36% 42% at 7% 4%,
+        rgba(249, 190, 65, 0.2),
+        rgba(255, 225, 152, 0.065) 48%,
+        transparent 78%
+      ),
+      repeating-linear-gradient(
+        102deg,
+        rgba(23, 62, 70, 0.012) 0,
+        rgba(23, 62, 70, 0.012) 1px,
+        transparent 1px,
+        transparent 4px
+      );
   }
 
   .hero-frame {
@@ -196,6 +213,7 @@
     margin: 0;
     overflow: hidden;
     background: transparent;
+    border-radius: 27% 8% 30% 11% / 13% 24% 16% 28%;
     -webkit-mask-image:
       linear-gradient(
         90deg,
@@ -252,7 +270,7 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-    animation: watercolor-breathe 15s ease-in-out infinite alternate;
+    animation: watercolor-breathe 6s ease-in-out infinite alternate;
     will-change: transform;
   }
 
@@ -269,6 +287,19 @@
     mix-blend-mode: screen;
     animation: wash-drift 13s ease-in-out infinite alternate;
     will-change: transform, opacity;
+  }
+
+  .shore-wash::after {
+    position: absolute;
+    inset: 21% 10% 16% 14%;
+    content: '';
+    opacity: 0.42;
+    background:
+      radial-gradient(circle at 28% 24%, rgba(255, 255, 226, 0.78), transparent 12%),
+      radial-gradient(circle at 64% 56%, rgba(231, 255, 247, 0.58), transparent 17%),
+      radial-gradient(circle at 42% 76%, rgba(255, 244, 201, 0.5), transparent 11%);
+    mix-blend-mode: screen;
+    animation: highlight-pulse 3s ease-in-out infinite;
   }
 
   #shore-light {
@@ -300,6 +331,19 @@
     100% {
       opacity: 0.54;
       transform: translate3d(5%, 4%, 0) rotate(2deg);
+    }
+  }
+
+  @keyframes highlight-pulse {
+    0%,
+    100% {
+      opacity: 0.24;
+      transform: translate3d(-1.5%, 1%, 0) scale(0.98);
+    }
+
+    50% {
+      opacity: 0.68;
+      transform: translate3d(1.5%, -1%, 0) scale(1.035);
     }
   }
 
@@ -358,7 +402,8 @@
 
   @media (prefers-reduced-motion: reduce) {
     .shore-artwork,
-    .shore-wash {
+    .shore-wash,
+    .shore-wash::after {
       animation: none;
     }
 
@@ -406,7 +451,7 @@
       for (const glint of glints) {
         const x = glint.x * width + Math.sin(time * 0.00008 + glint.phase) * 4;
         const y = glint.y * height + Math.cos(time * 0.00007 + glint.phase) * 5;
-        const pulse = 0.72 + Math.sin(time * 0.0007 + glint.phase) * 0.28;
+        const pulse = 0.72 + Math.sin(time * 0.0021 + glint.phase) * 0.28;
 
         ctx.beginPath();
         ctx.ellipse(x, y, glint.size * 2.4, glint.size * 0.72, -0.34, 0, Math.PI * 2);

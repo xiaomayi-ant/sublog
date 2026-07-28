@@ -1,9 +1,9 @@
 /* Water — 设计 tokens
-   比例感：暖白背景 ~75% / 墨蓝文字 ~18% / 河蓝 ~6% / 阳黄 ~1%（仅限高光、hover、激活态） */
+   比例感：纯白背景 ~75% / 墨蓝文字 ~18% / 河蓝 ~6% / 阳黄 ~1%（仅限高光、hover、激活态） */
 
 :root {
   /* 色彩 */
-  --color-bg: #fff9ec;        /* 暖白 */
+  --color-bg: #ffffff;        /* 纯白 */
   --color-ink: #10233f;       /* 墨蓝 */
   --color-river: #246bff;     /* 河蓝（主色） */
   --color-sky: #cfe5ff;       /* 天蓝 */

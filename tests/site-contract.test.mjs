@@ -161,13 +161,20 @@ test('the shared layout provides keyboard navigation affordances', async () => {
 
 test('the home hero preserves a portrait watercolor artwork beside the copy', async () => {
   const home = await readRoute('/');
+  const css = await readBuiltCss();
 
   assert.match(
     home,
     /<img class="shore-artwork" src="\/images\/hero-watercolor-shore-v1\.webp" alt="" width="1122" height="1402"[^>]*>/,
   );
   assert.match(home, /data-preserves-aspect="1122:1402"/);
-  assert.match(home, /data-edge-treatment="feathered"/);
+  assert.match(home, /data-edge-treatment="organic-feathered"/);
+  assert.match(home, /data-surface="pure-white"/);
+  assert.match(home, /data-color-focus="sunlight-diagonal"/);
+  assert.match(home, /data-motion-rhythm="6s-breathe-3s-highlight"/);
+  assert.match(css, /--color-bg:#fff(?:fff)?/);
+  assert.match(css, /animation:6s[^;}]*watercolor-breathe/);
+  assert.match(css, /animation:3s[^;}]*highlight-pulse/);
   await access(path.join(distRoot, 'images/hero-watercolor-shore-v1.webp'));
   assert.match(home, /时间如水/);
   assert.doesNotMatch(home, /Water study · 001|Light \/ tide \/ time/i);
