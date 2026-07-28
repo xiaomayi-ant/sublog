@@ -1,0 +1,706 @@
+---
+import Base from '../../layouts/Base.astro';
+---
+
+<Base
+  title="River Equation Lab"
+  description="一个用参数曲线、透明叠色和滚动形变生成的艺术河流实验。"
+  noIndex
+>
+  <article
+    class="river-lab"
+    data-river-model="parametric-ribbon"
+    data-scroll-stage="sticky-360svh"
+    data-river-motion="scroll-plus-time"
+  >
+    <section class="river-stage" id="river-stage">
+      <div class="river-viewport">
+        <canvas
+          id="river-canvas"
+          class="river-canvas"
+          role="img"
+          aria-label="数学河流动态实验"
+        ></canvas>
+
+        <div class="sun-field" aria-hidden="true"></div>
+
+        <header class="lab-intro">
+          <a class="lab-back" href="/">Water / Lab 01</a>
+          <p class="lab-kicker">A river, without an image.</p>
+          <h1>Let the curve<br />find its water.</h1>
+          <p class="lab-note">
+            河流不是一张被拉伸的图，而是中心线 <span class="formula">C(s,p)</span>
+            随滚动改变，两岸沿法线生长。时间只推动水面的细微流动。
+          </p>
+        </header>
+
+        <aside class="river-controls" aria-label="河流参数">
+          <div class="control-heading">
+            <div>
+              <span>River equation</span>
+              <strong>Live study</strong>
+            </div>
+            <button type="button" class="reset" data-river-reset>Reset</button>
+          </div>
+
+          <div class="presets" aria-label="视觉预设">
+            <button type="button" data-river-preset="watercolor" aria-pressed="true">Watercolor</button>
+            <button type="button" data-river-preset="silk" aria-pressed="false">Silk</button>
+            <button type="button" data-river-preset="fibers" aria-pressed="false">Fibers</button>
+          </div>
+
+          <div class="control-grid">
+            <label>
+              <span>Bend <output data-output="bend">1.05</output></span>
+              <input name="bend" type="range" min="0.35" max="1.65" value="1.05" step="0.01" />
+            </label>
+            <label>
+              <span>Width <output data-output="width">1.10</output></span>
+              <input name="width" type="range" min="0.55" max="1.55" value="1.10" step="0.01" />
+            </label>
+            <label>
+              <span>Turbulence <output data-output="turbulence">0.48</output></span>
+              <input name="turbulence" type="range" min="0" max="1" value="0.48" step="0.01" />
+            </label>
+            <label>
+              <span>Layers <output data-output="layers">7</output></span>
+              <input name="layers" type="range" min="3" max="11" value="7" step="1" />
+            </label>
+            <label>
+              <span>Flow <output data-output="flow">0.38</output></span>
+              <input name="flow" type="range" min="0" max="1" value="0.38" step="0.01" />
+            </label>
+            <label>
+              <span>Cobalt <output data-output="cobalt">0.30</output></span>
+              <input name="cobalt" type="range" min="0" max="1" value="0.30" step="0.01" />
+            </label>
+          </div>
+
+          <p class="control-status" aria-live="polite">Watercolor · scroll to reshape the river</p>
+        </aside>
+
+        <div class="river-index" aria-hidden="true">
+          <span>01</span>
+          <i></i>
+          <span>04</span>
+        </div>
+
+        <div class="river-progress" aria-hidden="true"><span></span></div>
+      </div>
+
+      <ol class="scroll-notes" aria-hidden="true">
+        <li style="--note-at: 15%">Source</li>
+        <li style="--note-at: 43%">Meander</li>
+        <li style="--note-at: 70%">Confluence</li>
+        <li style="--note-at: 94%">Open water</li>
+      </ol>
+    </section>
+  </article>
+</Base>
+
+<script>
+  import { buildRibbonSample, clamp, smoothNoise } from '../../lib/riverMath.mjs';
+
+  type RiverControl = 'bend' | 'width' | 'turbulence' | 'layers' | 'flow' | 'cobalt';
+  type RiverState = Record<RiverControl, number>;
+  type RiverPoint = { x: number; y: number };
+
+  const canvas = document.querySelector<HTMLCanvasElement>('#river-canvas');
+  const stage = document.querySelector<HTMLElement>('#river-stage');
+  const lab = document.querySelector<HTMLElement>('.river-lab');
+  const progressFill = document.querySelector<HTMLElement>('.river-progress span');
+  const status = document.querySelector<HTMLElement>('.control-status');
+  const controls = Array.from(
+    document.querySelectorAll<HTMLInputElement>('.river-controls input'),
+  );
+  const outputs = new Map(
+    Array.from(document.querySelectorAll<HTMLOutputElement>('[data-output]')).map((output) => [
+      output.dataset.output ?? '',
+      output,
+    ]),
+  );
+
+  if (
+    canvas instanceof HTMLCanvasElement &&
+    stage instanceof HTMLElement &&
+    lab instanceof HTMLElement
+  ) {
+    const drawingCanvas = canvas;
+    const scrollStage = stage;
+    const riverLab = lab;
+    const context = drawingCanvas.getContext('2d');
+    const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const defaults: RiverState = {
+      bend: 1.05,
+      width: 1.1,
+      turbulence: 0.48,
+      layers: 7,
+      flow: 0.38,
+      cobalt: 0.3,
+    };
+    const presets: Record<string, RiverState> = {
+      watercolor: defaults,
+      silk: {
+        bend: 0.82,
+        width: 0.88,
+        turbulence: 0.2,
+        layers: 5,
+        flow: 0.5,
+        cobalt: 0.54,
+      },
+      fibers: {
+        bend: 1.32,
+        width: 0.76,
+        turbulence: 0.82,
+        layers: 10,
+        flow: 0.72,
+        cobalt: 0.68,
+      },
+    };
+    const state: RiverState = { ...defaults };
+    let scrollProgress = 0;
+    let canvasWidth = 0;
+    let canvasHeight = 0;
+    let pixelRatio = 1;
+    let frame = 0;
+    let visible = true;
+
+    function syncControls() {
+      controls.forEach((input) => {
+        const name = input.name as RiverControl;
+        input.value = String(state[name]);
+        const output = outputs.get(name);
+        if (output) {
+          output.textContent =
+            name === 'layers' ? String(Math.round(state[name])) : state[name].toFixed(2);
+        }
+      });
+    }
+
+    function setStatus(message: string) {
+      if (status) status.textContent = message;
+    }
+
+    function resize() {
+      const bounds = drawingCanvas.getBoundingClientRect();
+      pixelRatio = Math.min(window.devicePixelRatio || 1, 1.75);
+      canvasWidth = Math.max(1, bounds.width);
+      canvasHeight = Math.max(1, bounds.height);
+      drawingCanvas.width = Math.round(canvasWidth * pixelRatio);
+      drawingCanvas.height = Math.round(canvasHeight * pixelRatio);
+      context?.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+    }
+
+    function updateProgress() {
+      const bounds = scrollStage.getBoundingClientRect();
+      const travel = Math.max(1, bounds.height - window.innerHeight);
+      scrollProgress = clamp(-bounds.top / travel, 0, 1);
+      riverLab.style.setProperty('--river-progress', String(scrollProgress));
+      if (progressFill) {
+        progressFill.style.transform = `scaleX(${scrollProgress})`;
+      }
+    }
+
+    function pointToCanvas(point: RiverPoint) {
+      return {
+        x: point.x * canvasWidth,
+        y: point.y * canvasHeight,
+      };
+    }
+
+    function optionsAt(time: number, seedOffset = 0) {
+      return {
+        bend: state.bend,
+        width: state.width,
+        turbulence: state.turbulence,
+        time: time * state.flow,
+        progress: scrollProgress,
+        seed: 17 + seedOffset,
+      };
+    }
+
+    function traceRibbon(radius: number, time: number, seedOffset: number) {
+      if (!context) return;
+      const left = [];
+      const right = [];
+      const options = optionsAt(time, seedOffset);
+      const samples = Math.max(100, Math.round(canvasWidth / 8));
+
+      for (let index = 0; index <= samples; index += 1) {
+        const s = index / samples;
+        const pulse =
+          1 +
+          (smoothNoise(s * 8 + time * 0.025, 83 + seedOffset) - 0.5) *
+            state.turbulence *
+            0.1;
+        const sample = buildRibbonSample(s, radius * pulse, options);
+        left.push(pointToCanvas(sample.left));
+        right.push(pointToCanvas(sample.right));
+      }
+
+      context.beginPath();
+      context.moveTo(left[0].x, left[0].y);
+      left.slice(1).forEach((point) => context.lineTo(point.x, point.y));
+      right.reverse().forEach((point) => context.lineTo(point.x, point.y));
+      context.closePath();
+    }
+
+    function drawWash(time: number) {
+      if (!context) return;
+      const layerCount = Math.round(state.layers);
+      const colors = [
+        [145, 209, 212],
+        [98, 183, 191],
+        [62, 147, 165],
+        [44, 108, 178],
+      ];
+
+      for (let layer = layerCount - 1; layer >= 0; layer -= 1) {
+        const depth = layer / Math.max(1, layerCount - 1);
+        const radius = 1.38 - depth * 0.68;
+        const colorIndex = Math.min(colors.length - 1, Math.floor(depth * colors.length));
+        const [red, green, blue] = colors[colorIndex];
+        const cobaltBoost = colorIndex === colors.length - 1 ? state.cobalt : 0;
+        const alpha = 0.028 + depth * 0.035 + cobaltBoost * 0.035;
+        traceRibbon(radius, time + layer * 5.7, layer * 19);
+        context.fillStyle = `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+        context.fill();
+      }
+
+      traceRibbon(0.72, time + 13, 103);
+      const core = context.createLinearGradient(0, 0, canvasWidth, canvasHeight);
+      core.addColorStop(0, 'rgba(177, 224, 221, 0.07)');
+      core.addColorStop(0.55, `rgba(47, 137, 171, ${0.04 + state.cobalt * 0.04})`);
+      core.addColorStop(1, `rgba(18, 53, 182, ${0.035 + state.cobalt * 0.07})`);
+      context.fillStyle = core;
+      context.fill();
+    }
+
+    function drawFibers(time: number) {
+      if (!context) return;
+      const fiberCount = 22 + Math.round(state.layers * 3.5);
+      const sampleCount = Math.max(80, Math.round(canvasWidth / 12));
+      context.lineCap = 'round';
+
+      for (let fiber = 0; fiber < fiberCount; fiber += 1) {
+        const lane = fiberCount === 1 ? 0 : (fiber / (fiberCount - 1)) * 2 - 1;
+        const laneRadius = lane * (0.76 + smoothNoise(fiber * 0.61, 211) * 0.2);
+        const options = optionsAt(time + fiber * 1.7, fiber * 11);
+        context.beginPath();
+
+        for (let index = 0; index <= sampleCount; index += 1) {
+          const s = index / sampleCount;
+          const sample = buildRibbonSample(s, Math.abs(laneRadius), options);
+          const bank = laneRadius >= 0 ? sample.left : sample.right;
+          const flutter =
+            (smoothNoise(s * 12 + time * 0.035 + fiber, 307) - 0.5) *
+            state.turbulence *
+            0.006;
+          const point = pointToCanvas({
+            x: bank.x + sample.normal.x * flutter,
+            y: bank.y + sample.normal.y * flutter,
+          });
+          if (index === 0) context.moveTo(point.x, point.y);
+          else context.lineTo(point.x, point.y);
+        }
+
+        const isCobalt = fiber % 7 === 0;
+        context.strokeStyle = isCobalt
+          ? `rgba(12, 42, 176, ${0.05 + state.cobalt * 0.12})`
+          : `rgba(44, 126, 144, ${0.035 + state.turbulence * 0.025})`;
+        context.lineWidth = isCobalt ? 0.8 : 0.45;
+        context.stroke();
+      }
+    }
+
+    function drawLight(time: number) {
+      if (!context) return;
+      const options = optionsAt(time, 509);
+      const sampleCount = Math.max(70, Math.round(canvasWidth / 14));
+      context.beginPath();
+      for (let index = 0; index <= sampleCount; index += 1) {
+        const s = index / sampleCount;
+        const sample = buildRibbonSample(s, 0.18, options);
+        const point = pointToCanvas(sample.left);
+        if (index === 0) context.moveTo(point.x, point.y);
+        else context.lineTo(point.x, point.y);
+      }
+      context.strokeStyle = 'rgba(255, 250, 222, 0.48)';
+      context.lineWidth = 1.1;
+      context.stroke();
+    }
+
+    function draw(timestamp: number) {
+      if (!context || !visible) {
+        frame = requestAnimationFrame(draw);
+        return;
+      }
+      const time = reducedMotionQuery.matches ? 0 : timestamp * 0.001;
+      context.clearRect(0, 0, canvasWidth, canvasHeight);
+      drawWash(time);
+      drawFibers(time);
+      drawLight(time);
+      frame = requestAnimationFrame(draw);
+    }
+
+    controls.forEach((input) => {
+      input.addEventListener('input', () => {
+        const name = input.name as RiverControl;
+        state[name] = Number(input.value);
+        syncControls();
+        document
+          .querySelectorAll('[data-river-preset]')
+          .forEach((button) => button.setAttribute('aria-pressed', 'false'));
+        setStatus(`${name} · ${input.value}`);
+      });
+    });
+
+    document.querySelectorAll('[data-river-preset]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const presetName = button.getAttribute('data-river-preset') ?? '';
+        const preset = presets[presetName];
+        if (!preset) return;
+        Object.assign(state, preset);
+        syncControls();
+        document
+          .querySelectorAll('[data-river-preset]')
+          .forEach((item) => item.setAttribute('aria-pressed', String(item === button)));
+        setStatus(`${button.textContent?.trim()} · scroll to reshape the river`);
+      });
+    });
+
+    document.querySelector('[data-river-reset]')?.addEventListener('click', () => {
+      Object.assign(state, defaults);
+      syncControls();
+      document.querySelectorAll('[data-river-preset]').forEach((button) => {
+        button.setAttribute(
+          'aria-pressed',
+          String(button.getAttribute('data-river-preset') === 'watercolor'),
+        );
+      });
+      setStatus('Watercolor · reset');
+    });
+
+    const observer = new IntersectionObserver(([entry]) => {
+      visible = entry.isIntersecting;
+    });
+    observer.observe(scrollStage);
+
+    window.addEventListener('resize', resize, { passive: true });
+    window.addEventListener('scroll', updateProgress, { passive: true });
+    resize();
+    updateProgress();
+    syncControls();
+    cancelAnimationFrame(frame);
+    frame = requestAnimationFrame(draw);
+  }
+</script>
+
+<style>
+  .river-lab {
+    --river-progress: 0;
+    background: #fff;
+    color: #0e2433;
+    width: 100vw;
+    margin-inline: calc(50% - 50vw);
+    margin-top: calc(var(--space-lg) * -1);
+    overflow: clip;
+  }
+
+  .river-stage {
+    height: 360svh;
+    position: relative;
+  }
+
+  .river-viewport {
+    position: sticky;
+    top: 0;
+    height: 100svh;
+    background: #fff;
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  .river-canvas {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .sun-field {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background:
+      linear-gradient(136deg, rgba(255, 204, 89, 0.15), rgba(255, 226, 144, 0.04) 24%, transparent 48%),
+      radial-gradient(circle at 10% 5%, rgba(255, 220, 132, 0.26), transparent 26%);
+    mix-blend-mode: multiply;
+  }
+
+  .lab-intro {
+    position: absolute;
+    top: clamp(2rem, 7vh, 5rem);
+    left: clamp(1.5rem, 6vw, 6rem);
+    z-index: 3;
+    width: min(32rem, calc(100vw - 3rem));
+  }
+
+  .lab-back,
+  .lab-kicker,
+  .formula,
+  .control-heading span,
+  .control-status,
+  .river-index,
+  .scroll-notes {
+    font-family: var(--font-mono);
+    font-size: 0.67rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .lab-back {
+    color: rgba(14, 36, 51, 0.58);
+    text-decoration: none;
+  }
+
+  .lab-kicker {
+    margin-top: clamp(3rem, 9vh, 7rem);
+    color: #1034b3;
+  }
+
+  h1 {
+    max-width: 9.4em;
+    margin-top: 0.7rem;
+    color: #102a38;
+    font-family: var(--font-display);
+    font-size: clamp(3.35rem, 7.7vw, 8.8rem);
+    font-weight: 400;
+    font-style: italic;
+    letter-spacing: -0.055em;
+    line-height: 0.83;
+  }
+
+  .lab-note {
+    max-width: 27rem;
+    margin-top: clamp(1.75rem, 4vh, 3rem);
+    color: rgba(14, 36, 51, 0.67);
+    font-size: clamp(0.82rem, 1vw, 0.95rem);
+    line-height: 1.85;
+  }
+
+  .formula {
+    color: #1034b3;
+    white-space: nowrap;
+  }
+
+  .river-controls {
+    position: absolute;
+    right: clamp(1.25rem, 4vw, 4rem);
+    bottom: clamp(1.25rem, 5vh, 3.5rem);
+    z-index: 4;
+    width: min(30rem, calc(100vw - 2.5rem));
+    padding: 1rem 1.15rem 0.85rem;
+    border: 1px solid rgba(14, 36, 51, 0.13);
+    border-radius: 1.6rem 0.6rem 1.8rem 0.75rem;
+    background: rgba(255, 255, 255, 0.76);
+    box-shadow: 0 1.2rem 4rem rgba(31, 79, 93, 0.08);
+    backdrop-filter: blur(14px);
+  }
+
+  .control-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .control-heading span,
+  .control-heading strong {
+    display: block;
+  }
+
+  .control-heading span {
+    color: rgba(14, 36, 51, 0.44);
+  }
+
+  .control-heading strong {
+    margin-top: 0.1rem;
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 500;
+    font-style: italic;
+  }
+
+  button {
+    border: 0;
+    color: inherit;
+    background: transparent;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .reset {
+    color: rgba(14, 36, 51, 0.48);
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    text-transform: uppercase;
+  }
+
+  .presets {
+    display: flex;
+    gap: 0.35rem;
+    margin-top: 0.9rem;
+  }
+
+  .presets button {
+    padding: 0.3rem 0.58rem;
+    border: 1px solid rgba(14, 36, 51, 0.13);
+    border-radius: 99rem;
+    color: rgba(14, 36, 51, 0.58);
+    font-family: var(--font-mono);
+    font-size: 0.61rem;
+    letter-spacing: 0.04em;
+  }
+
+  .presets button[aria-pressed='true'] {
+    border-color: rgba(16, 52, 179, 0.32);
+    color: #1034b3;
+    background: rgba(16, 52, 179, 0.055);
+  }
+
+  .control-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem 1rem;
+    margin-top: 0.9rem;
+  }
+
+  label span {
+    display: flex;
+    justify-content: space-between;
+    color: rgba(14, 36, 51, 0.55);
+    font-family: var(--font-mono);
+    font-size: 0.61rem;
+    letter-spacing: 0.04em;
+  }
+
+  output {
+    color: rgba(14, 36, 51, 0.86);
+  }
+
+  input[type='range'] {
+    width: 100%;
+    height: 0.85rem;
+    margin: 0;
+    accent-color: #174abf;
+  }
+
+  .control-status {
+    margin-top: 0.55rem;
+    color: rgba(14, 36, 51, 0.36);
+    letter-spacing: 0.04em;
+    text-transform: none;
+  }
+
+  .river-index {
+    position: absolute;
+    top: 50%;
+    right: clamp(1rem, 2vw, 2rem);
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+    color: rgba(14, 36, 51, 0.35);
+    transform: translateY(-50%);
+  }
+
+  .river-index i {
+    width: 1px;
+    height: 4rem;
+    background: linear-gradient(
+      to bottom,
+      #1034b3 calc(var(--river-progress) * 100%),
+      rgba(14, 36, 51, 0.12) 0
+    );
+  }
+
+  .river-progress {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 5;
+    height: 2px;
+    background: rgba(14, 36, 51, 0.06);
+  }
+
+  .river-progress span {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: #153dbe;
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+
+  .scroll-notes {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    color: rgba(14, 36, 51, 0.32);
+  }
+
+  .scroll-notes li {
+    position: absolute;
+    top: var(--note-at);
+    right: clamp(1.3rem, 4vw, 4rem);
+    writing-mode: vertical-rl;
+  }
+
+  @media (max-width: 48rem) {
+    .lab-intro {
+      top: 1.5rem;
+    }
+
+    .lab-kicker {
+      margin-top: 2.5rem;
+    }
+
+    h1 {
+      font-size: clamp(3rem, 14vw, 5rem);
+    }
+
+    .lab-note {
+      max-width: 22rem;
+      padding-right: 2rem;
+      font-size: 0.76rem;
+    }
+
+    .river-controls {
+      padding: 0.8rem 0.9rem;
+    }
+
+    .control-grid {
+      display: none;
+    }
+
+    .control-status {
+      display: none;
+    }
+
+    .river-index {
+      display: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .river-progress span {
+      transition: none;
+    }
+  }
+</style>
