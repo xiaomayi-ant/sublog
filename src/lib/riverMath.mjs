@@ -5,6 +5,7 @@ const DEFAULTS = {
   time: 0,
   progress: 0,
   seed: 17,
+  curvatureLimit: true,
 };
 
 export function clamp(value, minimum, maximum) {
@@ -77,6 +78,23 @@ export function riverWidth(position, suppliedOptions = {}) {
   return 0.091 * widthControl * irregularity * downstreamBasin * sourceTaper;
 }
 
+export function centerlineCurvature(position, suppliedOptions = {}) {
+  const options = optionsWithDefaults(suppliedOptions);
+  const s = clamp(position, 0, 1);
+  const epsilon = 0.004;
+  const before = sampleCenterline(clamp(s - epsilon, 0, 1), options);
+  const center = sampleCenterline(s, options);
+  const after = sampleCenterline(clamp(s + epsilon, 0, 1), options);
+  const firstX = (after.x - before.x) / (2 * epsilon);
+  const firstY = (after.y - before.y) / (2 * epsilon);
+  const secondX = (after.x - 2 * center.x + before.x) / (epsilon * epsilon);
+  const secondY = (after.y - 2 * center.y + before.y) / (epsilon * epsilon);
+  const speedSquared = firstX * firstX + firstY * firstY;
+
+  if (speedSquared < 1e-12) return 0;
+  return Math.abs(firstX * secondY - firstY * secondX) / Math.pow(speedSquared, 1.5);
+}
+
 export function buildRibbonSample(position, radius = 1, suppliedOptions = {}) {
   const options = optionsWithDefaults(suppliedOptions);
   const s = clamp(position, 0, 1);
@@ -95,7 +113,13 @@ export function buildRibbonSample(position, radius = 1, suppliedOptions = {}) {
     x: -tangent.y,
     y: tangent.x,
   };
-  const halfWidth = riverWidth(s, options) * radius;
+  const requestedHalfWidth = riverWidth(s, options) * radius;
+  const curvature = centerlineCurvature(s, options);
+  const cuspSafeHalfWidth = curvature > 1e-6 ? 0.78 / curvature : requestedHalfWidth;
+  const halfWidth =
+    options.curvatureLimit === false
+      ? requestedHalfWidth
+      : Math.min(requestedHalfWidth, cuspSafeHalfWidth);
   const offsetX = normal.x * halfWidth;
   const offsetY = normal.y * halfWidth;
 
@@ -103,6 +127,7 @@ export function buildRibbonSample(position, radius = 1, suppliedOptions = {}) {
     center,
     tangent,
     normal,
+    curvature,
     width: halfWidth * 2,
     left: {
       x: center.x + offsetX,

@@ -5,6 +5,8 @@ import path from 'node:path';
 const projectRoot = path.resolve(import.meta.dirname, '..');
 const distRoot = path.join(projectRoot, 'dist');
 const contractTest = path.join(projectRoot, 'tests/river-lab-contract.test.mjs');
+const mathTest = path.join(projectRoot, 'tests/river-math.test.mjs');
+const riverMathSource = path.join(projectRoot, 'src/lib/riverMath.mjs');
 const labHtml = path.join(distRoot, 'lab/river/index.html');
 const assetsRoot = path.join(distRoot, '_astro');
 
@@ -31,7 +33,20 @@ async function findAsset(extension, marker) {
   throw new Error(`Unable to find ${extension} asset containing ${marker}.`);
 }
 
-async function mutateAndRestore(name, target, transform) {
+function runMathTest() {
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, ['--test', mathTest], {
+      cwd: projectRoot,
+      env: process.env,
+      stdio: 'ignore',
+    });
+
+    child.on('error', reject);
+    child.on('exit', (code) => resolve(code ?? 1));
+  });
+}
+
+async function mutateAndRestore(name, target, transform, runTest = runContract) {
   const original = await readFile(target, 'utf8');
   const mutated = transform(original);
   if (mutated === original) {
@@ -40,7 +55,7 @@ async function mutateAndRestore(name, target, transform) {
 
   try {
     await writeFile(target, mutated);
-    const code = await runContract();
+    const code = await runTest();
     if (code === 0) return false;
     console.log(`killed: ${name}`);
     return true;
@@ -76,11 +91,31 @@ const mutations = [
     jsAsset.target,
     (source) => source.replaceAll('requestAnimationFrame', 'disabledAnimationFrame'),
   ],
+  [
+    'naive-ribbon-join',
+    labHtml,
+    (source) => source.replace('data-river-join="swept-union"', 'data-river-join="naive-polygon"'),
+  ],
+  [
+    'murky-water-palette',
+    labHtml,
+    (source) => source.replace('data-river-palette="clear-water"', 'data-river-palette="gray-blue"'),
+  ],
+  [
+    'disabled-curvature-limit',
+    riverMathSource,
+    (source) =>
+      source.replace(
+        'Math.min(requestedHalfWidth, cuspSafeHalfWidth)',
+        'requestedHalfWidth',
+      ),
+    runMathTest,
+  ],
 ];
 
 const survivors = [];
-for (const [name, target, transform] of mutations) {
-  const killed = await mutateAndRestore(name, target, transform);
+for (const [name, target, transform, runTest] of mutations) {
+  const killed = await mutateAndRestore(name, target, transform, runTest);
   if (!killed) survivors.push(name);
 }
 
@@ -88,4 +123,4 @@ if (survivors.length > 0) {
   throw new Error(`Unexplained surviving river mutations: ${survivors.join(', ')}`);
 }
 
-console.log('river_mutation_changed: 3 killed / 0 unexplained');
+console.log('river_mutation_changed: 6 killed / 0 unexplained');

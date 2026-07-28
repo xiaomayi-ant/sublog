@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   buildRibbonSample,
+  centerlineCurvature,
   clamp,
   riverWidth,
   sampleCenterline,
@@ -65,6 +66,30 @@ test('ribbon banks are symmetric around the centerline and normal to its tangent
   assert.ok(Math.abs(leftVector.x + rightVector.x) < 1e-9);
   assert.ok(Math.abs(leftVector.y + rightVector.y) < 1e-9);
   assert.ok(Math.abs(leftVector.x * sample.tangent.x + leftVector.y * sample.tangent.y) < 1e-6);
+});
+
+test('wide ribbons stay below the local cusp limit through sharp bends', () => {
+  const options = {
+    ...baseOptions,
+    bend: 1.3,
+    width: 1.26,
+    turbulence: 0.48,
+  };
+
+  for (const progress of [0, 0.2, 0.5, 0.8, 1]) {
+    for (let index = 2; index < 99; index += 1) {
+      const s = index / 100;
+      const curvature = centerlineCurvature(s, { ...options, progress });
+      const sample = buildRibbonSample(s, 1.38, { ...options, progress });
+
+      assert.ok(Number.isFinite(curvature));
+      assert.ok(curvature >= 0);
+      assert.ok(
+        sample.width * curvature <= 1.641,
+        `offset cusp risk at s=${s}, progress=${progress}`,
+      );
+    }
+  }
 });
 
 test('clamp protects scroll and control boundaries', () => {

@@ -19,6 +19,9 @@ test('the river lab publishes a self-contained parametric river scene', async ()
 
   assert.match(html, /<meta name="robots" content="noindex, follow">/);
   assert.match(html, /data-river-model="parametric-ribbon"/);
+  assert.match(html, /data-river-join="swept-union"/);
+  assert.match(html, /data-river-offset="curvature-limited"/);
+  assert.match(html, /data-river-palette="clear-water"/);
   assert.match(html, /data-scroll-stage="sticky-360svh"/);
   assert.match(html, /data-river-motion="scroll-plus-time"/);
   assert.match(html, /<canvas id="river-canvas"[^>]*role="img"/);
@@ -32,6 +35,18 @@ test('the lab exposes the art-direction controls and three meaningful presets', 
 
   for (const name of ['bend', 'width', 'turbulence', 'layers', 'flow', 'cobalt']) {
     assert.match(html, new RegExp(`<input[^>]*name="${name}"`));
+  }
+
+  const preferredDefaults = {
+    bend: '1.3',
+    width: '1.26',
+    turbulence: '0.48',
+    layers: '8',
+    flow: '1',
+    cobalt: '0.30',
+  };
+  for (const [name, value] of Object.entries(preferredDefaults)) {
+    assert.match(html, new RegExp(`<input[^>]*name="${name}"[^>]*value="${value}"`));
   }
 
   for (const preset of ['watercolor', 'silk', 'fibers']) {
