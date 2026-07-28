@@ -86,6 +86,17 @@ try {
         );
       },
     },
+    {
+      name: 'flattened-home-typography',
+      apply: async (distDir) => {
+        const home = path.join(distDir, 'index.html');
+        const html = await readFile(home, 'utf8');
+        await writeFile(
+          home,
+          html.replace('data-type-system="editorial-serif-sans"', 'data-type-system="flat"'),
+        );
+      },
+    },
   ];
 
   const survivors = [];
@@ -106,7 +117,7 @@ try {
     throw new Error(`Unexplained surviving contract mutations: ${survivors.join(', ')}`);
   }
 
-  console.log('mutation_changed: 6 killed / 0 unexplained');
+  console.log('mutation_changed: 7 killed / 0 unexplained');
 } finally {
   await rm(mutationRoot, { recursive: true });
 }

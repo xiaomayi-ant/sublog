@@ -180,3 +180,21 @@ test('the home hero preserves a portrait watercolor artwork beside the copy', as
   assert.doesNotMatch(home, /Water study · 001|Light \/ tide \/ time/i);
   assert.doesNotMatch(home, /data-art-form="watercolor-shore"|data-flow-direction="left-to-right"/);
 });
+
+test('the home hero uses a measured editorial typography hierarchy', async () => {
+  const home = await readRoute('/');
+  const css = await readBuiltCss();
+
+  assert.match(home, /data-type-system="editorial-serif-sans"/);
+  assert.match(home, /SUMOER — RESEARCH & BUILD \/ 2026/);
+  assert.match(home, /观察、研究，也构建。/);
+  assert.match(
+    home,
+    /关注智能系统、界面，以及人在技术中的判断。记录尚未定型的想法，也做可以被使用的东西。/,
+  );
+  assert.doesNotMatch(home, /Water \/ Personal field notes|Observe · make · let flow/i);
+  assert.match(css, /font-size:clamp\(5rem,8\.2vw,8\.25rem\)/);
+  assert.match(css, /letter-spacing:-\.045em/);
+  assert.match(css, /\.hero-statement[^}]*font-family:var\(--font-serif\)/);
+  assert.match(css, /\.hero-description[^}]*font-family:var\(--font-sans\)/);
+});
