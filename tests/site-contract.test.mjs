@@ -192,7 +192,7 @@ test('the home hero uses a measured editorial typography hierarchy', async () =>
     home,
     /关注智能系统、界面，以及人在技术中的判断。记录尚未定型的想法，也做可以被使用的东西。/,
   );
-  assert.match(home, /data-intro-motion="first-visit-word-reveal"/);
+  assert.match(home, /data-intro-motion="per-load-word-reveal"/);
   assert.match(home, /aria-label="Be water, my friend\."/);
   assert.match(home, /class="intro-be"[^>]*>Be<\/span>/);
   assert.match(home, /class="intro-water"[^>]*>water<\/span>/);
@@ -209,12 +209,23 @@ test('the home hero uses a measured editorial typography hierarchy', async () =>
   );
   assert.match(css, /font-size:clamp\(4\.25rem,6\.62vw,5\.5rem\)/);
   assert.match(css, /letter-spacing:-\.03em/);
-  assert.match(css, /\.intro-water[^}]*color:#2b8f94/);
-  assert.match(css, /\.intro-line--friend[^}]*color:#0047ab/);
+  assert.match(home, /data-water-color="transparent-teal"/);
+  assert.match(home, /data-friend-color="hermes-blue"/);
+  assert.match(css, /\.intro-water[^}]*color:(?:#2b8f9475|rgba\(43,143,148,\.46\))/);
+  assert.match(css, /\.intro-line--friend[^}]*color:#0000f2/);
   assert.match(css, /\.intro-line--friend[^}]*font-weight:700/);
   assert.match(css, /\.hero-description[^}]*font-family:var\(--font-sans\)/);
   assert.match(css, /animation:[^;}]*intro-group-in/);
   assert.match(css, /animation:[^;}]*intro-letter-in/);
   assert.doesNotMatch(css, /intro-word-out/);
-  assert.match(home, /sessionStorage\.getItem\([`'"]water-intro-reveal-v2[`'"]\)/);
+  assert.doesNotMatch(home, /sessionStorage/);
+});
+
+test('the home reads as one continuous page without structural divider lines', async () => {
+  const home = await readRoute('/');
+  const css = await readBuiltCss();
+
+  assert.match(home, /data-page-flow="continuous-no-dividers"/);
+  assert.match(css, /\.shore-hero[^}]*border:0/);
+  assert.match(css, /\.entry[^}]*border:0/);
 });

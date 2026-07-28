@@ -104,7 +104,18 @@ try {
         const html = await readFile(home, 'utf8');
         await writeFile(
           home,
-          html.replace('data-intro-motion="first-visit-word-reveal"', 'data-intro-motion="none"'),
+          html.replace('data-intro-motion="per-load-word-reveal"', 'data-intro-motion="none"'),
+        );
+      },
+    },
+    {
+      name: 'reintroduced-home-dividers',
+      apply: async (distDir) => {
+        const home = path.join(distDir, 'index.html');
+        const html = await readFile(home, 'utf8');
+        await writeFile(
+          home,
+          html.replace('data-page-flow="continuous-no-dividers"', 'data-page-flow="divided"'),
         );
       },
     },
@@ -128,7 +139,7 @@ try {
     throw new Error(`Unexplained surviving contract mutations: ${survivors.join(', ')}`);
   }
 
-  console.log('mutation_changed: 8 killed / 0 unexplained');
+  console.log('mutation_changed: 9 killed / 0 unexplained');
 } finally {
   await rm(mutationRoot, { recursive: true });
 }

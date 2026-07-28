@@ -35,51 +35,59 @@ const entries = [
   title="Be water, my friend."
   description="关注智能系统、界面，以及人在技术中的判断。记录尚未定型的想法，也做可以被使用的东西。"
 >
-  <ArtRiverHero />
+  <div class="home-flow" data-page-flow="continuous-no-dividers">
+    <ArtRiverHero />
 
-  <!-- 2. 大号排印入口 -->
-  <section class="entries" aria-label="站点入口">
-    {
-      entries.map(({ num, zh, en, desc, href }) => (
-        <a class="entry" href={href}>
-          <span class="entry-num meta">{num}</span>
-          <span class="entry-body">
-            <span class="entry-title">
-              {zh}
-              <span class="entry-en meta">{en}</span>
-            </span>
-            <span class="entry-desc">{desc}</span>
-          </span>
-          <span class="entry-dot" aria-hidden="true" />
-        </a>
-      ))
-    }
-  </section>
-
-  <!-- 3. 时间流 -->
-  <section class="stream" aria-labelledby="stream-title">
-    <h2 id="stream-title" class="stream-heading meta">时间流 · STREAM</h2>
-    <ul>
+    <!-- 2. 大号排印入口 -->
+    <section class="entries" aria-label="站点入口">
       {
-        stream.map(({ date, title, type, href }) => (
-          <li>
-            <a href={href} class="stream-item">
-              <span class="stream-date meta">{date}</span>
-              <span class="stream-title">{title}</span>
-              <span class="stream-type meta">{type}</span>
-            </a>
-          </li>
+        entries.map(({ num, zh, en, desc, href }) => (
+          <a class="entry" href={href}>
+            <span class="entry-num meta">{num}</span>
+            <span class="entry-body">
+              <span class="entry-title">
+                {zh}
+                <span class="entry-en meta">{en}</span>
+              </span>
+              <span class="entry-desc">{desc}</span>
+            </span>
+            <span class="entry-dot" aria-hidden="true" />
+          </a>
         ))
       }
-    </ul>
-  </section>
+    </section>
+
+    <!-- 3. 时间流 -->
+    <section class="stream" aria-labelledby="stream-title">
+      <h2 id="stream-title" class="stream-heading meta">时间流 · STREAM</h2>
+      <ul>
+        {
+          stream.map(({ date, title, type, href }) => (
+            <li>
+              <a href={href} class="stream-item">
+                <span class="stream-date meta">{date}</span>
+                <span class="stream-title">{title}</span>
+                <span class="stream-type meta">{type}</span>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+  </div>
 </Base>
 
 <style>
+  .home-flow {
+    display: flow-root;
+  }
+
   /* ── 大号入口 ── */
   .entries {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: clamp(3rem, 8vw, 7rem);
+    margin-top: clamp(5rem, 10vw, 9rem);
   }
 
   .entry {
@@ -87,14 +95,11 @@ const entries = [
     display: flex;
     align-items: baseline;
     gap: var(--space-lg);
-    padding-block: var(--space-lg);
+    min-height: 9rem;
+    padding-block: 0;
     color: var(--color-ink);
     text-decoration: none;
-    border-top: 1px solid var(--color-line);
-  }
-
-  .entry:last-child {
-    border-bottom: 1px solid var(--color-line);
+    border: 0;
   }
 
   .entry:hover {
@@ -177,7 +182,8 @@ const entries = [
 
   /* ── 时间流 ── */
   .stream {
-    margin-top: var(--space-2xl);
+    margin-top: clamp(7rem, 12vw, 11rem);
+    padding-bottom: clamp(4rem, 8vw, 7rem);
     max-width: var(--measure-wide);
   }
 
@@ -218,6 +224,11 @@ const entries = [
   }
 
   @media (max-width: 40rem) {
+    .entries {
+      grid-template-columns: 1fr;
+      gap: var(--space-xl);
+    }
+
     .stream-item {
       grid-template-columns: 6.5rem 1fr;
     }
