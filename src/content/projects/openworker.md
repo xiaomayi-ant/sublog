@@ -5,8 +5,6 @@ status: active
 type: AI Infrastructure
 built: "2026"
 pubDate: 2026-07-01
-demo: https://example.com
-repo: https://example.com
 featured: true
 draft: false
 ---
@@ -43,7 +41,7 @@ tasks/
 trigger: "0 8 * * *"
 permissions:
   fs: read-only
-  network: [api.example.com]
+  network: [api.service.test]
 on_failure: notify
 ```
 

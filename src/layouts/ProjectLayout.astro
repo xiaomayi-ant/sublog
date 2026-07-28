@@ -1,0 +1,266 @@
+---
+import { render } from 'astro:content';
+import Base from './Base.astro';
+import CodeCopy from '../components/CodeCopy.astro';
+import Meta from '../components/Meta.astro';
+import Prose from '../components/Prose.astro';
+import { STATUS_LABELS, type ProjectEntry } from '../lib/content';
+
+interface Props {
+  entry: ProjectEntry;
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+const { title, tagline, status, type, built, demo, repo } = entry.data;
+
+const signalLabels =
+  entry.id === 'openworker'
+    ? ['Intent', 'Boundary', 'Runtime', 'Trace']
+    : ['Notes', 'Parser', 'Timeline', 'Archive'];
+
+const links = [
+  demo ? { href: demo, label: 'Live demo' } : null,
+  repo ? { href: repo, label: 'Source' } : null,
+].filter((link): link is { href: string; label: string } => link !== null);
+---
+
+<Base title={title} description={tagline} imageType="project">
+  <article class="project-detail">
+    <header class="project-head">
+      <div class="project-intro">
+        <Meta items={['Project', STATUS_LABELS[status]]} />
+        <h1>{title}</h1>
+        <p class="tagline">{tagline}</p>
+      </div>
+
+      <dl class="project-facts">
+        <div>
+          <dt class="meta">Status</dt>
+          <dd>
+            <span class={`status-dot status-dot--${status}`} aria-hidden="true"></span>
+            {STATUS_LABELS[status]}
+          </dd>
+        </div>
+        <div>
+          <dt class="meta">Type</dt>
+          <dd>{type}</dd>
+        </div>
+        <div>
+          <dt class="meta">Built</dt>
+          <dd>{built}</dd>
+        </div>
+      </dl>
+    </header>
+
+    <div class="project-signal" aria-label={`${title} system sequence`}>
+      {
+        signalLabels.map((label, index) => (
+          <>
+            <span class="signal-node">
+              <span class="signal-index meta">{String(index + 1).padStart(2, '0')}</span>
+              <span>{label}</span>
+            </span>
+            {index < signalLabels.length - 1 && <span class="signal-line" aria-hidden="true"></span>}
+          </>
+        ))
+      }
+    </div>
+
+    {
+      links.length > 0 && (
+        <nav class="project-links" aria-label="项目链接">
+          {links.map((link) => (
+            <a href={link.href} target="_blank" rel="noreferrer">
+              {link.label} <span aria-hidden="true">↗</span>
+            </a>
+          ))}
+        </nav>
+      )
+    }
+
+    <Prose>
+      <Content />
+    </Prose>
+
+    <footer class="project-foot">
+      <a class="back meta" href="/projects">← 返回项目</a>
+    </footer>
+  </article>
+  <CodeCopy />
+</Base>
+
+<style>
+  .project-detail {
+    padding-top: var(--space-xl);
+  }
+
+  .project-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(15rem, 0.42fr);
+    gap: var(--space-2xl);
+    align-items: end;
+  }
+
+  .project-intro {
+    max-width: 44rem;
+  }
+
+  h1 {
+    margin-top: var(--space-sm);
+    font-size: var(--text-4xl);
+    letter-spacing: -0.025em;
+  }
+
+  .tagline {
+    max-width: var(--measure);
+    margin-top: var(--space-md);
+    color: var(--color-ink-soft);
+    font-family: var(--font-serif);
+    font-size: var(--text-xl);
+    line-height: 1.65;
+  }
+
+  .project-facts {
+    display: grid;
+    gap: var(--space-md);
+    margin: 0;
+    padding-left: var(--space-lg);
+    border-left: 1px solid var(--color-line);
+  }
+
+  .project-facts div {
+    display: grid;
+    grid-template-columns: 4rem minmax(0, 1fr);
+    gap: var(--space-md);
+    align-items: baseline;
+  }
+
+  .project-facts dt,
+  .project-facts dd {
+    margin: 0;
+  }
+
+  .project-facts dd {
+    font-size: var(--text-sm);
+  }
+
+  .status-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin-right: var(--space-xs);
+    border-radius: 50%;
+    background: var(--color-ink-faint);
+    vertical-align: middle;
+  }
+
+  .status-dot--active {
+    background: var(--color-river);
+  }
+
+  .status-dot--paused {
+    background: #6e99d4;
+  }
+
+  .project-signal {
+    display: grid;
+    grid-template-columns: auto 1fr auto 1fr auto 1fr auto;
+    align-items: center;
+    gap: var(--space-md);
+    margin-top: var(--space-2xl);
+    padding-block: var(--space-xl);
+    border-block: 1px solid var(--color-line);
+  }
+
+  .signal-node {
+    display: grid;
+    gap: var(--space-xs);
+    font-family: var(--font-serif);
+    font-size: var(--text-lg);
+  }
+
+  .signal-index {
+    color: var(--color-river);
+  }
+
+  .signal-line {
+    position: relative;
+    height: 1px;
+    overflow: visible;
+    background: linear-gradient(90deg, var(--color-sky), var(--color-river));
+  }
+
+  .signal-line::after {
+    content: '';
+    position: absolute;
+    top: -3px;
+    right: 0;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--color-sun);
+  }
+
+  .project-links {
+    display: flex;
+    gap: var(--space-lg);
+    margin-top: var(--space-lg);
+  }
+
+  .project-links a {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .project-detail :global(.prose) {
+    margin-top: var(--space-2xl);
+  }
+
+  .project-foot {
+    margin-top: var(--space-2xl);
+  }
+
+  .back {
+    text-decoration: none;
+  }
+
+  @media (max-width: 48rem) {
+    .project-head {
+      grid-template-columns: 1fr;
+      gap: var(--space-xl);
+    }
+
+    .project-facts {
+      padding-top: var(--space-md);
+      padding-left: 0;
+      border-top: 1px solid var(--color-line);
+      border-left: 0;
+    }
+
+    .project-signal {
+      grid-template-columns: 1fr;
+      gap: var(--space-sm);
+    }
+
+    .signal-node {
+      grid-template-columns: 2.5rem 1fr;
+      align-items: baseline;
+    }
+
+    .signal-line {
+      width: 1px;
+      height: var(--space-md);
+      margin-left: 1.1rem;
+      background: linear-gradient(var(--color-sky), var(--color-river));
+    }
+
+    .signal-line::after {
+      top: auto;
+      right: -3px;
+      bottom: 0;
+    }
+  }
+</style>

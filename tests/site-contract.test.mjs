@@ -47,3 +47,40 @@ test('RSS is generated from the configured site URL', async () => {
   assert.match(rss, /<rss/);
   assert.match(rss, /<item>/);
 });
+
+test('every published project has a complete case-study route', async () => {
+  const projects = [
+    {
+      route: '/projects/openworker',
+      title: 'OpenWorker',
+      sections: ['为什么存在', '解决什么问题', '如何工作', '关键设计决策', '当前局限'],
+    },
+    {
+      route: '/projects/riverline',
+      title: 'Riverline',
+      sections: ['为什么存在', '解决什么问题', '如何工作', '关键设计决策', '当前局限'],
+    },
+  ];
+
+  for (const project of projects) {
+    const html = await readRoute(project.route);
+    assert.match(html, new RegExp(`<h1[^>]*>${project.title}</h1>`));
+    assert.match(html, /返回项目/);
+
+    for (const section of project.sections) {
+      assert.ok(html.includes(section), `${project.route} should include "${section}"`);
+    }
+  }
+
+  await assert.rejects(
+    access(path.join(distRoot, 'projects/secret-draft/index.html')),
+    { code: 'ENOENT' },
+  );
+});
+
+test('published output contains no example.com placeholders', async () => {
+  const routes = ['/', '/projects', '/projects/openworker', '/projects/riverline', '/about'];
+  const html = (await Promise.all(routes.map(readRoute))).join('\n');
+
+  assert.doesNotMatch(html, /example\.com/);
+});
