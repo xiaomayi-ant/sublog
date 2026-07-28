@@ -8,10 +8,22 @@ import Footer from '../components/Footer.astro';
 interface Props {
   title: string;
   description?: string;
+  image?: string;
+  ogType?: 'website' | 'article';
+  noIndex?: boolean;
 }
 
-const { title, description = 'Water — 关于时间、流动、智能系统与未来的个人研究与构建空间。' } =
-  Astro.props;
+const {
+  title,
+  description = 'Water — 关于时间、流动、智能系统与未来的个人研究与构建空间。',
+  image = '/og-default.svg',
+  ogType = 'website',
+  noIndex = false,
+} = Astro.props;
+
+const site = Astro.site ?? new URL('https://water.localhost');
+const canonical = new URL(Astro.url.pathname, site);
+const socialImage = new URL(image, site);
 ---
 
 <!doctype html>
@@ -21,15 +33,27 @@ const { title, description = 'Water — 关于时间、流动、智能系统与�
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title} · Water</title>
     <meta name="description" content={description} />
-    {/* SEO / OG 完整方案见 Phase 5，这里先放基础占位 */}
+    <meta name="generator" content={Astro.generator} />
+    {noIndex && <meta name="robots" content="noindex, follow" />}
+    <link rel="canonical" href={canonical} />
+    <link rel="alternate" type="application/rss+xml" title="Water — 研究" href="/rss.xml" />
+    <meta property="og:site_name" content="Water" />
     <meta property="og:title" content={`${title} · Water`} />
     <meta property="og:description" content={description} />
-    <meta property="og:type" content="website" />
+    <meta property="og:type" content={ogType} />
+    <meta property="og:locale" content="zh_CN" />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={socialImage} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={`${title} · Water`} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={socialImage} />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   </head>
   <body>
+    <a class="skip-link" href="#content">跳到主要内容</a>
     <SiteNav />
-    <main class="site-shell">
+    <main id="content" class="site-shell">
       <slot />
     </main>
     <Footer />

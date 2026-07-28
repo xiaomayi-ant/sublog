@@ -1,36 +1,161 @@
 ---
-// /about — Phase 5 待建：个人叙事 + "Be water" 题跋；先放极简占位避免导航死链
 import Base from '../layouts/Base.astro';
 import Meta from '../components/Meta.astro';
 ---
 
-<Base title="About" description="关于 Sumoer。">
-  <header class="page-head">
-    <Meta items={['About']} />
-    <h1>关于</h1>
-    <p class="lede">“Be water, my friend.”</p>
+<Base title="关于" description="关于 Sumoer，以及 Water 为什么存在。">
+  <header class="about-head">
+    <div>
+      <Meta items={['About', 'Sumoer']} />
+      <h1>关于</h1>
+    </div>
+    <p class="lead">
+      这里是 Sumoer 的个人研究与构建空间。记录尚未定型的想法，也展示已经可以被使用的东西。
+    </p>
   </header>
-  <p class="placeholder meta">Phase 5 — 个人叙事与题跋待建。</p>
+
+  <div class="river-rule" aria-hidden="true">
+    <span></span>
+  </div>
+
+  <div class="about-grid">
+    <section aria-labelledby="about-focus">
+      <h2 id="about-focus">正在关注</h2>
+      <p>
+        智能系统如何获得可靠的行动边界，工具如何保留人的判断，以及时间如何改变产品与知识的形态。
+      </p>
+      <p>
+        这里的内容分成文章、笔记和实验：文章试着形成观点，笔记保留过程，实验用实现去校验直觉。
+      </p>
+    </section>
+
+    <section aria-labelledby="about-method">
+      <h2 id="about-method">一种工作方式</h2>
+      <ol class="method-list">
+        <li><span class="meta">01</span><span>先观察真实问题，再决定抽象。</span></li>
+        <li><span class="meta">02</span><span>把边界写清楚，再让系统行动。</span></li>
+        <li><span class="meta">03</span><span>留下可以复用的工具与文字。</span></li>
+      </ol>
+    </section>
+  </div>
+
+  <figure class="epigraph">
+    <blockquote>“Be water, my friend.”</blockquote>
+    <figcaption class="meta">A reminder to stay adaptive without losing form.</figcaption>
+  </figure>
 </Base>
 
 <style>
-  .page-head {
+  .about-head {
+    display: grid;
+    grid-template-columns: minmax(12rem, 0.65fr) minmax(0, 1fr);
+    gap: var(--space-2xl);
+    align-items: end;
     padding-top: var(--space-xl);
-    max-width: var(--measure);
   }
 
   h1 {
-    font-size: var(--text-3xl);
+    margin-top: var(--space-sm);
+    font-size: var(--text-4xl);
+  }
+
+  .lead {
+    max-width: 38rem;
+    font-family: var(--font-serif);
+    font-size: var(--text-xl);
+    line-height: 1.85;
+  }
+
+  .river-rule {
+    position: relative;
+    height: 5rem;
+    margin-block: var(--space-xl) var(--space-2xl);
+    overflow: hidden;
+  }
+
+  .river-rule::before,
+  .river-rule span {
+    content: '';
+    position: absolute;
+    right: -5%;
+    bottom: 1.5rem;
+    left: -5%;
+    height: 1px;
+    background: var(--color-river);
+    transform: rotate(-1.2deg);
+  }
+
+  .river-rule span {
+    bottom: 1.25rem;
+    height: 8px;
+    opacity: 0.45;
+    background: var(--color-sky);
+  }
+
+  .about-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-2xl);
+  }
+
+  .about-grid section {
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--color-line);
+  }
+
+  h2 {
+    font-size: var(--text-xl);
+  }
+
+  section p {
+    max-width: var(--measure);
+    margin-top: var(--space-md);
+    color: var(--color-ink-soft);
+    line-height: 1.9;
+  }
+
+  .method-list {
+    display: grid;
+    gap: var(--space-md);
+    margin-top: var(--space-lg);
+  }
+
+  .method-list li {
+    display: grid;
+    grid-template-columns: 2rem 1fr;
+    gap: var(--space-md);
+    align-items: baseline;
+  }
+
+  .method-list .meta {
+    color: var(--color-river);
+  }
+
+  .epigraph {
+    margin: var(--space-3xl) 0 0;
+    padding-left: var(--space-lg);
+    border-left: 2px solid var(--color-sun);
+  }
+
+  .epigraph blockquote {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: var(--text-2xl);
+  }
+
+  .epigraph figcaption {
     margin-top: var(--space-sm);
   }
 
-  .lede {
-    margin-top: var(--space-md);
-    font-family: var(--font-serif);
-    color: var(--color-ink-soft);
-  }
+  @media (max-width: 42rem) {
+    .about-head,
+    .about-grid {
+      grid-template-columns: 1fr;
+      gap: var(--space-xl);
+    }
 
-  .placeholder {
-    margin-top: var(--space-2xl);
+    .lead {
+      font-size: var(--text-lg);
+    }
   }
 </style>

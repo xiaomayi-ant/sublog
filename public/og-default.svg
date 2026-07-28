@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title description">
+  <title id="title">Water — 如斯</title>
+  <desc id="description">时间如水。记录正在形成的想法，构建可以被使用的东西。</desc>
+  <rect width="1200" height="630" fill="#FFF9EC"/>
+  <g fill="none" stroke-linecap="round">
+    <path d="M-40 470C145 380 310 535 495 450S825 350 1010 450s235 70 290 10" stroke="#CFE5FF" stroke-width="20" opacity=".75"/>
+    <path d="M-40 470C145 380 310 535 495 450S825 350 1010 450s235 70 290 10" stroke="#246BFF" stroke-width="4"/>
+  </g>
+  <g transform="translate(110 110)">
+    <circle cx="34" cy="34" r="20" fill="none" stroke="#10233F" stroke-width="5"/>
+    <path d="M22 72c5 14-4 25 1 38M39 68c6 16-4 30 1 44M56 72c5 14-4 25 1 38" fill="none" stroke="#246BFF" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="82" cy="20" r="4" fill="#246BFF"/>
+    <circle cx="94" cy="44" r="3" fill="#246BFF"/>
+    <circle cx="75" cy="61" r="4" fill="#F5C85B"/>
+  </g>
+  <text x="250" y="190" fill="#10233F" font-family="Songti SC, STSong, serif" font-size="112" font-weight="600" letter-spacing="10">如斯</text>
+  <text x="112" y="300" fill="#10233F" font-family="Songti SC, STSong, serif" font-size="38">时间如水。记录正在形成的想法，构建可以被使用的东西。</text>
+  <text x="112" y="355" fill="#10233F" opacity=".55" font-family="SFMono-Regular, Menlo, monospace" font-size="18" letter-spacing="3">RESEARCHING WHAT MOVES, BUILDING WHAT REMAINS.</text>
+  <text x="1090" y="570" fill="#10233F" opacity=".7" text-anchor="end" font-family="SFMono-Regular, Menlo, monospace" font-size="18" letter-spacing="4">SUMOER</text>
+</svg>

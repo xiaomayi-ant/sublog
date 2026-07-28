@@ -1,0 +1,61 @@
+---
+import Base from '../layouts/Base.astro';
+import Meta from '../components/Meta.astro';
+---
+
+<Base title="未找到" description="这条水路没有抵达任何页面。" noIndex>
+  <section class="not-found" aria-labelledby="not-found-title">
+    <Meta items={['404', 'Not found']} />
+    <p class="number" aria-hidden="true">404</p>
+    <h1 id="not-found-title">这条水路没有抵达这里。</h1>
+    <p class="description">页面可能已经移动，也可能从未存在。可以回到源头，或者继续阅读与探索。</p>
+    <nav class="routes" aria-label="返回站点">
+      <a href="/">回到首页</a>
+      <a href="/research">浏览研究</a>
+      <a href="/projects">查看项目</a>
+    </nav>
+  </section>
+</Base>
+
+<style>
+  .not-found {
+    min-height: 58vh;
+    padding-top: var(--space-2xl);
+  }
+
+  .number {
+    margin-top: var(--space-xl);
+    color: var(--color-sky);
+    font-family: var(--font-mono);
+    font-size: clamp(6rem, 25vw, 15rem);
+    font-weight: 600;
+    letter-spacing: -0.08em;
+    line-height: 0.75;
+  }
+
+  h1 {
+    max-width: 38rem;
+    margin-top: var(--space-xl);
+    font-size: var(--text-3xl);
+  }
+
+  .description {
+    max-width: var(--measure);
+    margin-top: var(--space-md);
+    color: var(--color-ink-soft);
+  }
+
+  .routes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-lg);
+    margin-top: var(--space-xl);
+  }
+
+  .routes a {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+</style>

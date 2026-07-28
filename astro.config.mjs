@@ -1,10 +1,11 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 
+const site = process.env.SITE_URL ?? 'https://water.localhost';
+
 // https://astro.build/config
 export default defineConfig({
-  // RSS 等需要绝对 URL；上线前替换为真实域名
-  site: 'https://water.example.com',
+  site,
   markdown: {
     shikiConfig: {
       // 浅色主题，契合暖白底设计系统

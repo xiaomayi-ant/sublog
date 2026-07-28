@@ -20,7 +20,7 @@ const typeLabel = TYPE_LABELS[entry.collection];
 const toc = headings.filter((h) => h.depth === 2 || h.depth === 3);
 ---
 
-<Base title={title} description={description}>
+<Base title={title} description={description} ogType="article">
   <article class="article">
     <header class="article-head">
       <Meta items={[formatDate(pubDate), typeLabel.en, ...tags.map((t) => `#${t}`)]} />

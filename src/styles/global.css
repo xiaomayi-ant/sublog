@@ -36,6 +36,31 @@ a:hover {
   text-decoration: underline;
 }
 
+a:focus-visible,
+button:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--color-river);
+  outline-offset: 4px;
+}
+
+.skip-link {
+  position: fixed;
+  top: var(--space-sm);
+  left: var(--space-sm);
+  z-index: 100;
+  padding: var(--space-xs) var(--space-sm);
+  color: var(--color-bg);
+  background: var(--color-ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  transform: translateY(calc(-100% - var(--space-lg)));
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
 h1,
 h2,
 h3,
@@ -62,6 +87,12 @@ svg,
 canvas {
   display: block;
   max-width: 100%;
+}
+
+@media (max-width: 24rem) {
+  .site-shell {
+    width: min(100% - 2rem, var(--measure-wide));
+  }
 }
 
 /* 页面骨架：nav / main / footer 统一行宽与留白 */

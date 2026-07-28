@@ -7,7 +7,11 @@
     Currently thinking about:<br />
     intelligent systems, interfaces, and time.
   </p>
-  <p class="credit meta">Made by Sumoer</p>
+  <div class="footer-meta meta">
+    <a href="/rss.xml">RSS</a>
+    <span aria-hidden="true">·</span>
+    <span>Made by Sumoer</span>
+  </div>
 </footer>
 
 <style>
@@ -29,8 +33,15 @@
     margin: 0;
   }
 
-  .credit {
+  .footer-meta {
+    display: flex;
+    gap: var(--space-xs);
+    align-items: center;
     flex-shrink: 0;
+  }
+
+  .footer-meta a {
+    color: inherit;
   }
 
   @media (max-width: 40rem) {
