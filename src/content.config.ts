@@ -26,8 +26,6 @@ const experiments = defineCollection({
   schema: researchSchema,
 });
 
-export const collections = { essays, notes, experiments, projects };
-
 // 项目 schema：结构化 metadata（STATUS/TYPE/BUILT）+ 可选链接与封面。
 // 正文遵循固定叙事结构（为什么存在/解决什么问题/如何工作/设计决策/当前局限），
 // Demo / 源码链接由详情模板统一渲染。
@@ -47,3 +45,5 @@ const projects = defineCollection({
     draft: z.boolean().default(false),
   }),
 });
+
+export const collections = { essays, notes, experiments, projects };

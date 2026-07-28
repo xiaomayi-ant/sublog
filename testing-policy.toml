@@ -1,0 +1,16 @@
+[policy]
+inherits = "global-2026-07-25"
+
+[commands]
+test = "npm test"
+contract = "npm run test:contract"
+
+[boundaries]
+integration = ["src/pages/**", "src/content.config.ts", "src/lib/content.ts"]
+
+[effects]
+production_write = []
+credentials = []
+
+[budgets]
+mutation_seconds = 120

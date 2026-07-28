@@ -8,6 +8,8 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
+    "test": "npm run test:contract",
+    "test:contract": "npm run build && node --test tests/site-contract.test.mjs",
     "preview": "astro preview",
     "astro": "astro"
   },
