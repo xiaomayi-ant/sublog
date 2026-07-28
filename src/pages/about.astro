@@ -3,11 +3,11 @@ import Base from '../layouts/Base.astro';
 import Meta from '../components/Meta.astro';
 ---
 
-<Base title="关于" description="关于 Sumoer，以及 Water 为什么存在。">
+<Base title="About" description="关于 Sumoer，以及 Water 为什么存在。">
   <header class="about-head">
     <div>
       <Meta items={['About', 'Sumoer']} />
-      <h1>关于</h1>
+      <h1>About</h1>
     </div>
     <p class="lead">
       这里是 Sumoer 的个人研究与构建空间。记录尚未定型的想法，也展示已经可以被使用的东西。
@@ -55,6 +55,7 @@ import Meta from '../components/Meta.astro';
   }
 
   h1 {
+    font-family: var(--font-display);
     margin-top: var(--space-sm);
     font-size: var(--text-4xl);
   }

@@ -27,8 +27,8 @@ async function readBuiltCss() {
   );
 }
 
-test('build emits the home, research, about, and projects entry routes', async () => {
-  const routes = ['/', '/research', '/projects', '/about'];
+test('build emits the home, blog, about, and projects entry routes', async () => {
+  const routes = ['/', '/blog', '/projects', '/about'];
 
   await Promise.all(
     routes.map(async (route) => {
@@ -39,19 +39,19 @@ test('build emits the home, research, about, and projects entry routes', async (
   );
 });
 
-test('build emits every published research route and excludes drafts', async () => {
+test('build emits every published article route and excludes drafts', async () => {
   const publishedRoutes = [
-    '/research/essays/agent-action-boundaries',
-    '/research/essays/local-first-tool-design',
-    '/research/notes/evaluation-is-not-scoring',
-    '/research/notes/llm-state-and-memory',
-    '/research/experiments/aigc-image-triage',
+    '/blog/harness/agent-action-boundaries',
+    '/blog/harness/local-first-tool-design',
+    '/blog/eval/evaluation-is-not-scoring',
+    '/blog/eval/aigc-image-triage',
+    '/blog/llm/llm-state-and-memory',
   ];
 
   await Promise.all(publishedRoutes.map((route) => access(path.join(distRoot, route.slice(1), 'index.html'))));
 
   await assert.rejects(
-    access(path.join(distRoot, 'research/notes/session-continuity-draft/index.html')),
+    access(path.join(distRoot, 'blog/notes/session-continuity-draft/index.html')),
     { code: 'ENOENT' },
   );
 });
@@ -79,7 +79,7 @@ test('every published project has a complete case-study route', async () => {
   for (const project of projects) {
     const html = await readRoute(project.route);
     assert.match(html, new RegExp(`<h1[^>]*>${project.title}</h1>`));
-    assert.match(html, /返回项目/);
+    assert.match(html, /返回 Github/);
 
     for (const section of project.sections) {
       assert.ok(html.includes(section), `${project.route} should include "${section}"`);
@@ -102,12 +102,12 @@ test('published output contains no example.com placeholders', async () => {
 test('every public HTML page exposes canonical and social metadata', async () => {
   const routes = [
     '/',
-    '/research',
+    '/blog',
     '/projects',
     '/about',
     '/404',
     '/projects/openworker',
-    '/research/essays/agent-action-boundaries',
+    '/blog/harness/agent-action-boundaries',
   ];
 
   for (const route of routes) {
@@ -129,7 +129,7 @@ test('About and 404 are complete user-facing pages', async () => {
   const notFound = await readRoute('/404');
   assert.match(notFound, /没有抵达这里/);
   assert.match(notFound, /href="\/"/);
-  assert.match(notFound, /href="\/research"/);
+  assert.match(notFound, /href="\/blog"/);
   assert.match(notFound, /href="\/projects"/);
 });
 
@@ -139,9 +139,9 @@ test('sitemap and robots expose public routes and exclude drafts', async () => {
 
   for (const route of [
     '/',
-    '/research',
+    '/blog',
     '/projects/openworker',
-    '/research/essays/agent-action-boundaries',
+    '/blog/harness/agent-action-boundaries',
   ]) {
     assert.ok(sitemap.includes(`https://water.localhost${route}`));
   }
@@ -169,10 +169,10 @@ test('the home hero preserves a portrait watercolor artwork beside the copy', as
   );
   assert.match(home, /data-preserves-aspect="1122:1402"/);
   assert.match(home, /data-edge-treatment="organic-feathered"/);
-  assert.match(home, /data-surface="pure-white"/);
+  assert.match(home, /data-surface="unified-page-bg"/);
   assert.match(home, /data-color-focus="sunlight-diagonal"/);
   assert.match(home, /data-motion-rhythm="6s-breathe-3s-highlight"/);
-  assert.match(css, /--color-bg:#fff(?:fff)?/);
+  assert.match(css, /--color-bg:#fcfaf6/);
   assert.match(css, /animation:6s[^;}]*watercolor-breathe/);
   assert.match(css, /animation:3s[^;}]*highlight-pulse/);
   await access(path.join(distRoot, 'images/hero-watercolor-shore-v1.webp'));
@@ -187,36 +187,50 @@ test('the home hero uses a measured editorial typography hierarchy', async () =>
   const css = await readBuiltCss();
 
   assert.match(home, /data-type-system="editorial-serif-sans"/);
-  assert.match(home, /SUMOER — RESEARCH & BUILD \/ 2026/);
+  assert.doesNotMatch(home, /SUMOER — RESEARCH & BUILD \/ 2026|class="hero-kicker"/);
+  assert.match(home, /data-stream="typewriter"/);
+  assert.match(home, /class="type type--zh"[^>]*>人类和AI的区别是什么？<\/span>/);
   assert.match(
     home,
-    /关注智能系统、界面，以及人在技术中的判断。记录尚未定型的想法，也做可以被使用的东西。/,
+    /class="type type--en"[^>]*>What is the difference between a human and an AI\?<\/span>/,
   );
+  assert.match(home, /class="type type--zh"[^>]*>AI目前的边界是什么？<\/span>/);
+  assert.match(home, /class="type type--en"[^>]*>Where are the boundaries of AI today\?<\/span>/);
+  assert.doesNotMatch(home, /class="hero-description"/);
+  assert.match(css, /\.type--en[^}]*font-style:italic/);
+  assert.match(css, /@keyframes type-in/);
   assert.match(home, /data-intro-motion="per-load-word-reveal"/);
   assert.match(home, /aria-label="Be water, my friend\."/);
   assert.match(home, /class="intro-be"[^>]*>Be<\/span>/);
-  assert.match(home, /class="intro-water"[^>]*>water<\/span>/);
+  assert.match(home, /class="intro-water"[^>]*><span class="intro-water-fill"[^>]*>water<\/span><\/span>/);
   assert.match(
     home,
-    /class="intro-be"[^>]*>Be<\/span><span class="intro-space"[^>]*>&nbsp;<\/span><span class="intro-water"[^>]*>water<\/span>/,
+    /class="intro-be"[^>]*>Be<\/span><span class="intro-space"[^>]*>&nbsp;<\/span><span class="intro-water"[^>]*><span class="intro-water-fill"[^>]*>water<\/span><\/span>/,
   );
   assert.match(home, /class="intro-line intro-line--friend"/);
-  assert.match(home, /style="--letter-delay: 330ms"[^>]*>m<\/span>/);
-  assert.match(home, /style="--letter-delay: 714ms"[^>]*>\.<\/span>/);
+  assert.match(home, /class="intro-be" style="--word-delay: 120ms"/);
+  assert.match(home, /class="intro-water" style="--word-delay: 620ms"/);
+  assert.match(home, /style="--letter-delay: 1180ms"[^>]*>m<\/span>/);
+  assert.match(home, /style="--letter-delay: 1330ms"[^>]*>y<\/span>/);
+  assert.match(home, /style="--letter-delay: 2380ms"[^>]*>\.<\/span>/);
   assert.doesNotMatch(
     home,
     /观察、研究，也构建。|阅读研究|查看项目|class="hero-links"|Water \/ Personal field notes|Observe · make · let flow/i,
   );
   assert.match(css, /font-size:clamp\(4\.25rem,6\.62vw,5\.5rem\)/);
   assert.match(css, /letter-spacing:-\.03em/);
-  assert.match(home, /data-water-color="transparent-teal"/);
+  assert.match(home, /data-water-color="liquid-glass"/);
   assert.match(home, /data-friend-color="hermes-blue"/);
-  assert.match(css, /\.intro-water[^}]*color:(?:#2b8f9475|rgba\(43,143,148,\.46\))/);
+  assert.match(css, /\.intro-be[^}]*color:(?:#0a0a0a|var\(--color-black\))/);
+  assert.match(css, /\.intro-water-fill[^}]*background-clip:text/);
+  assert.match(css, /\.intro-water-fill[^}]*animation:[^;}]*water-surface/);
+  assert.match(css, /\.intro-water-fill[^}]*:before[^}]*animation:[^;}]*water-flow/);
   assert.match(css, /\.intro-line--friend[^}]*color:#0000f2/);
   assert.match(css, /\.intro-line--friend[^}]*font-weight:700/);
-  assert.match(css, /\.hero-description[^}]*font-family:var\(--font-sans\)/);
-  assert.match(css, /animation:[^;}]*intro-group-in/);
+  assert.match(css, /\.hero-questions[^}]*font-family:var\(--font-sans\)/);
+  assert.match(css, /animation:[^;}]*intro-word-in/);
   assert.match(css, /animation:[^;}]*intro-letter-in/);
+  assert.match(css, /@keyframes water-flow/);
   assert.doesNotMatch(css, /intro-word-out/);
   assert.doesNotMatch(home, /sessionStorage/);
 });
@@ -228,4 +242,55 @@ test('the home reads as one continuous page without structural divider lines', a
   assert.match(home, /data-page-flow="continuous-no-dividers"/);
   assert.match(css, /\.shore-hero[^}]*border:0/);
   assert.match(css, /\.entry[^}]*border:0/);
+  assert.doesNotMatch(home, /Currently thinking about|Made by Sumoer|class="site-footer"/);
+  assert.doesNotMatch(css, /\.entry[^}]*:after[^}]*scaleX/);
+});
+
+test('each home entry carries its own three-row list', async () => {
+  const home = await readRoute('/');
+  const css = await readBuiltCss();
+
+  for (const list of ['blog', 'github']) {
+    const block = home.match(new RegExp(`<ul class="entry-list" data-entry-list="${list}"[\\s\\S]*?</ul>`))?.[0];
+    assert.ok(block, `home should render the ${list} entry list`);
+    assert.equal((block.match(/class="row(?: row--empty)?"/g) ?? []).length, 3);
+    assert.match(block, /class="row-date meta"[^>]*>\d{4}\.\d{2}\.\d{2}<|class="row-date meta"[^>]*>—/);
+  }
+
+  // 列表字号必须小于入口标题，才读得出从属关系
+  assert.match(css, /\.row-title[^}]*font-size:\.9375rem/);
+  assert.match(css, /\.entry-num[^}]*color:#0000f2/);
+  assert.doesNotMatch(home, /时间流 · STREAM/);
+});
+
+test('the primary nav is English-only, includes Home, and underlines the current section', async () => {
+  const css = await readBuiltCss();
+  const routes = ['/', '/blog', '/projects', '/about'];
+
+  for (const route of routes) {
+    const html = await readRoute(route);
+    const nav = html.match(/<nav aria-label="主导航"[^>]*>[\s\S]*?<\/nav>/)?.[0];
+    assert.ok(nav, `${route} should render the primary nav`);
+
+    for (const label of ['Home', 'Blog', 'Github', 'About']) {
+      assert.match(nav, new RegExp(`>${label}<`), `${route} nav should offer ${label}`);
+    }
+
+    assert.doesNotMatch(nav, /研究|项目|关于/, `${route} nav should carry no Chinese labels`);
+    assert.match(nav, /href="\/"/, `${route} should link back to the home page`);
+
+    const currentLinks = [...nav.matchAll(/<a href="([^"]+)"[^>]*aria-current="page"/g)].map(
+      (match) => match[1],
+    );
+    assert.deepEqual(currentLinks, [route], `${route} should mark exactly its own nav item current`);
+  }
+
+  // 老的 /research 路径必须彻底消失，避免半迁移状态
+  const home = await readRoute('/');
+  assert.doesNotMatch(home, /href="\/research/);
+
+  // 选中态与 hover 共用同一条下划线
+  assert.match(css, /nav\[[^\]]*\] a[^}]*:after[^}]*background:var\(--color-river\)/);
+  assert.match(css, /aria-current=page\][^}]*:after[^}]*transform:scalex\(1\)/i);
+  assert.match(css, /nav\[[^\]]*\] a[^}]*font-family:var\(--font-display\)/);
 });

@@ -1,0 +1,231 @@
+---
+// /blog — 四类分行排列：左栏类型名，右栏可折叠的文章列表（收起时只露最近一篇）
+import Base from '../layouts/Base.astro';
+import { getResearchByType, TYPE_LABELS, articleUrl, formatDate } from '../lib/content';
+
+const groups = await getResearchByType();
+---
+
+<Base title="Blog" description="对 AI 的一些学习：执行框架、模型、评估与笔记。">
+  <header class="page-head">
+    <h1>Blog</h1>
+    <p class="lede">对AI的一些学习</p>
+  </header>
+
+  <div class="type-rows">
+    {
+      groups.map(({ name, entries }) => {
+        const [latest, ...rest] = entries;
+        return (
+          <section class="type-row" aria-labelledby={`type-${name}`}>
+            <h2 class="type-name" id={`type-${name}`}>
+              <span class="type-en">{TYPE_LABELS[name].en}</span>
+              <span class="type-zh">/ {TYPE_LABELS[name].zh}</span>
+            </h2>
+
+            <div class="type-feed">
+              {latest === undefined ? (
+                <p class="empty meta">暂无内容</p>
+              ) : (
+                <details class="feed">
+                  <summary>
+                    <span class="latest">
+                      <span class="item-date meta">{formatDate(latest.data.pubDate)}</span>
+                      <span class="item-title">{latest.data.title}</span>
+                    </span>
+                    <span class="feed-hint feed-hint--closed meta">
+                      {rest.length > 0 ? `全部 ${entries.length} 篇` : '仅此一篇'}
+                    </span>
+                    <span class="feed-hint feed-hint--open meta">收起</span>
+                  </summary>
+
+                  <ul class="feed-list">
+                    {entries.map((entry) => (
+                      <li>
+                        <a class="item" href={articleUrl(entry)}>
+                          <span class="item-date meta">{formatDate(entry.data.pubDate)}</span>
+                          <span class="item-title">{entry.data.title}</span>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+            </div>
+          </section>
+        );
+      })
+    }
+  </div>
+</Base>
+
+<style>
+  .page-head {
+    padding-top: var(--space-xl);
+    max-width: var(--measure);
+  }
+
+  h1 {
+    font-family: var(--font-display);
+    font-size: var(--text-3xl);
+  }
+
+  .lede {
+    margin-top: var(--space-sm);
+    color: var(--color-ink-soft);
+  }
+
+  /* ── 每类一行：左栏类型名，右栏折叠的文章列表 ── */
+  .type-rows {
+    margin-top: clamp(2.5rem, 6vw, 4.5rem);
+  }
+
+  .type-row {
+    display: grid;
+    grid-template-columns: minmax(9rem, 0.34fr) minmax(0, 1fr);
+    gap: clamp(1.5rem, 4vw, 3.5rem);
+    align-items: start;
+    padding-block: var(--space-lg);
+  }
+
+  .type-name {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-xs);
+    margin: 0;
+  }
+
+  .type-en {
+    font-family: var(--font-display);
+    font-size: var(--text-xl);
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+
+  .type-zh {
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    font-weight: 400;
+    color: var(--color-ink-faint);
+  }
+
+  /* 折叠：收起时 summary 就是最近一篇 */
+  .feed > summary {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-md);
+    padding: var(--space-2xs) 0;
+    list-style: none;
+    cursor: pointer;
+  }
+
+  .feed > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .latest {
+    display: grid;
+    grid-template-columns: 6.5rem minmax(0, 1fr);
+    align-items: baseline;
+    gap: var(--space-md);
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* 展开后最近一篇交给下面的列表（那里是可点的链接），summary 只留开关 */
+  .feed[open] > summary .latest,
+  .feed[open] > summary .feed-hint--closed,
+  .feed:not([open]) > summary .feed-hint--open {
+    display: none;
+  }
+
+  .feed[open] > summary {
+    justify-content: flex-end;
+  }
+
+  .feed-hint {
+    flex-shrink: 0;
+    color: var(--color-ink-faint);
+    transition: color var(--duration-fast) var(--ease-out);
+  }
+
+  .feed > summary::after {
+    content: '';
+    align-self: center;
+    flex-shrink: 0;
+    width: 0.42rem;
+    height: 0.42rem;
+    border-right: 1.5px solid var(--color-ink-faint);
+    border-bottom: 1.5px solid var(--color-ink-faint);
+    transform: rotate(45deg);
+    transition: transform var(--duration-fast) var(--ease-out);
+  }
+
+  .feed[open] > summary::after {
+    transform: rotate(-135deg);
+  }
+
+  .feed > summary:hover .feed-hint,
+  .feed > summary:hover .item-title {
+    color: var(--color-river);
+  }
+
+  .feed-list {
+    margin-top: var(--space-xs);
+  }
+
+  .item {
+    display: grid;
+    grid-template-columns: 6.5rem minmax(0, 1fr);
+    align-items: baseline;
+    gap: var(--space-md);
+    padding-block: var(--space-xs);
+    color: var(--color-ink);
+    text-decoration: none;
+  }
+
+  .item:hover {
+    text-decoration: none;
+  }
+
+  .item-date {
+    color: var(--color-ink-faint);
+  }
+
+  .item-title {
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    background-image: linear-gradient(var(--color-river), var(--color-river));
+    background-repeat: no-repeat;
+    background-size: 0% 1px;
+    background-position: 0 100%;
+    transition:
+      background-size var(--duration-slow) var(--ease-out),
+      color var(--duration-fast) var(--ease-out);
+  }
+
+  .item:hover .item-title {
+    background-size: 100% 1px;
+  }
+
+  .empty {
+    padding-block: var(--space-2xs);
+  }
+
+  @media (max-width: 44rem) {
+    .type-row {
+      grid-template-columns: 1fr;
+      gap: var(--space-sm);
+    }
+
+    .latest,
+    .item {
+      grid-template-columns: 5.5rem minmax(0, 1fr);
+      gap: var(--space-sm);
+    }
+
+    .feed-hint {
+      display: none;
+    }
+  }
+</style>

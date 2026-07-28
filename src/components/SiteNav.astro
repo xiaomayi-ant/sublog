@@ -1,25 +1,26 @@
 ---
-// SiteNav — 左上 SUMOER，右侧极简导航（研究 / Projects / About）
+// SiteNav — 左上 SUMOER，右侧极简导航（Home / Blog / Github / About，纯英文）
 const links = [
-  { href: '/research', label: '研究', en: 'Research' },
-  { href: '/projects', label: '项目', en: 'Projects' },
-  { href: '/about', label: '关于', en: 'About' },
+  { href: '/', label: 'Home' },
+  { href: '/blog', label: 'Blog' },
+  { href: '/projects', label: 'Github' },
+  { href: '/about', label: 'About' },
 ];
-const current = Astro.url.pathname;
+
+// 尾斜杠归一化后再判断：首页要求精确匹配，其余允许子路由（/blog/harness/... 仍高亮 Blog）
+const pathname = Astro.url.pathname.replace(/(.)\/$/, '$1');
+const isCurrent = (href: string) =>
+  href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`);
 ---
 
 <header class="site-nav site-shell">
   <a class="brand" href="/">SUMOER</a>
   <nav aria-label="主导航">
     <ul>
-      {links.map(({ href, label, en }) => (
+      {links.map(({ href, label }) => (
         <li>
-          <a
-            href={href}
-            aria-current={current.startsWith(href) ? 'page' : undefined}
-          >
+          <a href={href} aria-current={isCurrent(href) ? 'page' : undefined}>
             {label}
-            {en && <span class="nav-en" aria-hidden="true">{en}</span>}
           </a>
         </li>
       ))}
@@ -36,49 +37,69 @@ const current = Astro.url.pathname;
   }
 
   .brand {
-    font-family: var(--font-mono);
-    font-size: var(--text-sm);
-    letter-spacing: 0.16em;
+    font-family: var(--font-display);
+    font-size: 0.95rem;
+    font-weight: 500;
+    letter-spacing: 0.22em;
     color: var(--color-ink);
     text-decoration: none;
   }
 
   ul {
     display: flex;
-    gap: var(--space-lg);
+    gap: clamp(1.5rem, 3.5vw, 2.75rem);
   }
 
   nav a {
-    display: inline-flex;
-    align-items: baseline;
-    gap: var(--space-2xs);
-    font-size: var(--text-sm);
+    position: relative;
+    display: inline-block;
+    padding-bottom: 0.35rem;
+    font-family: var(--font-display);
+    font-size: 1.0625rem;
+    font-weight: 400;
+    letter-spacing: 0.005em;
     color: var(--color-ink-soft);
     text-decoration: none;
     transition: color var(--duration-fast) var(--ease-out);
   }
 
+  /* 选中态与 hover 共用同一条水线：hover 时从左漫过，选中时常驻 */
+  nav a::after {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 1.5px;
+    content: '';
+    background: var(--color-river);
+    border-radius: 1px;
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform var(--duration-slow) var(--ease-out);
+  }
+
   nav a:hover {
-    color: var(--color-river);
+    color: var(--color-ink);
     text-decoration: none;
+  }
+
+  nav a:hover::after,
+  nav a[aria-current='page']::after {
+    transform: scaleX(1);
   }
 
   nav a[aria-current='page'] {
     color: var(--color-ink);
-    box-shadow: inset 0 -2px 0 var(--color-sun);
-  }
-
-  .nav-en {
-    font-family: var(--font-mono);
-    font-size: var(--text-xs);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--color-ink-faint);
+    font-style: italic;
   }
 
   @media (max-width: 40rem) {
-    .nav-en {
-      display: none;
+    ul {
+      gap: 1.25rem;
+    }
+
+    nav a {
+      font-size: 1rem;
     }
   }
 </style>

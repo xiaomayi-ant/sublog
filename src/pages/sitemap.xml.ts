@@ -11,12 +11,12 @@ export async function GET(context: APIContext) {
 
   const paths = [
     '/',
-    '/research',
+    '/blog',
     '/projects',
     '/about',
     ...research.map(articleUrl),
     ...projects.map(projectUrl),
-    ...tags.map((tag) => `/research/tags/${encodeURIComponent(tag)}`),
+    ...tags.map((tag) => `/blog/tags/${encodeURIComponent(tag)}`),
   ];
 
   const urls = [...new Set(paths)]

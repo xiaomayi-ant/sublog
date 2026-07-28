@@ -5,7 +5,7 @@
 <section
   class="shore-hero"
   aria-labelledby="home-title"
-  data-surface="pure-white"
+  data-surface="unified-page-bg"
   data-color-focus="sunlight-diagonal"
   data-motion-rhythm="6s-breathe-3s-highlight"
   data-type-system="editorial-serif-sans"
@@ -13,36 +13,42 @@
 >
   <div class="hero-frame">
     <div class="hero-copy">
-      <p class="hero-kicker">SUMOER — RESEARCH & BUILD / 2026</p>
       <h1
         id="home-title"
         aria-label="Be water, my friend."
         data-intro-state="playing"
-        data-water-color="transparent-teal"
+        data-water-color="liquid-glass"
         data-friend-color="hermes-blue"
       >
         <span class="intro-line intro-line--water" aria-hidden="true">
-          <span class="intro-be">Be</span>
+          <span class="intro-be" style="--word-delay: 120ms">Be</span>
           <span class="intro-space">&nbsp;</span>
-          <span class="intro-water">water</span><span class="intro-comma">,</span>
+          <span class="intro-water" style="--word-delay: 620ms"
+            ><span class="intro-water-fill" data-text="water">water</span></span
+          ><span class="intro-comma" style="--word-delay: 620ms">,</span>
         </span>
         <span class="intro-line intro-line--friend" aria-hidden="true">
-          <span class="intro-letter" style="--letter-delay: 330ms">m</span>
-          <span class="intro-letter" style="--letter-delay: 378ms">y</span>
+          <span class="intro-letter" style="--letter-delay: 1180ms">m</span>
+          <span class="intro-letter" style="--letter-delay: 1330ms">y</span>
           <span class="intro-space">&nbsp;</span>
-          <span class="intro-letter" style="--letter-delay: 426ms">f</span>
-          <span class="intro-letter" style="--letter-delay: 474ms">r</span>
-          <span class="intro-letter" style="--letter-delay: 522ms">i</span>
-          <span class="intro-letter" style="--letter-delay: 570ms">e</span>
-          <span class="intro-letter" style="--letter-delay: 618ms">n</span>
-          <span class="intro-letter" style="--letter-delay: 666ms">d</span>
-          <span class="intro-letter" style="--letter-delay: 714ms">.</span>
+          <span class="intro-letter" style="--letter-delay: 1480ms">f</span>
+          <span class="intro-letter" style="--letter-delay: 1630ms">r</span>
+          <span class="intro-letter" style="--letter-delay: 1780ms">i</span>
+          <span class="intro-letter" style="--letter-delay: 1930ms">e</span>
+          <span class="intro-letter" style="--letter-delay: 2080ms">n</span>
+          <span class="intro-letter" style="--letter-delay: 2230ms">d</span>
+          <span class="intro-letter" style="--letter-delay: 2380ms">.</span>
         </span>
       </h1>
 
-      <div class="hero-description">
-        <p>
-          关注智能系统、界面，以及人在技术中的判断。记录尚未定型的想法，也做可以被使用的东西。
+      <div class="hero-questions" data-stream="typewriter">
+        <p class="question">
+          <span class="type type--zh">人类和AI的区别是什么？</span>
+          <span class="type type--en">What is the difference between a human and an AI?</span>
+        </p>
+        <p class="question">
+          <span class="type type--zh">AI目前的边界是什么？</span>
+          <span class="type type--en">Where are the boundaries of AI today?</span>
         </p>
       </div>
     </div>
@@ -76,36 +82,29 @@
     min-height: min(49rem, calc(100svh - 5.25rem));
     margin-inline: calc(50% - 50vw);
     overflow: hidden;
-    background: #fff;
+    /* 与全站同底：首屏不再自铺白色，避免和下方版块出现色块落差 */
+    background: var(--color-bg);
     border: 0;
   }
 
+  /* 阳光仍是斜向的，但只留一层几乎不可见的暖光晕，且在版块边缘之前就化开 */
   .shore-hero::before {
     position: absolute;
     inset: 0;
     content: '';
     pointer-events: none;
-    opacity: 0.86;
+    opacity: 0.5;
     background:
       linear-gradient(
         132deg,
-        rgba(246, 184, 55, 0.2) 0%,
-        rgba(252, 210, 111, 0.13) 18%,
-        rgba(255, 234, 178, 0.055) 36%,
-        transparent 57%
+        rgba(246, 184, 55, 0.05) 0%,
+        rgba(252, 210, 111, 0.03) 22%,
+        transparent 46%
       ),
       radial-gradient(
-        ellipse 36% 42% at 7% 4%,
-        rgba(249, 190, 65, 0.2),
-        rgba(255, 225, 152, 0.065) 48%,
-        transparent 78%
-      ),
-      repeating-linear-gradient(
-        102deg,
-        rgba(23, 62, 70, 0.012) 0,
-        rgba(23, 62, 70, 0.012) 1px,
-        transparent 1px,
-        transparent 4px
+        ellipse 32% 38% at 12% 8%,
+        rgba(249, 190, 65, 0.055),
+        transparent 72%
       );
   }
 
@@ -113,7 +112,7 @@
     position: relative;
     display: grid;
     grid-template-columns: minmax(25rem, 1fr) auto;
-    align-items: center;
+    align-items: stretch;
     gap: clamp(4rem, 8vw, 8rem);
     width: min(100% - 5rem, 76rem);
     min-height: inherit;
@@ -124,19 +123,9 @@
   .hero-copy {
     position: relative;
     z-index: 2;
+    align-self: start;
     max-width: 34rem;
-    padding-top: 0.5rem;
-  }
-
-  .hero-kicker {
-    margin-bottom: 1.45rem;
-    font-family: var(--font-sans);
-    font-size: 0.6875rem;
-    font-weight: 600;
-    line-height: 1.7;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: rgba(23, 62, 70, 0.57);
+    padding-top: clamp(1rem, 6vh, 4rem);
   }
 
   h1 {
@@ -161,13 +150,53 @@
   }
 
   .intro-be {
-    color: rgba(23, 62, 70, 0.68);
+    display: inline-block;
+    color: var(--color-black);
   }
 
   .intro-water,
   .intro-comma {
-    color: rgba(43, 143, 148, 0.46);
-    text-shadow: 0 0 1.2rem rgba(102, 199, 195, 0.14);
+    display: inline-block;
+  }
+
+  .intro-comma {
+    color: rgba(23, 62, 70, 0.16);
+  }
+
+  /* water：液态玻璃。字身几乎透明，靠上缘白高光 + 左右色散 + 下方折射投影撑出体积，
+     再让一条折射光带在字里缓慢滑过。流动放在内层，外层只负责入场，两者 transform 互不覆盖。 */
+  .intro-water-fill {
+    position: relative;
+    display: inline-block;
+    color: rgba(23, 62, 70, 0.15);
+    text-shadow:
+      -0.015em -0.016em 0 rgba(255, 255, 255, 0.95),
+      0.018em 0 0.012em rgba(86, 199, 201, 0.34),
+      -0.018em 0 0.012em rgba(146, 186, 255, 0.26),
+      0 0.055em 0.5em rgba(52, 122, 148, 0.24);
+    animation: water-surface 5.5s ease-in-out infinite;
+    will-change: transform;
+  }
+
+  .intro-water-fill::before {
+    position: absolute;
+    inset: 0;
+    content: attr(data-text);
+    pointer-events: none;
+    color: transparent;
+    background-image: linear-gradient(
+      104deg,
+      transparent 30%,
+      rgba(60, 148, 178, 0.42) 43%,
+      rgba(126, 208, 224, 0.5) 50%,
+      rgba(60, 148, 178, 0.34) 57%,
+      transparent 70%
+    );
+    background-size: 260% 100%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    animation: water-flow 9s linear infinite;
+    will-change: background-position;
   }
 
   .intro-line--friend {
@@ -179,33 +208,97 @@
     display: inline-block;
   }
 
-  h1[data-intro-state='playing'] .intro-line--water {
-    animation: intro-group-in 380ms var(--ease-out) 60ms both;
+  /* Be → water 逐词出现，两词间隔 500ms；my friend 逐字，步进 150ms */
+  h1[data-intro-state='playing'] .intro-be,
+  h1[data-intro-state='playing'] .intro-water,
+  h1[data-intro-state='playing'] .intro-comma {
+    animation: intro-word-in 420ms var(--ease-out) var(--word-delay) both;
   }
 
   h1[data-intro-state='playing'] .intro-letter {
     animation: intro-letter-in 300ms var(--ease-out) var(--letter-delay) both;
   }
 
-  .hero-description {
-    max-width: 27rem;
-    margin-top: 2.2rem;
+  /* 两个问句：中文一行，斜体英文一行；与标题之间留出明显的呼吸 */
+  .hero-questions {
+    max-width: 32rem;
+    margin-top: clamp(3.25rem, 7vh, 5rem);
     font-family: var(--font-sans);
     color: rgba(23, 62, 70, 0.74);
   }
 
-  .hero-description p {
-    max-width: 26.5rem;
-    font-size: clamp(0.98rem, 1.15vw, 1.08rem);
-    line-height: 1.78;
+  .question + .question {
+    margin-top: 1.35rem;
+  }
+
+  .type {
+    display: block;
+    /* max-content：打完之后盒子贴着文字收边，光标才不会停在栏宽的尽头 */
+    width: max-content;
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    border-right: 2px solid transparent;
+  }
+
+  .type--zh {
+    font-size: clamp(1rem, 1.2vw, 1.12rem);
+    line-height: 1.75;
+    letter-spacing: 0.01em;
+  }
+
+  .type--en {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: clamp(0.9rem, 1.05vw, 1rem);
+    line-height: 1.7;
+    color: rgba(23, 62, 70, 0.52);
+  }
+
+  /* 打字时右侧留一个光标；这一行打完就熄灭，最后一行留着继续闪 */
+  .hero-questions[data-stream-state='playing'] .type {
+    border-right-color: currentColor;
+  }
+
+  .hero-questions[data-stream-state='playing'] .type[data-typed='done'] {
+    border-right-color: transparent;
+    animation: none;
+  }
+
+  .hero-questions[data-stream-state='playing'] .type--last[data-typed='done'] {
+    border-right-color: currentColor;
+    animation: caret-blink 1.06s steps(1) infinite;
+  }
+
+  @keyframes type-in {
+    from {
+      width: 0;
+    }
+
+    to {
+      width: var(--type-width);
+    }
+  }
+
+  @keyframes caret-blink {
+    0%,
+    49% {
+      border-right-color: currentColor;
+    }
+
+    50%,
+    100% {
+      border-right-color: transparent;
+    }
   }
 
   .shore-art {
     position: relative;
+    align-self: end;
     width: auto;
-    height: min(77vh, 42.5rem);
+    height: min(62vh, 34.5rem);
     aspect-ratio: 1122 / 1402;
-    margin: 0;
+    margin: 0 0 clamp(2rem, 7vh, 5rem);
     overflow: hidden;
     background: transparent;
     border-radius: 27% 8% 30% 11% / 13% 24% 16% 28%;
@@ -342,17 +435,40 @@
     }
   }
 
-  @keyframes intro-group-in {
+  @keyframes intro-word-in {
     from {
       opacity: 0;
-      filter: blur(4px);
       transform: translate3d(0, 0.16em, 0);
     }
 
     to {
       opacity: 1;
-      filter: blur(0);
       transform: translate3d(0, 0, 0);
+    }
+  }
+
+  @keyframes water-flow {
+    from {
+      background-position: 0% 50%;
+    }
+
+    to {
+      background-position: -260% 50%;
+    }
+  }
+
+  @keyframes water-surface {
+    0%,
+    100% {
+      transform: translate3d(0, 0, 0) scale(1, 1);
+    }
+
+    35% {
+      transform: translate3d(0, -0.012em, 0) scale(1.004, 0.988);
+    }
+
+    70% {
+      transform: translate3d(0, 0.014em, 0) scale(0.997, 1.014);
     }
   }
 
@@ -378,7 +494,7 @@
     }
 
     .shore-art {
-      height: min(70vh, 37rem);
+      height: min(58vh, 30rem);
     }
 
     h1 {
@@ -421,10 +537,26 @@
 
   @media (prefers-reduced-motion: reduce) {
     h1[data-intro-state] .intro-line,
+    h1[data-intro-state] .intro-be,
+    h1[data-intro-state] .intro-water,
+    h1[data-intro-state] .intro-comma,
     h1[data-intro-state] .intro-letter {
       opacity: 1;
       filter: none;
       transform: none;
+      animation: none;
+    }
+
+    /* 静止的水面：保留渐变着色，只停掉流动 */
+    .intro-water-fill,
+    .intro-water-fill::before {
+      animation: none;
+    }
+
+    /* 问句直接落地，不打字 */
+    .type {
+      width: auto;
+      border-right-color: transparent;
       animation: none;
     }
 
@@ -571,5 +703,50 @@
     heroElement.addEventListener('pointerleave', resetArtwork);
     window.addEventListener('resize', resize);
     reduceMotion.addEventListener('change', syncMotion);
+  }
+</script>
+
+<script>
+  // 问句的打字机输出：标题走完之后逐字推进，中文慢、英文快。
+  // 宽度用实测值而不是 ch 估算——中英混排下 ch 会算歪，宁可量一次。
+  const questions = document.querySelector('.hero-questions') as HTMLElement | null;
+  const typeMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  if (questions && !typeMotion.matches) {
+    const TITLE_DONE = 2850; // 标题最后一个字母落位之后再开口
+    const GAP = 180; // 行与行之间的停顿
+    const SPEED = { zh: 70, en: 22 }; // 每字毫秒
+
+    const lines = [...questions.querySelectorAll<HTMLElement>('.type')];
+    const range = document.createRange();
+    let start = TITLE_DONE;
+
+    lines.forEach((line, index) => {
+      const chars = (line.textContent ?? '').trim().length;
+      if (chars === 0) return;
+
+      const speed = line.classList.contains('type--en') ? SPEED.en : SPEED.zh;
+      const duration = chars * speed;
+
+      // 量文字本身的宽度：.type 是块级元素，scrollWidth 会给出整栏宽度，光标会跑过头
+      range.selectNodeContents(line);
+      line.style.setProperty('--type-width', `${Math.ceil(range.getBoundingClientRect().width)}px`);
+      line.style.animation = `type-in ${duration}ms steps(${chars}) ${start}ms both`;
+      if (index === lines.length - 1) line.classList.add('type--last');
+
+      line.addEventListener(
+        'animationend',
+        () => {
+          line.dataset.typed = 'done';
+          line.style.animation = '';
+          line.style.removeProperty('--type-width');
+        },
+        { once: true },
+      );
+
+      start += duration + GAP;
+    });
+
+    questions.dataset.streamState = 'playing';
   }
 </script>

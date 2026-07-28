@@ -7,10 +7,10 @@ import { getAllProjects, projectUrl, STATUS_LABELS } from '../lib/content';
 const projects = await getAllProjects();
 ---
 
-<Base title="项目" description="正在构建的工具、系统和独立产品。">
+<Base title="Github" description="正在构建的工具、系统和独立产品。">
   <header class="page-head">
-    <Meta items={['Projects']} />
-    <h1>项目</h1>
+    <Meta items={['Github']} />
+    <h1>Github</h1>
     <p class="lede">正在构建的工具、系统和独立产品。</p>
   </header>
 
@@ -48,6 +48,7 @@ const projects = await getAllProjects();
   }
 
   h1 {
+    font-family: var(--font-display);
     font-size: var(--text-3xl);
     margin-top: var(--space-sm);
   }

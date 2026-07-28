@@ -57,7 +57,7 @@ function buildIndex(docs: Doc[]): Map<string, Set<string>> {
 
 ## AI 助手放在哪一层
 
-AI 助手不碰原始文件，只读写一个 `drafts/` 目录。它生成的任何东西，都要经过人显式「采纳」才进入正式笔记。这是上一篇[关于行动边界的思考](/research/essays/agent-action-boundaries)在自家工具上的直接应用。
+AI 助手不碰原始文件，只读写一个 `drafts/` 目录。它生成的任何东西，都要经过人显式「采纳」才进入正式笔记。这是上一篇[关于行动边界的思考](/blog/harness/agent-action-boundaries)在自家工具上的直接应用。
 
 ## 还没解决的问题
 

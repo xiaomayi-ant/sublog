@@ -2,8 +2,8 @@ import { defineCollection } from 'astro:content';
 import { glob } from 'astro/loaders';
 import { z } from 'astro/zod';
 
-// 统一的研究内容 schema：标题、摘要、发布日期、标签数组、草稿标记。
-// essays / notes / experiments 三类共用，Phase 3 的 /research 索引按类型分组、按标签筛选。
+// 统一的文章 schema：标题、摘要、发布日期、标签数组、草稿标记。
+// harness / llm / eval / notes 四类共用，/blog 索引按类型分组、按标签筛选。
 const researchSchema = z.object({
   title: z.string(),
   description: z.string(),
@@ -12,18 +12,23 @@ const researchSchema = z.object({
   draft: z.boolean().default(false),
 });
 
-const essays = defineCollection({
-  loader: glob({ pattern: '**/*.md', base: './src/content/essays' }),
+const harness = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/harness' }),
+  schema: researchSchema,
+});
+
+const llm = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/llm' }),
+  schema: researchSchema,
+});
+
+const evals = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/eval' }),
   schema: researchSchema,
 });
 
 const notes = defineCollection({
   loader: glob({ pattern: '**/*.md', base: './src/content/notes' }),
-  schema: researchSchema,
-});
-
-const experiments = defineCollection({
-  loader: glob({ pattern: '**/*.md', base: './src/content/experiments' }),
   schema: researchSchema,
 });
 
@@ -47,4 +52,5 @@ const projects = defineCollection({
   }),
 });
 
-export const collections = { essays, notes, experiments, projects };
+// 目录名 eval 与 JS 保留字冲突，变量叫 evals，对外的 collection 名仍是 eval。
+export const collections = { harness, llm, eval: evals, notes, projects };

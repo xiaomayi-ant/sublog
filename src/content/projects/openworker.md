@@ -45,7 +45,7 @@ permissions:
 on_failure: notify
 ```
 
-这与我在[关于 Agent 行动边界的思考](/research/essays/agent-action-boundaries)里写的模型一致：不可逆或外溢的动作必须回到人的回路，`permissions` 字段就是把边界变成一等概念的尝试。
+这与我在[关于 Agent 行动边界的思考](/blog/harness/agent-action-boundaries)里写的模型一致：不可逆或外溢的动作必须回到人的回路，`permissions` 字段就是把边界变成一等概念的尝试。
 
 ## 关键设计决策
 

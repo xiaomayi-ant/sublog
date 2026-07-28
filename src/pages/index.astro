@@ -1,32 +1,52 @@
 ---
-// 首页 — 艺术河流首屏 / 大号入口 / 时间流
+// 首页 — 艺术河流首屏 / 两个大号入口，各自带一列最新条目
 import Base from '../layouts/Base.astro';
 import ArtRiverHero from '../components/ArtRiverHero.astro';
-import { getAllResearch, TYPE_LABELS, articleUrl, formatDate } from '../lib/content';
+import {
+  getAllProjects,
+  getAllResearch,
+  articleUrl,
+  projectUrl,
+  formatDate,
+} from '../lib/content';
 
-// ── 时间流数据 ─────────────────────────────────────────────
-// 从三个 Content Collections 读取（合并、排除 draft、按日期倒序取前 5 条）。
-const stream = (await getAllResearch()).slice(0, 5).map((entry) => ({
+// ── 入口下的条目列 ─────────────────────────────────────────
+// Blog 列：三个 Content Collections 合并、排除 draft、按日期倒序取前 3 条。
+const ROWS_PER_ENTRY = 3;
+
+const blogRows = (await getAllResearch()).slice(0, ROWS_PER_ENTRY).map((entry) => ({
   date: formatDate(entry.data.pubDate),
   title: entry.data.title,
-  type: TYPE_LABELS[entry.collection].en.slice(0, -1).toUpperCase(), // Essays→ESSAY
   href: articleUrl(entry),
 }));
+
+// Github 列：已发布的项目；不足 3 条的位置留占位行，等具体项目填进来。
+const githubRows = (await getAllProjects()).slice(0, ROWS_PER_ENTRY).map((project) => ({
+  date: formatDate(project.data.pubDate),
+  title: project.data.title,
+  href: projectUrl(project),
+}));
+
+const githubPlaceholders = Math.max(0, ROWS_PER_ENTRY - githubRows.length);
 
 const entries = [
   {
     num: '01',
-    zh: '研究',
-    en: 'RESEARCH',
+    title: 'Blog',
     desc: '思考、实验、技术文章和长期问题',
-    href: '/research',
+    href: '/blog',
+    list: 'blog',
+    rows: blogRows,
+    placeholders: 0,
   },
   {
     num: '02',
-    zh: '项目',
-    en: 'PROJECTS',
+    title: 'Github',
     desc: '正在构建的工具、系统和独立产品',
     href: '/projects',
+    list: 'github',
+    rows: githubRows,
+    placeholders: githubPlaceholders,
   },
 ];
 ---
@@ -38,41 +58,41 @@ const entries = [
   <div class="home-flow" data-page-flow="continuous-no-dividers">
     <ArtRiverHero />
 
-    <!-- 2. 大号排印入口 -->
+    <!-- 2. 大号入口 + 各自的条目列 -->
     <section class="entries" aria-label="站点入口">
       {
-        entries.map(({ num, zh, en, desc, href }) => (
-          <a class="entry" href={href}>
-            <span class="entry-num meta">{num}</span>
-            <span class="entry-body">
-              <span class="entry-title">
-                {zh}
-                <span class="entry-en meta">{en}</span>
+        entries.map(({ num, title, desc, href, list, rows, placeholders }) => (
+          <div class="entry-col">
+            <a class="entry" href={href}>
+              <span class="entry-num meta">{num}</span>
+              <span class="entry-body">
+                <span class="entry-title">{title}</span>
+                <span class="entry-desc">{desc}</span>
               </span>
-              <span class="entry-desc">{desc}</span>
-            </span>
-            <span class="entry-dot" aria-hidden="true" />
-          </a>
+              <span class="entry-dot" aria-hidden="true" />
+            </a>
+
+            <ul class="entry-list" data-entry-list={list} aria-label={`${title} 最新条目`}>
+              {rows.map((row) => (
+                <li>
+                  <a class="row" href={row.href}>
+                    <span class="row-date meta">{row.date}</span>
+                    <span class="row-title">{row.title}</span>
+                  </a>
+                </li>
+              ))}
+              {Array.from({ length: placeholders }).map(() => (
+                <li>
+                  <span class="row row--empty" aria-hidden="true">
+                    <span class="row-date meta">————</span>
+                    <span class="row-title">待填充</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         ))
       }
-    </section>
-
-    <!-- 3. 时间流 -->
-    <section class="stream" aria-labelledby="stream-title">
-      <h2 id="stream-title" class="stream-heading meta">时间流 · STREAM</h2>
-      <ul>
-        {
-          stream.map(({ date, title, type, href }) => (
-            <li>
-              <a href={href} class="stream-item">
-                <span class="stream-date meta">{date}</span>
-                <span class="stream-title">{title}</span>
-                <span class="stream-type meta">{type}</span>
-              </a>
-            </li>
-          ))
-        }
-      </ul>
     </section>
   </div>
 </Base>
@@ -87,7 +107,8 @@ const entries = [
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: clamp(3rem, 8vw, 7rem);
-    margin-top: clamp(5rem, 10vw, 9rem);
+    margin-top: clamp(1.5rem, 3vw, 3rem);
+    padding-bottom: clamp(1.5rem, 3vw, 2.5rem);
   }
 
   .entry {
@@ -95,43 +116,25 @@ const entries = [
     display: flex;
     align-items: baseline;
     gap: var(--space-lg);
-    min-height: 9rem;
-    padding-block: 0;
+    padding: var(--space-sm) var(--space-md);
+    margin-inline: calc(var(--space-md) * -1);
     color: var(--color-ink);
     text-decoration: none;
     border: 0;
+    border-radius: 1rem;
+    transition: background-color var(--duration-slow) var(--ease-out);
   }
 
   .entry:hover {
     text-decoration: none;
-  }
-
-  /* 下划线流动：天蓝水线从左向右漫过 */
-  .entry::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    bottom: -1px;
-    width: 100%;
-    height: 2px;
-    background: var(--color-river);
-    transform: scaleX(0);
-    transform-origin: left;
-    transition: transform var(--duration-slow) var(--ease-out);
-  }
-
-  .entry:hover::after {
-    transform: scaleX(1);
+    /* 不用分割线，也不要成片的蓝：只留一层刚好能读出"选中"的水色 */
+    background-color: rgba(36, 107, 255, 0.014);
   }
 
   .entry-num {
     width: 2.5rem;
     flex-shrink: 0;
-    transition: color var(--duration-fast) var(--ease-out);
-  }
-
-  .entry:hover .entry-num {
-    color: var(--color-river);
+    color: #0000f2;
   }
 
   .entry-body {
@@ -141,12 +144,10 @@ const entries = [
   }
 
   .entry-title {
-    font-family: var(--font-serif);
+    font-family: var(--font-display);
     font-size: var(--text-3xl);
     line-height: 1.2;
-    display: flex;
-    align-items: baseline;
-    gap: var(--space-md);
+    letter-spacing: -0.01em;
   }
 
   .entry-desc {
@@ -162,7 +163,7 @@ const entries = [
   /* 阳黄光点：hover 时安静地出现 */
   .entry-dot {
     position: absolute;
-    right: 0;
+    right: var(--space-md);
     top: 50%;
     width: 8px;
     height: 8px;
@@ -180,34 +181,34 @@ const entries = [
     transform: translateY(-50%) scale(1);
   }
 
-  /* ── 时间流 ── */
-  .stream {
-    margin-top: clamp(7rem, 12vw, 11rem);
-    padding-bottom: clamp(4rem, 8vw, 7rem);
-    max-width: var(--measure-wide);
+  /* ── 入口下的条目列：明确从属于上方入口，字号比入口小一档 ── */
+  .entry-list {
+    margin-top: var(--space-md);
+    padding-left: calc(2.5rem + var(--space-lg));
   }
 
-  .stream-heading {
-    margin-bottom: var(--space-lg);
-  }
-
-  .stream-item {
+  .row {
     display: grid;
-    grid-template-columns: 7.5rem 1fr auto;
+    grid-template-columns: 6rem minmax(0, 1fr);
     align-items: baseline;
-    gap: var(--space-lg);
-    padding-block: var(--space-sm);
+    gap: var(--space-md);
+    padding-block: 0.42rem;
     color: var(--color-ink);
     text-decoration: none;
   }
 
-  .stream-item:hover {
+  .row:hover {
     text-decoration: none;
   }
 
-  .stream-title {
-    font-family: var(--font-serif);
-    font-size: var(--text-lg);
+  .row-date {
+    font-size: 0.6875rem;
+    color: var(--color-ink-faint);
+  }
+
+  .row-title {
+    font-size: 0.9375rem;
+    line-height: 1.6;
     background-image: linear-gradient(var(--color-river), var(--color-river));
     background-repeat: no-repeat;
     background-size: 0% 1px;
@@ -215,12 +216,16 @@ const entries = [
     transition: background-size var(--duration-slow) var(--ease-out);
   }
 
-  .stream-item:hover .stream-title {
+  .row:hover .row-title {
     background-size: 100% 1px;
   }
 
-  .stream-type {
+  .row--empty {
     color: var(--color-ink-faint);
+  }
+
+  .row--empty .row-title {
+    background-image: none;
   }
 
   @media (max-width: 40rem) {
@@ -229,16 +234,17 @@ const entries = [
       gap: var(--space-xl);
     }
 
-    .stream-item {
-      grid-template-columns: 6.5rem 1fr;
-    }
-
-    .stream-type {
-      display: none;
-    }
-
     .entry-title {
       font-size: var(--text-2xl);
+    }
+
+    .entry-list {
+      padding-left: var(--space-md);
+    }
+
+    .row {
+      grid-template-columns: 5.5rem minmax(0, 1fr);
+      gap: var(--space-sm);
     }
   }
 </style>

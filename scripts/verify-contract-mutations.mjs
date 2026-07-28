@@ -76,6 +76,46 @@ try {
       },
     },
     {
+      name: 'split-hero-background',
+      apply: async (distDir) => {
+        const home = path.join(distDir, 'index.html');
+        const html = await readFile(home, 'utf8');
+        await writeFile(home, html.replace('data-surface="unified-page-bg"', 'data-surface="pure-white"'));
+      },
+    },
+    {
+      name: 'solid-water-wordmark',
+      apply: async (distDir) => {
+        const home = path.join(distDir, 'index.html');
+        const html = await readFile(home, 'utf8');
+        await writeFile(home, html.replace('data-water-color="liquid-glass"', 'data-water-color="solid"'));
+      },
+    },
+    {
+      name: 'dropped-home-nav-item',
+      apply: async (distDir) => {
+        const home = path.join(distDir, 'index.html');
+        const html = await readFile(home, 'utf8');
+        await writeFile(home, html.replace(/<li[^>]*><a href="\/"[^>]*>Home<\/a><\/li>/, ''));
+      },
+    },
+    {
+      name: 'collapsed-entry-lists',
+      apply: async (distDir) => {
+        const home = path.join(distDir, 'index.html');
+        const html = await readFile(home, 'utf8');
+        await writeFile(home, html.replace(/<li[^>]*><a class="row"[\s\S]*?<\/li>/, ''));
+      },
+    },
+    {
+      name: 'static-question-stream',
+      apply: async (distDir) => {
+        const home = path.join(distDir, 'index.html');
+        const html = await readFile(home, 'utf8');
+        await writeFile(home, html.replace('data-stream="typewriter"', 'data-stream="none"'));
+      },
+    },
+    {
       name: 'missing-sunlight-focus',
       apply: async (distDir) => {
         const home = path.join(distDir, 'index.html');
@@ -139,7 +179,7 @@ try {
     throw new Error(`Unexplained surviving contract mutations: ${survivors.join(', ')}`);
   }
 
-  console.log('mutation_changed: 9 killed / 0 unexplained');
+  console.log('mutation_changed: 14 killed / 0 unexplained');
 } finally {
   await rm(mutationRoot, { recursive: true });
 }

@@ -1,13 +1,15 @@
 /* Water — 设计 tokens
-   比例感：纯白背景 ~75% / 墨蓝文字 ~18% / 河蓝 ~6% / 阳黄 ~1%（仅限高光、hover、激活态） */
+   比例感：暖白纸背景 ~75% / 墨蓝文字 ~18% / 河蓝 ~6% / 阳黄 ~1%（仅限高光、hover、激活态）
+   背景色全站唯一：首屏与其余版块共用 --color-bg，不再各自铺色。 */
 
 :root {
   /* 色彩 */
-  --color-bg: #ffffff;        /* 纯白 */
+  --color-bg: #fcfaf6;        /* 暖白纸（全站统一底色） */
   --color-ink: #10233f;       /* 墨蓝 */
   --color-river: #246bff;     /* 河蓝（主色） */
   --color-sky: #cfe5ff;       /* 天蓝 */
   --color-sun: #f5c85b;       /* 阳黄（仅高光） */
+  --color-black: #0a0a0a;     /* 纯黑（"Be"） */
 
   /* 派生色 */
   --color-ink-soft: rgba(16, 35, 63, 0.64);
@@ -20,6 +22,9 @@
   --font-sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB",
     "Source Han Sans SC", "Microsoft YaHei", sans-serif;
   --font-mono: ui-monospace, "IBM Plex Mono", "SF Mono", Menlo, Consolas, monospace;
+  /* 导航与首屏共用的编辑体：比 sans/mono 更灵动，大小写混排不做全大写 */
+  --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, Baskerville,
+    "Songti SC", "Times New Roman", serif;
 
   /* 排版尺度（1.25 近似比例） */
   --text-xs: 0.75rem;
@@ -44,6 +49,7 @@
   /* 行宽 */
   --measure: 34rem;           /* 正文窄行宽 */
   --measure-wide: 64rem;      /* 页面内容最大宽度 */
+  --measure-article: 48rem;   /* 文章正文栏宽（居中） */
 
   /* 动效 */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);

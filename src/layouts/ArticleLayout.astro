@@ -30,7 +30,7 @@ const toc = headings.filter((h) => h.depth === 2 || h.depth === 3);
         tags.length > 0 && (
           <p class="article-tags">
             {tags.map((tag) => (
-              <a class="tag meta" href={`/research/tags/${tag}`}>
+              <a class="tag meta" href={`/blog/tags/${tag}`}>
                 {tag}
               </a>
             ))}
@@ -59,25 +59,29 @@ const toc = headings.filter((h) => h.depth === 2 || h.depth === 3);
     </Prose>
 
     <footer class="article-foot">
-      <a class="back meta" href="/research">← 返回研究</a>
+      <a class="back meta" href="/blog">← 返回 Blog</a>
     </footer>
   </article>
   <CodeCopy />
 </Base>
 
 <style>
+  /* 文章页用整页的居中栏，而不是贴在左边的窄条 */
   .article {
+    width: min(100%, var(--measure-article));
+    margin-inline: auto;
     padding-top: var(--space-xl);
   }
 
   .article-head {
-    max-width: var(--measure);
+    max-width: none;
   }
 
   h1 {
-    font-size: var(--text-3xl);
+    font-size: var(--text-4xl);
     margin-top: var(--space-md);
-    line-height: 1.4;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
   }
 
   .article-desc {
@@ -107,7 +111,7 @@ const toc = headings.filter((h) => h.depth === 2 || h.depth === 3);
 
   /* 可折叠 TOC：纯 CSS details/summary */
   .toc {
-    max-width: var(--measure);
+    max-width: none;
     margin-top: var(--space-xl);
     padding: var(--space-md) var(--space-lg);
     border-left: 2px solid var(--color-sky);
@@ -152,6 +156,7 @@ const toc = headings.filter((h) => h.depth === 2 || h.depth === 3);
   }
 
   .article :global(.prose) {
+    max-width: none;
     margin-top: var(--space-xl);
   }
 
