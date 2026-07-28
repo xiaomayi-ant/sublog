@@ -1,5 +1,5 @@
 ---
-// ArtRiverHero — portrait watercolor artwork with an editorial copy column.
+// ArtRiverHero — editorial title and questions over the persistent mathematical river.
 ---
 
 <section
@@ -7,7 +7,7 @@
   aria-labelledby="home-title"
   data-surface="unified-page-bg"
   data-color-focus="sunlight-diagonal"
-  data-motion-rhythm="6s-breathe-3s-highlight"
+  data-motion-rhythm="material-flow-scroll-bend"
   data-type-system="editorial-serif-sans"
   data-intro-motion="per-load-word-reveal"
 >
@@ -52,27 +52,6 @@
         </p>
       </div>
     </div>
-
-    <figure
-      class="shore-art"
-      data-preserves-aspect="1122:1402"
-      data-edge-treatment="organic-feathered"
-    >
-      <div class="artwork-drift">
-        <img
-          class="shore-artwork"
-          src="/images/hero-watercolor-shore-v1.webp"
-          alt=""
-          width="1122"
-          height="1402"
-          loading="eager"
-          decoding="async"
-          fetchpriority="high"
-        />
-      </div>
-      <div class="shore-wash" aria-hidden="true"></div>
-      <canvas id="shore-light" aria-hidden="true" data-art-form="light-overlay"></canvas>
-    </figure>
   </div>
 </section>
 
@@ -82,38 +61,13 @@
     min-height: min(49rem, calc(100svh - 5.25rem));
     margin-inline: calc(50% - 50vw);
     overflow: hidden;
-    /* 与全站同底：首屏不再自铺白色，避免和下方版块出现色块落差 */
-    background: var(--color-bg);
+    background: transparent;
     border: 0;
-  }
-
-  /* 阳光仍是斜向的，但只留一层几乎不可见的暖光晕，且在版块边缘之前就化开 */
-  .shore-hero::before {
-    position: absolute;
-    inset: 0;
-    content: '';
-    pointer-events: none;
-    opacity: 0.5;
-    background:
-      linear-gradient(
-        132deg,
-        rgba(246, 184, 55, 0.05) 0%,
-        rgba(252, 210, 111, 0.03) 22%,
-        transparent 46%
-      ),
-      radial-gradient(
-        ellipse 32% 38% at 12% 8%,
-        rgba(249, 190, 65, 0.055),
-        transparent 72%
-      );
   }
 
   .hero-frame {
     position: relative;
     display: grid;
-    grid-template-columns: minmax(25rem, 1fr) auto;
-    align-items: stretch;
-    gap: clamp(4rem, 8vw, 8rem);
     width: min(100% - 5rem, 76rem);
     min-height: inherit;
     margin-inline: auto;
@@ -124,17 +78,17 @@
     position: relative;
     z-index: 2;
     align-self: start;
-    max-width: 34rem;
+    width: min(100%, 34rem);
     padding-top: clamp(1rem, 6vh, 4rem);
   }
 
   h1 {
+    color: #173e46;
     font-family: "Iowan Old Style", Baskerville, "Times New Roman", serif;
     font-size: clamp(4.25rem, 6.62vw, 5.5rem);
     font-weight: 400;
     line-height: 1.08;
     letter-spacing: -0.03em;
-    color: #173e46;
   }
 
   .intro-line {
@@ -163,8 +117,6 @@
     color: rgba(23, 62, 70, 0.16);
   }
 
-  /* water：液态玻璃。字身几乎透明，靠上缘白高光 + 左右色散 + 下方折射投影撑出体积，
-     再让一条折射光带在字里缓慢滑过。流动放在内层，外层只负责入场，两者 transform 互不覆盖。 */
   .intro-water-fill {
     position: relative;
     display: inline-block;
@@ -200,15 +152,14 @@
   }
 
   .intro-line--friend {
-    font-weight: 700;
     color: #0000f2;
+    font-weight: 700;
   }
 
   .intro-letter {
     display: inline-block;
   }
 
-  /* Be → water 逐词出现，两词间隔 500ms；my friend 逐字，步进 150ms */
   h1[data-intro-state='playing'] .intro-be,
   h1[data-intro-state='playing'] .intro-water,
   h1[data-intro-state='playing'] .intro-comma {
@@ -219,12 +170,11 @@
     animation: intro-letter-in 300ms var(--ease-out) var(--letter-delay) both;
   }
 
-  /* 两个问句：中文一行，斜体英文一行；与标题之间留出明显的呼吸 */
   .hero-questions {
     max-width: 32rem;
     margin-top: clamp(3.25rem, 7vh, 5rem);
-    font-family: var(--font-sans);
     color: rgba(23, 62, 70, 0.74);
+    font-family: var(--font-sans);
   }
 
   .question + .question {
@@ -233,7 +183,6 @@
 
   .type {
     display: block;
-    /* max-content：打完之后盒子贴着文字收边，光标才不会停在栏宽的尽头 */
     width: max-content;
     max-width: 100%;
     overflow: hidden;
@@ -248,14 +197,13 @@
   }
 
   .type--en {
-    font-family: var(--font-display);
-    font-style: italic;
-    font-size: clamp(0.9rem, 1.05vw, 1rem);
-    line-height: 1.7;
     color: rgba(23, 62, 70, 0.52);
+    font-family: var(--font-display);
+    font-size: clamp(0.9rem, 1.05vw, 1rem);
+    font-style: italic;
+    line-height: 1.7;
   }
 
-  /* 打字时右侧留一个光标；这一行打完就熄灭，最后一行留着继续闪 */
   .hero-questions[data-stream-state='playing'] .type {
     border-right-color: currentColor;
   }
@@ -292,149 +240,6 @@
     }
   }
 
-  .shore-art {
-    position: relative;
-    align-self: end;
-    width: auto;
-    height: min(62vh, 34.5rem);
-    aspect-ratio: 1122 / 1402;
-    margin: 0 0 clamp(2rem, 7vh, 5rem);
-    overflow: hidden;
-    background: transparent;
-    border-radius: 27% 8% 30% 11% / 13% 24% 16% 28%;
-    -webkit-mask-image:
-      linear-gradient(
-        90deg,
-        transparent 0%,
-        rgba(0, 0, 0, 0.3) 4%,
-        #000 12%,
-        #000 91%,
-        rgba(0, 0, 0, 0.38) 97%,
-        transparent 100%
-      ),
-      linear-gradient(
-        180deg,
-        transparent 0%,
-        rgba(0, 0, 0, 0.45) 5%,
-        #000 12%,
-        #000 90%,
-        rgba(0, 0, 0, 0.3) 96%,
-        transparent 100%
-      );
-    -webkit-mask-composite: source-in;
-    mask-image:
-      linear-gradient(
-        90deg,
-        transparent 0%,
-        rgba(0, 0, 0, 0.3) 4%,
-        #000 12%,
-        #000 91%,
-        rgba(0, 0, 0, 0.38) 97%,
-        transparent 100%
-      ),
-      linear-gradient(
-        180deg,
-        transparent 0%,
-        rgba(0, 0, 0, 0.45) 5%,
-        #000 12%,
-        #000 90%,
-        rgba(0, 0, 0, 0.3) 96%,
-        transparent 100%
-      );
-    mask-composite: intersect;
-  }
-
-  .artwork-drift {
-    --drift-x: 0px;
-    --drift-y: 0px;
-    position: absolute;
-    inset: -1.8%;
-    transform: translate3d(var(--drift-x), var(--drift-y), 0);
-    transition: transform 900ms var(--ease-out);
-    will-change: transform;
-  }
-
-  .shore-artwork {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    animation: watercolor-breathe 6s ease-in-out infinite alternate;
-    will-change: transform;
-  }
-
-  .shore-wash {
-    position: absolute;
-    inset: -24%;
-    pointer-events: none;
-    opacity: 0.42;
-    background:
-      radial-gradient(circle at 32% 28%, rgba(255, 248, 201, 0.38), transparent 24%),
-      radial-gradient(circle at 68% 58%, rgba(202, 255, 239, 0.25), transparent 28%),
-      radial-gradient(circle at 42% 78%, rgba(255, 255, 255, 0.2), transparent 18%);
-    filter: blur(18px);
-    mix-blend-mode: screen;
-    animation: wash-drift 13s ease-in-out infinite alternate;
-    will-change: transform, opacity;
-  }
-
-  .shore-wash::after {
-    position: absolute;
-    inset: 21% 10% 16% 14%;
-    content: '';
-    opacity: 0.42;
-    background:
-      radial-gradient(circle at 28% 24%, rgba(255, 255, 226, 0.78), transparent 12%),
-      radial-gradient(circle at 64% 56%, rgba(231, 255, 247, 0.58), transparent 17%),
-      radial-gradient(circle at 42% 76%, rgba(255, 244, 201, 0.5), transparent 11%);
-    mix-blend-mode: screen;
-    animation: highlight-pulse 3s ease-in-out infinite;
-  }
-
-  #shore-light {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    opacity: 0.64;
-    mix-blend-mode: screen;
-  }
-
-  @keyframes watercolor-breathe {
-    0% {
-      transform: translate3d(-0.35%, 0.15%, 0) scale(1.025);
-    }
-
-    100% {
-      transform: translate3d(0.45%, -0.45%, 0) scale(1.045);
-    }
-  }
-
-  @keyframes wash-drift {
-    0% {
-      opacity: 0.32;
-      transform: translate3d(-4%, -2%, 0) rotate(-2deg);
-    }
-
-    100% {
-      opacity: 0.54;
-      transform: translate3d(5%, 4%, 0) rotate(2deg);
-    }
-  }
-
-  @keyframes highlight-pulse {
-    0%,
-    100% {
-      opacity: 0.24;
-      transform: translate3d(-1.5%, 1%, 0) scale(0.98);
-    }
-
-    50% {
-      opacity: 0.68;
-      transform: translate3d(1.5%, -1%, 0) scale(1.035);
-    }
-  }
-
   @keyframes intro-word-in {
     from {
       opacity: 0;
@@ -460,7 +265,7 @@
   @keyframes water-surface {
     0%,
     100% {
-      transform: translate3d(0, 0, 0) scale(1, 1);
+      transform: translate3d(0, 0, 0) scale(1);
     }
 
     35% {
@@ -488,35 +293,26 @@
 
   @media (max-width: 58rem) {
     .hero-frame {
-      grid-template-columns: minmax(20rem, 1fr) auto;
-      gap: 2.5rem;
       width: min(100% - 3rem, 76rem);
-    }
-
-    .shore-art {
-      height: min(58vh, 30rem);
     }
 
     h1 {
       font-size: clamp(3.6rem, 8vw, 5.5rem);
     }
-
   }
 
   @media (max-width: 44rem) {
     .shore-hero {
-      min-height: auto;
+      min-height: min(43rem, calc(100svh - 4rem));
     }
 
     .hero-frame {
-      grid-template-columns: 1fr;
-      gap: 2.75rem;
       width: min(100% - 2.5rem, 34rem);
       padding-block: 4rem 2.5rem;
     }
 
     .hero-copy {
-      max-width: none;
+      width: 100%;
       padding-top: 0;
     }
 
@@ -524,14 +320,8 @@
       font-size: clamp(3.65rem, 17vw, 5.4rem);
     }
 
-    .hero-description {
-      max-width: none;
-    }
-
-    .shore-art {
-      justify-self: end;
-      width: min(86vw, 28rem);
-      height: auto;
+    .hero-questions {
+      margin-top: 3.5rem;
     }
   }
 
@@ -547,176 +337,27 @@
       animation: none;
     }
 
-    /* 静止的水面：保留渐变着色，只停掉流动 */
     .intro-water-fill,
     .intro-water-fill::before {
       animation: none;
     }
 
-    /* 问句直接落地，不打字 */
     .type {
       width: auto;
       border-right-color: transparent;
       animation: none;
     }
-
-    .shore-artwork,
-    .shore-wash,
-    .shore-wash::after {
-      animation: none;
-    }
-
-    .artwork-drift {
-      transform: none;
-    }
-
-    #shore-light {
-      opacity: 0.32;
-    }
   }
 </style>
 
 <script>
-  const hero = document.querySelector('.shore-hero') as HTMLElement | null;
-  const artwork = document.querySelector('.artwork-drift') as HTMLElement | null;
-  const canvas = document.getElementById('shore-light') as HTMLCanvasElement | null;
-  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-
-  if (hero && artwork && canvas) {
-    const heroElement = hero;
-    const artworkElement = artwork;
-    const lightCanvas = canvas;
-    const ctx = lightCanvas.getContext('2d');
-    let width = 0;
-    let height = 0;
-    let dpr = 1;
-    let raf = 0;
-    let visible = true;
-
-    const glints = Array.from({ length: 30 }, (_, index) => ({
-      x: 0.08 + ((index * 0.237) % 0.84),
-      y: 0.06 + ((index * 0.173) % 0.84),
-      size: 2 + (index % 5) * 1.2,
-      phase: index * 1.87,
-      alpha: 0.14 + (index % 4) * 0.04,
-    }));
-
-    function draw(time: number) {
-      if (!ctx || !width || !height) return;
-      ctx.clearRect(0, 0, width, height);
-      ctx.save();
-      ctx.globalCompositeOperation = 'screen';
-
-      for (const glint of glints) {
-        const x = glint.x * width + Math.sin(time * 0.00008 + glint.phase) * 4;
-        const y = glint.y * height + Math.cos(time * 0.00007 + glint.phase) * 5;
-        const pulse = 0.72 + Math.sin(time * 0.0021 + glint.phase) * 0.28;
-
-        ctx.beginPath();
-        ctx.ellipse(x, y, glint.size * 2.4, glint.size * 0.72, -0.34, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255, 255, 244, ${glint.alpha * pulse})`;
-        ctx.fill();
-      }
-
-      for (let ribbon = 0; ribbon < 4; ribbon += 1) {
-        const baseY = height * (0.14 + ribbon * 0.16);
-        const endX = width * (0.9 - ribbon * 0.045);
-        ctx.beginPath();
-
-        for (let index = 0; index <= 28; index += 1) {
-          const x = (index / 28) * endX;
-          const y =
-            baseY +
-            Math.sin(index * 0.62 + time * 0.00034 + ribbon * 1.7) * (2.5 + ribbon) +
-            Math.cos(index * 0.21 + ribbon) * 2;
-          if (index === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        }
-
-        ctx.strokeStyle = `rgba(255, 255, 244, ${0.055 + ribbon * 0.012})`;
-        ctx.lineWidth = 0.9 + ribbon * 0.18;
-        ctx.lineCap = 'round';
-        ctx.setLineDash([18 + ribbon * 5, 22, 5, 16]);
-        ctx.lineDashOffset = -time * (0.004 + ribbon * 0.001);
-        ctx.stroke();
-        ctx.setLineDash([]);
-      }
-
-      const sheenX = width * (0.35 + Math.sin(time * 0.000045) * 0.08);
-      const sheenY = height * (0.3 + Math.cos(time * 0.000038) * 0.06);
-      const sheen = ctx.createRadialGradient(sheenX, sheenY, 0, sheenX, sheenY, width * 0.42);
-      sheen.addColorStop(0, 'rgba(255, 251, 215, 0.08)');
-      sheen.addColorStop(0.52, 'rgba(221, 255, 243, 0.025)');
-      sheen.addColorStop(1, 'rgba(255, 255, 255, 0)');
-      ctx.fillStyle = sheen;
-      ctx.fillRect(0, 0, width, height);
-      ctx.restore();
-    }
-
-    function loop(time: number) {
-      draw(time);
-      if (visible && !reduceMotion.matches) raf = requestAnimationFrame(loop);
-    }
-
-    function resize() {
-      const rect = lightCanvas.getBoundingClientRect();
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
-      width = Math.max(1, Math.round(rect.width));
-      height = Math.max(1, Math.round(rect.height));
-      lightCanvas.width = Math.round(width * dpr);
-      lightCanvas.height = Math.round(height * dpr);
-      ctx?.setTransform(dpr, 0, 0, dpr, 0, 0);
-      draw(0);
-    }
-
-    function syncMotion() {
-      cancelAnimationFrame(raf);
-      if (visible && !reduceMotion.matches) raf = requestAnimationFrame(loop);
-      else draw(0);
-    }
-
-    function moveArtwork(event: PointerEvent) {
-      if (reduceMotion.matches) return;
-      const rect = heroElement.getBoundingClientRect();
-      const x = ((event.clientX - rect.left) / rect.width - 0.5) * -4;
-      const y = ((event.clientY - rect.top) / rect.height - 0.5) * -3;
-      artworkElement.style.setProperty('--drift-x', `${x.toFixed(2)}px`);
-      artworkElement.style.setProperty('--drift-y', `${y.toFixed(2)}px`);
-    }
-
-    function resetArtwork() {
-      artworkElement.style.setProperty('--drift-x', '0px');
-      artworkElement.style.setProperty('--drift-y', '0px');
-    }
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        visible = entry?.isIntersecting ?? true;
-        syncMotion();
-      },
-      { threshold: 0.02 },
-    );
-
-    resize();
-    observer.observe(lightCanvas);
-    heroElement.addEventListener('pointermove', moveArtwork);
-    heroElement.addEventListener('pointerleave', resetArtwork);
-    window.addEventListener('resize', resize);
-    reduceMotion.addEventListener('change', syncMotion);
-  }
-</script>
-
-<script>
-  // 问句的打字机输出：标题走完之后逐字推进，中文慢、英文快。
-  // 宽度用实测值而不是 ch 估算——中英混排下 ch 会算歪，宁可量一次。
-  const questions = document.querySelector('.hero-questions') as HTMLElement | null;
+  const questions = document.querySelector<HTMLElement>('.hero-questions');
   const typeMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
   if (questions && !typeMotion.matches) {
-    const TITLE_DONE = 2850; // 标题最后一个字母落位之后再开口
-    const GAP = 180; // 行与行之间的停顿
-    const SPEED = { zh: 70, en: 22 }; // 每字毫秒
-
+    const TITLE_DONE = 2850;
+    const GAP = 180;
+    const SPEED = { zh: 70, en: 22 };
     const lines = [...questions.querySelectorAll<HTMLElement>('.type')];
     const range = document.createRange();
     let start = TITLE_DONE;
@@ -727,8 +368,6 @@
 
       const speed = line.classList.contains('type--en') ? SPEED.en : SPEED.zh;
       const duration = chars * speed;
-
-      // 量文字本身的宽度：.type 是块级元素，scrollWidth 会给出整栏宽度，光标会跑过头
       range.selectNodeContents(line);
       line.style.setProperty('--type-width', `${Math.ceil(range.getBoundingClientRect().width)}px`);
       line.style.animation = `type-in ${duration}ms steps(${chars}) ${start}ms both`;

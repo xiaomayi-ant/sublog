@@ -103,15 +103,12 @@ import Base from '../../layouts/Base.astro';
 
 <script>
   import {
-    buildRibbonSample,
-    clamp,
-    riverWidth,
-    smoothNoise,
-  } from '../../lib/riverMath.mjs';
+    createRiverRenderer,
+    RIVER_PRESETS,
+  } from '../../lib/riverRenderer.mjs';
 
   type RiverControl = 'bend' | 'width' | 'turbulence' | 'layers' | 'flow' | 'cobalt';
   type RiverState = Record<RiverControl, number>;
-  type RiverPoint = { x: number; y: number };
 
   const canvas = document.querySelector<HTMLCanvasElement>('#river-canvas');
   const stage = document.querySelector<HTMLElement>('#river-stage');
@@ -136,46 +133,14 @@ import Base from '../../layouts/Base.astro';
     const drawingCanvas = canvas;
     const scrollStage = stage;
     const riverLab = lab;
-    const context = drawingCanvas.getContext('2d');
-    const ribbonBuffer = document.createElement('canvas');
-    const ribbonContext = ribbonBuffer.getContext('2d');
-    const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const defaults: RiverState = {
-      bend: 1.3,
-      width: 1.26,
-      turbulence: 0.48,
-      layers: 8,
-      flow: 1,
-      cobalt: 0.3,
-    };
+    const defaults: RiverState = { ...RIVER_PRESETS.watercolor };
     const presets: Record<string, RiverState> = {
       watercolor: defaults,
-      silk: {
-        bend: 0.82,
-        width: 0.88,
-        turbulence: 0.2,
-        layers: 5,
-        flow: 0.5,
-        cobalt: 0.54,
-      },
-      fibers: {
-        bend: 1.32,
-        width: 0.76,
-        turbulence: 0.82,
-        layers: 10,
-        flow: 0.72,
-        cobalt: 0.68,
-      },
+      silk: { ...RIVER_PRESETS.silk },
+      fibers: { ...RIVER_PRESETS.fibers },
     };
     const state: RiverState = { ...defaults };
-    let scrollProgress = 0;
     let targetScrollProgress = 0;
-    let progressInitialized = false;
-    let canvasWidth = 0;
-    let canvasHeight = 0;
-    let pixelRatio = 1;
-    let frame = 0;
-    let visible = true;
 
     function syncControls() {
       controls.forEach((input) => {
@@ -193,213 +158,28 @@ import Base from '../../layouts/Base.astro';
       if (status) status.textContent = message;
     }
 
-    function resize() {
-      const bounds = drawingCanvas.getBoundingClientRect();
-      pixelRatio = Math.min(window.devicePixelRatio || 1, 1.75);
-      canvasWidth = Math.max(1, bounds.width);
-      canvasHeight = Math.max(1, bounds.height);
-      drawingCanvas.width = Math.round(canvasWidth * pixelRatio);
-      drawingCanvas.height = Math.round(canvasHeight * pixelRatio);
-      ribbonBuffer.width = Math.ceil(canvasWidth);
-      ribbonBuffer.height = Math.ceil(canvasHeight);
-      context?.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-    }
-
     function updateProgress() {
       const bounds = scrollStage.getBoundingClientRect();
       const travel = Math.max(1, bounds.height - window.innerHeight);
-      targetScrollProgress = clamp(-bounds.top / travel, 0, 1);
-      if (!progressInitialized) {
-        scrollProgress = targetScrollProgress;
-        progressInitialized = true;
-      }
+      targetScrollProgress = Math.min(1, Math.max(0, -bounds.top / travel));
       riverLab.style.setProperty('--river-progress', String(targetScrollProgress));
       if (progressFill) {
         progressFill.style.transform = `scaleX(${targetScrollProgress})`;
       }
     }
 
-    function pointToCanvas(point: RiverPoint) {
-      return {
-        x: point.x * canvasWidth,
-        y: point.y * canvasHeight,
-      };
-    }
-
-    function optionsAt(time: number, seedOffset = 0) {
-      return {
-        bend: state.bend,
-        width: state.width,
-        turbulence: state.turbulence,
-        time: time * state.flow,
-        progress: scrollProgress,
-        seed: 17 + seedOffset,
-      };
-    }
-
-    function traceRibbon(radius: number, time: number, seedOffset: number) {
-      if (!context || !ribbonContext) return false;
-      const options = { ...optionsAt(time), curvatureLimit: false };
-      const samples = Math.max(100, Math.round(canvasWidth / 8));
-      let previous:
-        | {
-            left: RiverPoint;
-            right: RiverPoint;
-          }
-        | undefined;
-
-      ribbonContext.clearRect(0, 0, ribbonBuffer.width, ribbonBuffer.height);
-      ribbonContext.fillStyle = '#fff';
-
-      for (let index = 0; index <= samples; index += 1) {
-        const s = index / samples;
-        const pulse =
-          1 +
-          (smoothNoise(s * 8 + time * 0.025, 83 + seedOffset) - 0.5) *
-            state.turbulence *
-            0.1;
-        const sample = buildRibbonSample(s, radius * pulse, options);
-        const left = pointToCanvas(sample.left);
-        const right = pointToCanvas(sample.right);
-        const center = pointToCanvas(sample.center);
-        const jointRadius = Math.hypot(left.x - center.x, left.y - center.y);
-
-        if (previous) {
-          ribbonContext.beginPath();
-          ribbonContext.moveTo(previous.left.x, previous.left.y);
-          ribbonContext.lineTo(left.x, left.y);
-          ribbonContext.lineTo(right.x, right.y);
-          ribbonContext.lineTo(previous.right.x, previous.right.y);
-          ribbonContext.closePath();
-          ribbonContext.fill();
-        }
-
-        ribbonContext.beginPath();
-        ribbonContext.arc(center.x, center.y, jointRadius, 0, Math.PI * 2);
-        ribbonContext.fill();
-        previous = { left, right };
-      }
-
-      return true;
-    }
-
-    function compositeRibbon(fillStyle: string | CanvasGradient, alpha: number) {
-      if (!context || !ribbonContext) return;
-      ribbonContext.globalCompositeOperation = 'source-in';
-      ribbonContext.fillStyle = fillStyle;
-      ribbonContext.fillRect(0, 0, ribbonBuffer.width, ribbonBuffer.height);
-      ribbonContext.globalCompositeOperation = 'source-over';
-
-      context.save();
-      context.globalAlpha = alpha;
-      context.drawImage(ribbonBuffer, 0, 0, canvasWidth, canvasHeight);
-      context.restore();
-    }
-
-    function drawWash(time: number) {
-      if (!context) return;
-      const layerCount = Math.round(state.layers);
-      const colors = [
-        [200, 241, 238],
-        [132, 220, 217],
-        [74, 184, 202],
-        [42, 128, 194],
-      ];
-
-      for (let layer = layerCount - 1; layer >= 0; layer -= 1) {
-        const depth = layer / Math.max(1, layerCount - 1);
-        const radius = 1.38 - depth * 0.68;
-        const colorIndex = Math.min(colors.length - 1, Math.floor(depth * colors.length));
-        const [red, green, blue] = colors[colorIndex];
-        const cobaltBoost = colorIndex === colors.length - 1 ? state.cobalt : 0;
-        const alpha = 0.028 + depth * 0.035 + cobaltBoost * 0.035;
-        if (traceRibbon(radius, time, layer * 19)) {
-          compositeRibbon(`rgb(${red}, ${green}, ${blue})`, alpha);
-        }
-      }
-
-      if (traceRibbon(0.72, time, 103) && ribbonContext) {
-        const core = ribbonContext.createLinearGradient(0, 0, canvasWidth, canvasHeight);
-        core.addColorStop(0, 'rgb(205, 246, 241)');
-        core.addColorStop(0.55, 'rgb(49, 168, 196)');
-        core.addColorStop(1, 'rgb(22, 81, 190)');
-        compositeRibbon(core, 0.045 + state.cobalt * 0.055);
-      }
-    }
-
-    function drawFibers(time: number) {
-      if (!context) return;
-      const fiberCount = 22 + Math.round(state.layers * 3.5);
-      const sampleCount = Math.max(80, Math.round(canvasWidth / 12));
-      context.lineCap = 'round';
-
-      for (let fiber = 0; fiber < fiberCount; fiber += 1) {
-        const lane = fiberCount === 1 ? 0 : (fiber / (fiberCount - 1)) * 2 - 1;
-        const laneRadius = lane * (0.76 + smoothNoise(fiber * 0.61, 211) * 0.2);
-        const options = optionsAt(time);
-        context.beginPath();
-
-        for (let index = 0; index <= sampleCount; index += 1) {
-          const s = index / sampleCount;
-          const sample = buildRibbonSample(s, 0, options);
-          const lateralOffset = riverWidth(s, options) * laneRadius;
-          const flutter =
-            (smoothNoise(s * 12 + time * 0.035 + fiber, 307) - 0.5) *
-            state.turbulence *
-            0.006;
-          const point = pointToCanvas({
-            x: sample.center.x,
-            y: sample.center.y + lateralOffset + flutter,
-          });
-          if (index === 0) context.moveTo(point.x, point.y);
-          else context.lineTo(point.x, point.y);
-        }
-
-        const isCobalt = fiber % 7 === 0;
-        context.strokeStyle = isCobalt
-          ? `rgba(22, 73, 186, ${0.045 + state.cobalt * 0.1})`
-          : `rgba(39, 153, 173, ${0.03 + state.turbulence * 0.022})`;
-        context.lineWidth = isCobalt ? 0.8 : 0.45;
-        context.stroke();
-      }
-    }
-
-    function drawLight(time: number) {
-      if (!context) return;
-      const options = optionsAt(time);
-      const sampleCount = Math.max(70, Math.round(canvasWidth / 14));
-      context.beginPath();
-      for (let index = 0; index <= sampleCount; index += 1) {
-        const s = index / sampleCount;
-        const sample = buildRibbonSample(s, 0, options);
-        const point = pointToCanvas(sample.center);
-        if (index === 0) context.moveTo(point.x, point.y);
-        else context.lineTo(point.x, point.y);
-      }
-      context.strokeStyle = 'rgba(255, 252, 229, 0.3)';
-      context.lineWidth = 0.8;
-      context.stroke();
-    }
-
-    function draw(timestamp: number) {
-      if (!context || !visible) {
-        frame = requestAnimationFrame(draw);
-        return;
-      }
-      const time = reducedMotionQuery.matches ? 0 : timestamp * 0.001;
-      const follow = reducedMotionQuery.matches ? 1 : 0.12;
-      scrollProgress += (targetScrollProgress - scrollProgress) * follow;
-      context.clearRect(0, 0, canvasWidth, canvasHeight);
-      drawWash(time);
-      drawFibers(time);
-      drawLight(time);
-      frame = requestAnimationFrame(draw);
-    }
+    const renderer = createRiverRenderer({
+      canvas: drawingCanvas,
+      initialState: state,
+      getProgress: () => targetScrollProgress,
+      observeElement: scrollStage,
+    });
 
     controls.forEach((input) => {
       input.addEventListener('input', () => {
         const name = input.name as RiverControl;
         state[name] = Number(input.value);
+        renderer.setState(state);
         syncControls();
         document
           .querySelectorAll('[data-river-preset]')
@@ -414,6 +194,7 @@ import Base from '../../layouts/Base.astro';
         const preset = presets[presetName];
         if (!preset) return;
         Object.assign(state, preset);
+        renderer.setState(state);
         syncControls();
         document
           .querySelectorAll('[data-river-preset]')
@@ -424,6 +205,7 @@ import Base from '../../layouts/Base.astro';
 
     document.querySelector('[data-river-reset]')?.addEventListener('click', () => {
       Object.assign(state, defaults);
+      renderer.setState(state);
       syncControls();
       document.querySelectorAll('[data-river-preset]').forEach((button) => {
         button.setAttribute(
@@ -434,18 +216,9 @@ import Base from '../../layouts/Base.astro';
       setStatus('Watercolor · reset');
     });
 
-    const observer = new IntersectionObserver(([entry]) => {
-      visible = entry.isIntersecting;
-    });
-    observer.observe(scrollStage);
-
-    window.addEventListener('resize', resize, { passive: true });
     window.addEventListener('scroll', updateProgress, { passive: true });
-    resize();
     updateProgress();
     syncControls();
-    cancelAnimationFrame(frame);
-    frame = requestAnimationFrame(draw);
   }
 </script>
 

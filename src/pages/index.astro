@@ -2,6 +2,7 @@
 // 首页 — 艺术河流首屏 / 两个大号入口，各自带一列最新条目
 import Base from '../layouts/Base.astro';
 import ArtRiverHero from '../components/ArtRiverHero.astro';
+import HomeRiver from '../components/HomeRiver.astro';
 import {
   getAllProjects,
   getAllResearch,
@@ -56,50 +57,60 @@ const entries = [
   description="关注智能系统、界面，以及人在技术中的判断。记录尚未定型的想法，也做可以被使用的东西。"
 >
   <div class="home-flow" data-page-flow="continuous-no-dividers">
-    <ArtRiverHero />
+    <HomeRiver />
+    <div class="home-content">
+      <ArtRiverHero />
 
-    <!-- 2. 大号入口 + 各自的条目列 -->
-    <section class="entries" aria-label="站点入口">
-      {
-        entries.map(({ num, title, desc, href, list, rows, placeholders }) => (
-          <div class="entry-col">
-            <a class="entry" href={href}>
-              <span class="entry-num meta">{num}</span>
-              <span class="entry-body">
-                <span class="entry-title">{title}</span>
-                <span class="entry-desc">{desc}</span>
-              </span>
-              <span class="entry-dot" aria-hidden="true" />
-            </a>
+      <!-- 2. 大号入口 + 各自的条目列 -->
+      <section class="entries" aria-label="站点入口">
+        {
+          entries.map(({ num, title, desc, href, list, rows, placeholders }) => (
+            <div class="entry-col">
+              <a class="entry" href={href}>
+                <span class="entry-num meta">{num}</span>
+                <span class="entry-body">
+                  <span class="entry-title">{title}</span>
+                  <span class="entry-desc">{desc}</span>
+                </span>
+                <span class="entry-dot" aria-hidden="true" />
+              </a>
 
-            <ul class="entry-list" data-entry-list={list} aria-label={`${title} 最新条目`}>
-              {rows.map((row) => (
-                <li>
-                  <a class="row" href={row.href}>
-                    <span class="row-date meta">{row.date}</span>
-                    <span class="row-title">{row.title}</span>
-                  </a>
-                </li>
-              ))}
-              {Array.from({ length: placeholders }).map(() => (
-                <li>
-                  <span class="row row--empty" aria-hidden="true">
-                    <span class="row-date meta">————</span>
-                    <span class="row-title">待填充</span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))
-      }
-    </section>
+              <ul class="entry-list" data-entry-list={list} aria-label={`${title} 最新条目`}>
+                {rows.map((row) => (
+                  <li>
+                    <a class="row" href={row.href}>
+                      <span class="row-date meta">{row.date}</span>
+                      <span class="row-title">{row.title}</span>
+                    </a>
+                  </li>
+                ))}
+                {Array.from({ length: placeholders }).map(() => (
+                  <li>
+                    <span class="row row--empty" aria-hidden="true">
+                      <span class="row-date meta">————</span>
+                      <span class="row-title">待填充</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))
+        }
+      </section>
+    </div>
   </div>
 </Base>
 
 <style>
   .home-flow {
+    position: relative;
     display: flow-root;
+    background: var(--color-bg);
+  }
+
+  .home-content {
+    position: relative;
+    z-index: 1;
   }
 
   /* ── 大号入口 ── */

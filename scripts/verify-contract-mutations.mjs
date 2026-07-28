@@ -59,19 +59,27 @@ try {
       },
     },
     {
-      name: 'missing-watercolor-artwork',
-      apply: async (distDir) => {
-        await rm(path.join(distDir, 'images/hero-watercolor-shore-v1.webp'));
-      },
-    },
-    {
-      name: 'hard-edge-watercolor-artwork',
+      name: 'missing-home-river',
       apply: async (distDir) => {
         const home = path.join(distDir, 'index.html');
         const html = await readFile(home, 'utf8');
         await writeFile(
           home,
-          html.replace('data-edge-treatment="organic-feathered"', 'data-edge-treatment="hard"'),
+          html.replace('data-home-river="locked-preset"', 'data-home-river="missing"'),
+        );
+      },
+    },
+    {
+      name: 'animated-home-river-entry',
+      apply: async (distDir) => {
+        const home = path.join(distDir, 'index.html');
+        const html = await readFile(home, 'utf8');
+        await writeFile(
+          home,
+          html.replace(
+            'data-river-entry="present-from-first-frame"',
+            'data-river-entry="animated"',
+          ),
         );
       },
     },
@@ -159,6 +167,17 @@ try {
         );
       },
     },
+    {
+      name: 'unlocked-home-river-preset',
+      apply: async (distDir) => {
+        const home = path.join(distDir, 'index.html');
+        const html = await readFile(home, 'utf8');
+        await writeFile(
+          home,
+          html.replace('data-home-river="locked-preset"', 'data-home-river="runtime-controls"'),
+        );
+      },
+    },
   ];
 
   const survivors = [];
@@ -179,7 +198,7 @@ try {
     throw new Error(`Unexplained surviving contract mutations: ${survivors.join(', ')}`);
   }
 
-  console.log('mutation_changed: 14 killed / 0 unexplained');
+  console.log('mutation_changed: 15 killed / 0 unexplained');
 } finally {
   await rm(mutationRoot, { recursive: true });
 }

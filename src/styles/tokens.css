@@ -4,7 +4,7 @@
 
 :root {
   /* 色彩 */
-  --color-bg: #fcfaf6;        /* 暖白纸（全站统一底色） */
+  --color-bg: #fff;           /* 清澈白（全站统一底色） */
   --color-ink: #10233f;       /* 墨蓝 */
   --color-river: #246bff;     /* 河蓝（主色） */
   --color-sky: #cfe5ff;       /* 天蓝 */

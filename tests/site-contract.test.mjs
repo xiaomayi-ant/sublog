@@ -27,6 +27,15 @@ async function readBuiltCss() {
   );
 }
 
+async function readBuiltJavascript() {
+  const assetsRoot = path.join(distRoot, '_astro');
+  const files = await readdir(assetsRoot);
+  const scripts = files.filter((file) => file.endsWith('.js'));
+  return (await Promise.all(scripts.map((file) => readFile(path.join(assetsRoot, file), 'utf8')))).join(
+    '\n',
+  );
+}
+
 test('build emits the home, blog, about, and projects entry routes', async () => {
   const routes = ['/', '/blog', '/projects', '/about'];
 
@@ -159,27 +168,39 @@ test('the shared layout provides keyboard navigation affordances', async () => {
   assert.match(css, /:focus-visible/);
 });
 
-test('the home hero preserves a portrait watercolor artwork beside the copy', async () => {
+test('the home uses one persistent mathematical river instead of a framed artwork', async () => {
   const home = await readRoute('/');
   const css = await readBuiltCss();
+  const javascript = await readBuiltJavascript();
 
+  assert.match(home, /data-home-river="locked-preset"/);
+  assert.match(home, /data-river-entry="present-from-first-frame"/);
+  assert.match(home, /data-river-continuity="hero-to-entries"/);
   assert.match(
     home,
-    /<img class="shore-artwork" src="\/images\/hero-watercolor-shore-v1\.webp" alt="" width="1122" height="1402"[^>]*>/,
+    /<canvas id="home-river-canvas" class="home-river-canvas" aria-hidden="true"/,
   );
-  assert.match(home, /data-preserves-aspect="1122:1402"/);
-  assert.match(home, /data-edge-treatment="organic-feathered"/);
+  assert.match(home, /data-bend="1\.3"/);
+  assert.match(home, /data-width="1\.26"/);
+  assert.match(home, /data-flow="1"/);
+  assert.match(home, /data-layers="8"/);
   assert.match(home, /data-surface="unified-page-bg"/);
   assert.match(home, /data-color-focus="sunlight-diagonal"/);
-  assert.match(home, /data-motion-rhythm="6s-breathe-3s-highlight"/);
-  assert.match(css, /--color-bg:#fcfaf6/);
-  assert.match(css, /animation:6s[^;}]*watercolor-breathe/);
-  assert.match(css, /animation:3s[^;}]*highlight-pulse/);
-  await access(path.join(distRoot, 'images/hero-watercolor-shore-v1.webp'));
+  assert.match(home, /data-motion-rhythm="material-flow-scroll-bend"/);
+  assert.match(css, /--color-bg:#fff/);
+  assert.match(css, /\.home-river-field[^}]*position:absolute/);
+  assert.match(css, /\.home-river-viewport[^}]*position:sticky/);
+  assert.match(css, /\.home-river-canvas[^}]*width:100%/);
+  assert.match(css, /\.home-river-canvas[^}]*height:100%/);
+  assert.match(javascript, /createRiverRenderer/);
   assert.match(home, /Be water,/);
   assert.doesNotMatch(home, /时间如水/);
   assert.doesNotMatch(home, /Water study · 001|Light \/ tide \/ time/i);
-  assert.doesNotMatch(home, /data-art-form="watercolor-shore"|data-flow-direction="left-to-right"/);
+  assert.doesNotMatch(
+    home,
+    /shore-artwork|hero-watercolor-shore-v1|river-controls|data-river-preset|data-river-entry="animated"/,
+  );
+  assert.doesNotMatch(css, /\.home-river-canvas[^}]*animation:/);
 });
 
 test('the home hero uses a measured editorial typography hierarchy', async () => {
