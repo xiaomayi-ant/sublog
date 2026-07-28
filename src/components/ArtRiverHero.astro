@@ -1,0 +1,357 @@
+---
+// ArtRiverHero — code-rendered river with a quiet editorial frame.
+---
+
+<section class="river-hero" aria-labelledby="home-title">
+  <canvas id="art-river" aria-hidden="true" data-flow-direction="left-to-right"></canvas>
+  <div class="river-grain" aria-hidden="true"></div>
+
+  <div class="hero-frame">
+    <div class="hero-register meta" aria-hidden="true">
+      <span>WATER / FIELD NOTE 001</span>
+      <span>FLOW · WEST → EAST</span>
+    </div>
+
+    <div class="hero-copy">
+      <p class="hero-kicker meta">Personal research &amp; building</p>
+      <h1 id="home-title">时间如水。</h1>
+      <p>记录正在形成的想法，构建可以被使用的东西。</p>
+    </div>
+
+    <div class="hero-foot meta" aria-hidden="true">
+      <span>TIME</span>
+      <span class="flow-rule"></span>
+      <span>SYSTEMS</span>
+      <span class="flow-rule"></span>
+      <span>INTERFACES</span>
+    </div>
+  </div>
+</section>
+
+<style>
+  .river-hero {
+    position: relative;
+    min-height: min(47rem, calc(100svh - 5.25rem));
+    margin-inline: calc(50% - 50vw);
+    overflow: hidden;
+    isolation: isolate;
+    background:
+      radial-gradient(circle at 18% 12%, rgba(255, 255, 255, 0.85), transparent 28%),
+      linear-gradient(112deg, #fffaf0 0%, #f8f1e4 46%, #eee7dc 100%);
+    border-block: 1px solid var(--color-line);
+  }
+
+  #art-river,
+  .river-grain {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  #art-river {
+    z-index: -2;
+  }
+
+  .river-grain {
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.28;
+    background-image:
+      repeating-linear-gradient(
+        96deg,
+        transparent 0,
+        transparent 3px,
+        rgba(16, 35, 63, 0.018) 4px
+      ),
+      radial-gradient(circle at 70% 80%, rgba(245, 200, 91, 0.16), transparent 24%);
+    mix-blend-mode: multiply;
+  }
+
+  .hero-frame {
+    position: relative;
+    width: min(100% - 5rem, 76rem);
+    min-height: inherit;
+    margin-inline: auto;
+    padding-block: clamp(2rem, 5vh, 4rem);
+  }
+
+  .hero-register {
+    display: flex;
+    justify-content: space-between;
+    color: rgba(16, 35, 63, 0.5);
+  }
+
+  .hero-copy {
+    position: absolute;
+    top: clamp(5.75rem, 13vh, 8.5rem);
+    left: 0;
+    max-width: 30rem;
+  }
+
+  .hero-kicker {
+    margin-bottom: 1.1rem;
+    color: var(--color-river);
+  }
+
+  h1 {
+    font-size: clamp(3.3rem, 6.4vw, 6.5rem);
+    font-weight: 500;
+    line-height: 0.96;
+    letter-spacing: -0.055em;
+  }
+
+  .hero-copy > p:last-child {
+    max-width: 25rem;
+    margin-top: 1.35rem;
+    font-family: var(--font-serif);
+    font-size: clamp(1rem, 1.35vw, 1.2rem);
+    color: var(--color-ink-soft);
+  }
+
+  .hero-foot {
+    position: absolute;
+    right: 0;
+    bottom: clamp(2rem, 5vh, 4rem);
+    display: grid;
+    grid-template-columns: auto 3.5rem auto 3.5rem auto;
+    align-items: center;
+    gap: 0.75rem;
+    color: rgba(16, 35, 63, 0.56);
+  }
+
+  .flow-rule {
+    height: 1px;
+    background: currentColor;
+  }
+
+  @media (max-width: 46rem) {
+    .river-hero {
+      min-height: 38rem;
+    }
+
+    .hero-frame {
+      width: min(100% - 2.5rem, 76rem);
+    }
+
+    .hero-register span:last-child {
+      display: none;
+    }
+
+    .hero-copy {
+      top: 5.5rem;
+    }
+
+    h1 {
+      font-size: clamp(3.25rem, 16vw, 5.25rem);
+    }
+
+    .hero-foot {
+      left: 0;
+      right: auto;
+      grid-template-columns: auto 1.5rem auto 1.5rem auto;
+      gap: 0.5rem;
+    }
+  }
+</style>
+
+<script>
+  const canvas = document.getElementById('art-river') as HTMLCanvasElement | null;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  if (canvas) {
+    const artCanvas = canvas;
+    const ctx = artCanvas.getContext('2d', { alpha: true });
+    let width = 0;
+    let height = 0;
+    let dpr = 1;
+    let raf = 0;
+    let visible = true;
+
+    const flowMarks = Array.from({ length: 34 }, (_, index) => ({
+      start: ((index * 0.173) % 1) - 0.08,
+      lane: -0.42 + ((index * 5) % 13) / 15,
+      speed: 0.000018 + (index % 5) * 0.0000025,
+      size: 1.2 + (index % 4) * 0.55,
+      alpha: 0.16 + (index % 3) * 0.06,
+    }));
+
+    function centerY(x: number, time: number) {
+      const nx = x / Math.max(width, 1);
+      const longBend = Math.sin(nx * Math.PI * 2.05 - 0.8) * height * 0.105;
+      const shortBend = Math.sin(nx * Math.PI * 5.1 + 0.65) * height * 0.028;
+      const breath = Math.sin(time * 0.00009 + nx * Math.PI * 3) * height * 0.008;
+      return height * 0.57 + longBend + shortBend + breath;
+    }
+
+    function riverWidth(x: number, time: number) {
+      const nx = x / Math.max(width, 1);
+      const swell = Math.sin(nx * Math.PI * 3.4 + 0.35) * height * 0.025;
+      const breath = Math.cos(time * 0.000075 + nx * Math.PI * 2) * height * 0.006;
+      return height * 0.29 + swell + breath;
+    }
+
+    function makeRiverPath(time: number, expansion = 0) {
+      const path = new Path2D();
+      const samples = 96;
+
+      for (let index = 0; index <= samples; index += 1) {
+        const x = (index / samples) * width;
+        const edgeNoise =
+          Math.sin(index * 0.79) * height * 0.004 +
+          Math.sin(index * 0.27 + 1.4) * height * 0.006;
+        const y = centerY(x, time) - riverWidth(x, time) / 2 - expansion + edgeNoise;
+        if (index === 0) path.moveTo(x, y);
+        else path.lineTo(x, y);
+      }
+
+      for (let index = samples; index >= 0; index -= 1) {
+        const x = (index / samples) * width;
+        const edgeNoise =
+          Math.sin(index * 0.67 + 0.8) * height * 0.004 +
+          Math.sin(index * 0.31) * height * 0.005;
+        path.lineTo(x, centerY(x, time) + riverWidth(x, time) / 2 + expansion + edgeNoise);
+      }
+
+      path.closePath();
+      return path;
+    }
+
+    function drawRibbon(time: number, lane: number, color: string, dash: number[]) {
+      if (!ctx) return;
+      const samples = 110;
+      ctx.beginPath();
+
+      for (let index = 0; index <= samples; index += 1) {
+        const x = (index / samples) * width;
+        const ripple =
+          Math.sin(index * 0.22 + lane * 8 + time * 0.00022) * height * 0.008;
+        const y = centerY(x, time) + riverWidth(x, time) * lane + ripple;
+        if (index === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+
+      ctx.strokeStyle = color;
+      ctx.lineWidth = Math.max(1, height * 0.0025);
+      ctx.lineCap = 'round';
+      ctx.setLineDash(dash);
+      ctx.lineDashOffset = -time * (0.018 + Math.abs(lane) * 0.008);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    function drawIsland(time: number) {
+      if (!ctx) return;
+      const x = width * 0.69;
+      const y = centerY(x, time) + riverWidth(x, time) * 0.03;
+      const rx = Math.min(width * 0.075, 100);
+      const ry = Math.min(height * 0.055, 34);
+
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(-0.08);
+      ctx.beginPath();
+      ctx.moveTo(-rx, 0);
+      ctx.bezierCurveTo(-rx * 0.42, -ry * 1.3, rx * 0.48, -ry * 0.9, rx, 0);
+      ctx.bezierCurveTo(rx * 0.38, ry * 1.15, -rx * 0.5, ry * 1.25, -rx, 0);
+      ctx.fillStyle = 'rgba(248, 241, 228, 0.94)';
+      ctx.shadowColor = 'rgba(16, 35, 63, 0.18)';
+      ctx.shadowBlur = 18;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = 'rgba(16, 35, 63, 0.2)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function draw(time: number) {
+      if (!ctx || !width || !height) return;
+      ctx.clearRect(0, 0, width, height);
+
+      const bankGlow = makeRiverPath(time, height * 0.035);
+      ctx.save();
+      ctx.fillStyle = 'rgba(36, 107, 255, 0.07)';
+      ctx.shadowColor = 'rgba(36, 107, 255, 0.16)';
+      ctx.shadowBlur = 34;
+      ctx.fill(bankGlow);
+      ctx.restore();
+
+      const river = makeRiverPath(time);
+      const water = ctx.createLinearGradient(0, height * 0.28, width, height * 0.76);
+      water.addColorStop(0, '#0d3553');
+      water.addColorStop(0.28, '#195d9f');
+      water.addColorStop(0.58, '#2b84b8');
+      water.addColorStop(0.78, '#236cab');
+      water.addColorStop(1, '#102f50');
+
+      ctx.save();
+      ctx.fillStyle = water;
+      ctx.fill(river);
+      ctx.clip(river);
+
+      ctx.globalCompositeOperation = 'screen';
+      drawRibbon(time, -0.32, 'rgba(199, 232, 244, 0.34)', [150, 54, 28, 92]);
+      drawRibbon(time, -0.12, 'rgba(137, 205, 232, 0.25)', [86, 42, 220, 70]);
+      drawRibbon(time, 0.08, 'rgba(232, 245, 242, 0.3)', [210, 84, 46, 64]);
+      drawRibbon(time, 0.29, 'rgba(114, 187, 222, 0.26)', [118, 48, 34, 120]);
+
+      for (const mark of flowMarks) {
+        const progress = (mark.start + time * mark.speed) % 1.16;
+        const x = (progress - 0.08) * width;
+        const y =
+          centerY(x, time) +
+          riverWidth(x, time) * mark.lane +
+          Math.sin(progress * Math.PI * 12) * height * 0.006;
+        ctx.beginPath();
+        ctx.ellipse(x, y, mark.size * 3.4, mark.size, -0.12, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(229, 244, 243, ${mark.alpha})`;
+        ctx.fill();
+      }
+
+      ctx.restore();
+      drawIsland(time);
+
+      ctx.save();
+      ctx.strokeStyle = 'rgba(16, 35, 63, 0.24)';
+      ctx.lineWidth = 1;
+      ctx.stroke(river);
+      ctx.restore();
+    }
+
+    function loop(time: number) {
+      draw(time);
+      if (visible && !reduceMotion.matches) raf = requestAnimationFrame(loop);
+    }
+
+    function resize() {
+      const rect = artCanvas.getBoundingClientRect();
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      width = Math.max(1, Math.round(rect.width));
+      height = Math.max(1, Math.round(rect.height));
+      artCanvas.width = Math.round(width * dpr);
+      artCanvas.height = Math.round(height * dpr);
+      ctx?.setTransform(dpr, 0, 0, dpr, 0, 0);
+      draw(0);
+    }
+
+    function syncMotion() {
+      cancelAnimationFrame(raf);
+      if (visible && !reduceMotion.matches) raf = requestAnimationFrame(loop);
+      else draw(0);
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        visible = entry?.isIntersecting ?? true;
+        syncMotion();
+      },
+      { threshold: 0.02 },
+    );
+
+    resize();
+    observer.observe(artCanvas);
+    window.addEventListener('resize', resize);
+    reduceMotion.addEventListener('change', syncMotion);
+  }
+</script>

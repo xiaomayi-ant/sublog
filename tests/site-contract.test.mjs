@@ -158,3 +158,14 @@ test('the shared layout provides keyboard navigation affordances', async () => {
   assert.match(home, /<main id="content"/);
   assert.match(css, /:focus-visible/);
 });
+
+test('the home hero renders an accessible left-to-right art river without legacy effects', async () => {
+  const home = await readRoute('/');
+
+  assert.match(
+    home,
+    /<canvas id="art-river" aria-hidden="true" data-flow-direction="left-to-right"[^>]*><\/canvas>/,
+  );
+  assert.match(home, /时间如水/);
+  assert.doesNotMatch(home, /id="river"|id="star-field"/);
+});

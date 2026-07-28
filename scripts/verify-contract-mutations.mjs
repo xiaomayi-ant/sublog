@@ -58,6 +58,14 @@ try {
         await writeFile(path.join(draftDir, 'index.html'), '<h1>Draft leaked</h1>');
       },
     },
+    {
+      name: 'missing-art-river-contract',
+      apply: async (distDir) => {
+        const home = path.join(distDir, 'index.html');
+        const html = await readFile(home, 'utf8');
+        await writeFile(home, html.replace('id="art-river"', 'id="removed-art-river"'));
+      },
+    },
   ];
 
   const survivors = [];
@@ -78,7 +86,7 @@ try {
     throw new Error(`Unexplained surviving contract mutations: ${survivors.join(', ')}`);
   }
 
-  console.log('mutation_changed: 3 killed / 0 unexplained');
+  console.log('mutation_changed: 4 killed / 0 unexplained');
 } finally {
   await rm(mutationRoot, { recursive: true });
 }
