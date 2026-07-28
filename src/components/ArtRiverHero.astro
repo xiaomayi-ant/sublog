@@ -1,15 +1,15 @@
 ---
-// ArtRiverHero — code-rendered river with a quiet editorial frame.
+// ArtRiverHero — a code-rendered watercolor shoreline inspired by luminous coastal studies.
 ---
 
-<section class="river-hero" aria-labelledby="home-title">
-  <canvas id="art-river" aria-hidden="true" data-flow-direction="left-to-right"></canvas>
-  <div class="river-grain" aria-hidden="true"></div>
+<section class="shore-hero" aria-labelledby="home-title">
+  <canvas id="art-river" aria-hidden="true" data-art-form="watercolor-shore"></canvas>
+  <div class="paper-light" aria-hidden="true"></div>
 
   <div class="hero-frame">
     <div class="hero-register meta" aria-hidden="true">
-      <span>WATER / FIELD NOTE 001</span>
-      <span>FLOW · WEST → EAST</span>
+      <span>WATER / STUDY 001</span>
+      <span>TIDE · LIGHT · TIME</span>
     </div>
 
     <div class="hero-copy">
@@ -19,30 +19,28 @@
     </div>
 
     <div class="hero-foot meta" aria-hidden="true">
-      <span>TIME</span>
-      <span class="flow-rule"></span>
-      <span>SYSTEMS</span>
-      <span class="flow-rule"></span>
-      <span>INTERFACES</span>
+      <span>OBSERVE</span>
+      <span class="foot-dot"></span>
+      <span>MAKE</span>
+      <span class="foot-dot"></span>
+      <span>LET FLOW</span>
     </div>
   </div>
 </section>
 
 <style>
-  .river-hero {
+  .shore-hero {
     position: relative;
-    min-height: min(47rem, calc(100svh - 5.25rem));
+    min-height: min(49rem, calc(100svh - 5.25rem));
     margin-inline: calc(50% - 50vw);
     overflow: hidden;
     isolation: isolate;
-    background:
-      radial-gradient(circle at 18% 12%, rgba(255, 255, 255, 0.85), transparent 28%),
-      linear-gradient(112deg, #fffaf0 0%, #f8f1e4 46%, #eee7dc 100%);
-    border-block: 1px solid var(--color-line);
+    background: #fff4df;
+    border-block: 1px solid rgba(34, 74, 84, 0.12);
   }
 
   #art-river,
-  .river-grain {
+  .paper-light {
     position: absolute;
     inset: 0;
     width: 100%;
@@ -53,19 +51,20 @@
     z-index: -2;
   }
 
-  .river-grain {
+  .paper-light {
     z-index: -1;
     pointer-events: none;
-    opacity: 0.28;
-    background-image:
+    background:
+      radial-gradient(circle at 16% 14%, rgba(255, 255, 255, 0.78), transparent 24%),
+      linear-gradient(90deg, rgba(255, 250, 236, 0.18), transparent 44%),
       repeating-linear-gradient(
-        96deg,
-        transparent 0,
-        transparent 3px,
-        rgba(16, 35, 63, 0.018) 4px
-      ),
-      radial-gradient(circle at 70% 80%, rgba(245, 200, 91, 0.16), transparent 24%);
-    mix-blend-mode: multiply;
+        102deg,
+        rgba(24, 67, 73, 0.018) 0,
+        rgba(24, 67, 73, 0.018) 1px,
+        transparent 1px,
+        transparent 4px
+      );
+    mix-blend-mode: soft-light;
   }
 
   .hero-frame {
@@ -79,55 +78,63 @@
   .hero-register {
     display: flex;
     justify-content: space-between;
-    color: rgba(16, 35, 63, 0.5);
+    color: rgba(21, 58, 63, 0.52);
+  }
+
+  .hero-register span:last-child {
+    color: rgba(235, 255, 249, 0.72);
+    text-shadow: 0 1px 10px rgba(17, 87, 95, 0.18);
   }
 
   .hero-copy {
     position: absolute;
-    top: clamp(5.75rem, 13vh, 8.5rem);
+    top: clamp(6.25rem, 15vh, 9.25rem);
     left: 0;
-    max-width: 30rem;
+    width: min(38vw, 29rem);
   }
 
   .hero-kicker {
-    margin-bottom: 1.1rem;
-    color: var(--color-river);
+    margin-bottom: 1.2rem;
+    color: #278f93;
   }
 
   h1 {
-    font-size: clamp(3.3rem, 6.4vw, 6.5rem);
+    font-size: clamp(3.5rem, 6.4vw, 6.6rem);
     font-weight: 500;
-    line-height: 0.96;
-    letter-spacing: -0.055em;
+    line-height: 0.95;
+    letter-spacing: -0.06em;
+    color: #173e46;
   }
 
   .hero-copy > p:last-child {
-    max-width: 25rem;
-    margin-top: 1.35rem;
+    max-width: 24rem;
+    margin-top: 1.5rem;
     font-family: var(--font-serif);
-    font-size: clamp(1rem, 1.35vw, 1.2rem);
-    color: var(--color-ink-soft);
+    font-size: clamp(1rem, 1.35vw, 1.22rem);
+    line-height: 1.85;
+    color: rgba(23, 62, 70, 0.72);
   }
 
   .hero-foot {
     position: absolute;
-    right: 0;
+    left: 0;
     bottom: clamp(2rem, 5vh, 4rem);
-    display: grid;
-    grid-template-columns: auto 3.5rem auto 3.5rem auto;
+    display: flex;
     align-items: center;
-    gap: 0.75rem;
-    color: rgba(16, 35, 63, 0.56);
+    gap: 0.85rem;
+    color: rgba(23, 62, 70, 0.56);
   }
 
-  .flow-rule {
-    height: 1px;
-    background: currentColor;
+  .foot-dot {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: #7acdcc;
   }
 
   @media (max-width: 46rem) {
-    .river-hero {
-      min-height: 38rem;
+    .shore-hero {
+      min-height: 42rem;
     }
 
     .hero-frame {
@@ -140,17 +147,16 @@
 
     .hero-copy {
       top: 5.5rem;
+      width: min(82vw, 28rem);
     }
 
     h1 {
-      font-size: clamp(3.25rem, 16vw, 5.25rem);
+      max-width: 4em;
+      font-size: clamp(3.45rem, 16vw, 5.3rem);
     }
 
-    .hero-foot {
-      left: 0;
-      right: auto;
-      grid-template-columns: auto 1.5rem auto 1.5rem auto;
-      gap: 0.5rem;
+    .hero-copy > p:last-child {
+      max-width: min(76vw, 23rem);
     }
   }
 </style>
@@ -161,162 +167,278 @@
 
   if (canvas) {
     const artCanvas = canvas;
-    const ctx = artCanvas.getContext('2d', { alpha: true });
+    const ctx = artCanvas.getContext('2d', { alpha: false });
     let width = 0;
     let height = 0;
     let dpr = 1;
     let raf = 0;
     let visible = true;
 
-    const flowMarks = Array.from({ length: 34 }, (_, index) => ({
-      start: ((index * 0.173) % 1) - 0.08,
-      lane: -0.42 + ((index * 5) % 13) / 15,
-      speed: 0.000018 + (index % 5) * 0.0000025,
-      size: 1.2 + (index % 4) * 0.55,
-      alpha: 0.16 + (index % 3) * 0.06,
+    const waterBlooms = Array.from({ length: 72 }, (_, index) => ({
+      x: 0.38 + ((index * 0.193) % 0.7),
+      y: (index * 0.317) % 1,
+      radiusX: 0.024 + (index % 7) * 0.0065,
+      radiusY: 0.018 + (index % 5) * 0.006,
+      phase: index * 1.71,
+      tone: index % 4,
     }));
 
-    function centerY(x: number, time: number) {
-      const nx = x / Math.max(width, 1);
-      const longBend = Math.sin(nx * Math.PI * 2.05 - 0.8) * height * 0.105;
-      const shortBend = Math.sin(nx * Math.PI * 5.1 + 0.65) * height * 0.028;
-      const breath = Math.sin(time * 0.00009 + nx * Math.PI * 3) * height * 0.008;
-      return height * 0.57 + longBend + shortBend + breath;
+    const lightCells = Array.from({ length: 64 }, (_, index) => ({
+      x: 0.35 + ((index * 0.227) % 0.72),
+      y: (index * 0.149) % 1,
+      radius: 6 + (index % 6) * 3.5,
+      phase: index * 2.13,
+      alpha: 0.1 + (index % 4) * 0.03,
+    }));
+
+    const foamPearls = Array.from({ length: 24 }, (_, index) => ({
+      y: 0.03 + ((index * 0.091) % 0.94),
+      offset: 9 + (index % 4) * 8,
+      radius: 1.5 + (index % 5) * 0.75,
+      phase: index * 1.37,
+    }));
+
+    function shoreX(y: number, time: number, offset = 0) {
+      const ny = y / Math.max(height, 1);
+      const diagonal = width * (0.46 - ny * 0.21);
+      const longCurve = Math.sin(ny * Math.PI * 1.45 + 0.58) * width * 0.045;
+      const scallop = Math.sin(ny * Math.PI * 6.4 + time * 0.00012) * width * 0.009;
+      const breath = Math.sin(time * 0.00016 + ny * Math.PI * 3.2) * 5;
+      return diagonal + longCurve + scallop + breath + offset;
     }
 
-    function riverWidth(x: number, time: number) {
-      const nx = x / Math.max(width, 1);
-      const swell = Math.sin(nx * Math.PI * 3.4 + 0.35) * height * 0.025;
-      const breath = Math.cos(time * 0.000075 + nx * Math.PI * 2) * height * 0.006;
-      return height * 0.29 + swell + breath;
-    }
-
-    function makeRiverPath(time: number, expansion = 0) {
+    function makeWaterPath(time: number) {
       const path = new Path2D();
-      const samples = 96;
-
-      for (let index = 0; index <= samples; index += 1) {
-        const x = (index / samples) * width;
-        const edgeNoise =
-          Math.sin(index * 0.79) * height * 0.004 +
-          Math.sin(index * 0.27 + 1.4) * height * 0.006;
-        const y = centerY(x, time) - riverWidth(x, time) / 2 - expansion + edgeNoise;
-        if (index === 0) path.moveTo(x, y);
-        else path.lineTo(x, y);
-      }
+      const samples = 84;
+      path.moveTo(shoreX(0, time), 0);
+      path.lineTo(width, 0);
+      path.lineTo(width, height);
+      path.lineTo(shoreX(height, time), height);
 
       for (let index = samples; index >= 0; index -= 1) {
-        const x = (index / samples) * width;
-        const edgeNoise =
-          Math.sin(index * 0.67 + 0.8) * height * 0.004 +
-          Math.sin(index * 0.31) * height * 0.005;
-        path.lineTo(x, centerY(x, time) + riverWidth(x, time) / 2 + expansion + edgeNoise);
+        const y = (index / samples) * height;
+        path.lineTo(shoreX(y, time), y);
       }
 
       path.closePath();
       return path;
     }
 
-    function drawRibbon(time: number, lane: number, color: string, dash: number[]) {
+    function traceShore(time: number, offset: number) {
       if (!ctx) return;
-      const samples = 110;
+      const samples = 96;
       ctx.beginPath();
-
       for (let index = 0; index <= samples; index += 1) {
-        const x = (index / samples) * width;
-        const ripple =
-          Math.sin(index * 0.22 + lane * 8 + time * 0.00022) * height * 0.008;
-        const y = centerY(x, time) + riverWidth(x, time) * lane + ripple;
+        const y = (index / samples) * height;
+        const x = shoreX(y, time, offset);
         if (index === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
       }
-
-      ctx.strokeStyle = color;
-      ctx.lineWidth = Math.max(1, height * 0.0025);
-      ctx.lineCap = 'round';
-      ctx.setLineDash(dash);
-      ctx.lineDashOffset = -time * (0.018 + Math.abs(lane) * 0.008);
-      ctx.stroke();
-      ctx.setLineDash([]);
     }
 
-    function drawIsland(time: number) {
+    function drawSand() {
       if (!ctx) return;
-      const x = width * 0.69;
-      const y = centerY(x, time) + riverWidth(x, time) * 0.03;
-      const rx = Math.min(width * 0.075, 100);
-      const ry = Math.min(height * 0.055, 34);
+      const sand = ctx.createLinearGradient(0, 0, width * 0.52, height);
+      sand.addColorStop(0, '#fffaf0');
+      sand.addColorStop(0.52, '#fff0d7');
+      sand.addColorStop(1, '#f5d8b7');
+      ctx.fillStyle = sand;
+      ctx.fillRect(0, 0, width, height);
+
+      const warmth = ctx.createRadialGradient(
+        width * 0.17,
+        height * 0.7,
+        0,
+        width * 0.17,
+        height * 0.7,
+        width * 0.5,
+      );
+      warmth.addColorStop(0, 'rgba(255, 211, 166, 0.2)');
+      warmth.addColorStop(1, 'rgba(255, 244, 223, 0)');
+      ctx.fillStyle = warmth;
+      ctx.fillRect(0, 0, width, height);
+    }
+
+    function drawWater(time: number, waterPath: Path2D) {
+      if (!ctx) return;
+      const water = ctx.createLinearGradient(width * 0.22, height, width, 0);
+      water.addColorStop(0, '#c6eee2');
+      water.addColorStop(0.28, '#8ddbd4');
+      water.addColorStop(0.62, '#64c7cb');
+      water.addColorStop(1, '#55b6c9');
 
       ctx.save();
-      ctx.translate(x, y);
-      ctx.rotate(-0.08);
-      ctx.beginPath();
-      ctx.moveTo(-rx, 0);
-      ctx.bezierCurveTo(-rx * 0.42, -ry * 1.3, rx * 0.48, -ry * 0.9, rx, 0);
-      ctx.bezierCurveTo(rx * 0.38, ry * 1.15, -rx * 0.5, ry * 1.25, -rx, 0);
-      ctx.fillStyle = 'rgba(248, 241, 228, 0.94)';
-      ctx.shadowColor = 'rgba(16, 35, 63, 0.18)';
-      ctx.shadowBlur = 18;
-      ctx.fill();
-      ctx.shadowBlur = 0;
-      ctx.strokeStyle = 'rgba(16, 35, 63, 0.2)';
-      ctx.lineWidth = 1;
+      ctx.fillStyle = water;
+      ctx.fill(waterPath);
+      ctx.clip(waterPath);
+
+      ctx.globalCompositeOperation = 'soft-light';
+      for (const bloom of waterBlooms) {
+        const driftX = Math.sin(time * 0.00007 + bloom.phase) * 12;
+        const driftY = Math.cos(time * 0.00006 + bloom.phase) * 8;
+        const x = bloom.x * width + driftX;
+        const y = bloom.y * height + driftY;
+        const radiusX = bloom.radiusX * width;
+        const radiusY = bloom.radiusY * height;
+        const colors = [
+          ['rgba(255, 236, 186, 0.25)', 'rgba(255, 246, 218, 0)'],
+          ['rgba(232, 255, 237, 0.29)', 'rgba(214, 247, 233, 0)'],
+          ['rgba(26, 139, 167, 0.2)', 'rgba(39, 159, 178, 0)'],
+          ['rgba(166, 238, 219, 0.32)', 'rgba(180, 241, 222, 0)'],
+        ];
+        const palette = colors[bloom.tone] ?? colors[0]!;
+
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(Math.sin(bloom.phase) * 0.46);
+        ctx.beginPath();
+        const points = 15;
+        const edge = Array.from({ length: points }, (_, point) => {
+          const angle = (point / points) * Math.PI * 2;
+          const irregular =
+            0.82 +
+            Math.sin(point * 2.41 + bloom.phase) * 0.13 +
+            Math.cos(point * 4.17 - bloom.phase) * 0.08;
+          return {
+            x: Math.cos(angle) * radiusX * irregular,
+            y: Math.sin(angle) * radiusY * irregular,
+          };
+        });
+        const first = edge[0]!;
+        const second = edge[1]!;
+        ctx.moveTo((first.x + second.x) / 2, (first.y + second.y) / 2);
+        for (let point = 1; point <= points; point += 1) {
+          const current = edge[point % points]!;
+          const next = edge[(point + 1) % points]!;
+          ctx.quadraticCurveTo(
+            current.x,
+            current.y,
+            (current.x + next.x) / 2,
+            (current.y + next.y) / 2,
+          );
+        }
+        ctx.closePath();
+        const pigment = ctx.createRadialGradient(
+          -radiusX * 0.16,
+          -radiusY * 0.12,
+          0,
+          0,
+          0,
+          Math.max(radiusX, radiusY),
+        );
+        pigment.addColorStop(0, palette[0]);
+        pigment.addColorStop(0.7, palette[0]);
+        pigment.addColorStop(1, palette[1]);
+        ctx.fillStyle = pigment;
+        ctx.shadowColor = palette[0];
+        ctx.shadowBlur = Math.min(26, radiusY * 0.42);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      ctx.globalCompositeOperation = 'screen';
+      for (const cell of lightCells) {
+        const x = cell.x * width + Math.sin(time * 0.00011 + cell.phase) * 9;
+        const y = cell.y * height + Math.cos(time * 0.00009 + cell.phase) * 7;
+        const pulse = 0.82 + Math.sin(time * 0.0008 + cell.phase) * 0.18;
+        const radius = cell.radius * pulse;
+
+        ctx.beginPath();
+        for (let point = 0; point <= 9; point += 1) {
+          const angle = (point / 9) * Math.PI * 2;
+          const irregular = 0.78 + Math.sin(point * 2.7 + cell.phase) * 0.2;
+          const px = x + Math.cos(angle) * radius * irregular * 1.5;
+          const py = y + Math.sin(angle) * radius * irregular;
+          if (point === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.strokeStyle = `rgba(244, 255, 246, ${cell.alpha})`;
+        ctx.lineWidth = 1.25;
+        ctx.stroke();
+      }
+
+      const submergedSand = ctx.createRadialGradient(
+        width * 0.46,
+        height * 0.22,
+        0,
+        width * 0.46,
+        height * 0.22,
+        width * 0.32,
+      );
+      submergedSand.addColorStop(0, 'rgba(255, 235, 184, 0.34)');
+      submergedSand.addColorStop(0.46, 'rgba(255, 240, 198, 0.12)');
+      submergedSand.addColorStop(1, 'rgba(255, 245, 214, 0)');
+      ctx.fillStyle = submergedSand;
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.restore();
+    }
+
+    function drawFoam(time: number) {
+      if (!ctx) return;
+
+      ctx.save();
+      traceShore(time, 8);
+      ctx.strokeStyle = 'rgba(245, 255, 249, 0.48)';
+      ctx.lineWidth = 34;
+      ctx.lineCap = 'round';
+      ctx.shadowColor = 'rgba(255, 255, 255, 0.62)';
+      ctx.shadowBlur = 22;
       ctx.stroke();
+
+      traceShore(time, 2);
+      ctx.strokeStyle = 'rgba(255, 255, 252, 0.88)';
+      ctx.lineWidth = 8;
+      ctx.shadowBlur = 10;
+      ctx.stroke();
+
+      traceShore(time, 18);
+      ctx.strokeStyle = 'rgba(245, 255, 248, 0.64)';
+      ctx.lineWidth = 2.4;
+      ctx.setLineDash([24, 7, 5, 11, 38, 9]);
+      ctx.lineDashOffset = -time * 0.009;
+      ctx.shadowBlur = 0;
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      traceShore(time, 34);
+      ctx.strokeStyle = 'rgba(250, 255, 250, 0.3)';
+      ctx.lineWidth = 1.6;
+      ctx.setLineDash([10, 10, 3, 18, 20, 13]);
+      ctx.lineDashOffset = time * 0.006;
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      for (const pearl of foamPearls) {
+        const y =
+          pearl.y * height +
+          Math.sin(time * 0.00019 + pearl.phase) * Math.min(12, height * 0.016);
+        const x = shoreX(y, time, pearl.offset);
+        const pulse = 0.8 + Math.sin(time * 0.0011 + pearl.phase) * 0.2;
+        ctx.beginPath();
+        ctx.ellipse(x, y, pearl.radius * 1.8 * pulse, pearl.radius * pulse, -0.28, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(255, 255, 250, 0.76)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+
       ctx.restore();
     }
 
     function draw(time: number) {
       if (!ctx || !width || !height) return;
-      ctx.clearRect(0, 0, width, height);
+      drawSand();
+      const waterPath = makeWaterPath(time);
+      drawWater(time, waterPath);
+      drawFoam(time);
 
-      const bankGlow = makeRiverPath(time, height * 0.035);
-      ctx.save();
-      ctx.fillStyle = 'rgba(36, 107, 255, 0.07)';
-      ctx.shadowColor = 'rgba(36, 107, 255, 0.16)';
-      ctx.shadowBlur = 34;
-      ctx.fill(bankGlow);
-      ctx.restore();
-
-      const river = makeRiverPath(time);
-      const water = ctx.createLinearGradient(0, height * 0.28, width, height * 0.76);
-      water.addColorStop(0, '#0d3553');
-      water.addColorStop(0.28, '#195d9f');
-      water.addColorStop(0.58, '#2b84b8');
-      water.addColorStop(0.78, '#236cab');
-      water.addColorStop(1, '#102f50');
-
-      ctx.save();
-      ctx.fillStyle = water;
-      ctx.fill(river);
-      ctx.clip(river);
-
-      ctx.globalCompositeOperation = 'screen';
-      drawRibbon(time, -0.32, 'rgba(199, 232, 244, 0.34)', [150, 54, 28, 92]);
-      drawRibbon(time, -0.12, 'rgba(137, 205, 232, 0.25)', [86, 42, 220, 70]);
-      drawRibbon(time, 0.08, 'rgba(232, 245, 242, 0.3)', [210, 84, 46, 64]);
-      drawRibbon(time, 0.29, 'rgba(114, 187, 222, 0.26)', [118, 48, 34, 120]);
-
-      for (const mark of flowMarks) {
-        const progress = (mark.start + time * mark.speed) % 1.16;
-        const x = (progress - 0.08) * width;
-        const y =
-          centerY(x, time) +
-          riverWidth(x, time) * mark.lane +
-          Math.sin(progress * Math.PI * 12) * height * 0.006;
-        ctx.beginPath();
-        ctx.ellipse(x, y, mark.size * 3.4, mark.size, -0.12, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(229, 244, 243, ${mark.alpha})`;
-        ctx.fill();
-      }
-
-      ctx.restore();
-      drawIsland(time);
-
-      ctx.save();
-      ctx.strokeStyle = 'rgba(16, 35, 63, 0.24)';
-      ctx.lineWidth = 1;
-      ctx.stroke(river);
-      ctx.restore();
+      const haze = ctx.createLinearGradient(0, 0, width, 0);
+      haze.addColorStop(0, 'rgba(255, 251, 239, 0.2)');
+      haze.addColorStop(0.28, 'rgba(255, 250, 236, 0.06)');
+      haze.addColorStop(0.62, 'rgba(255, 255, 255, 0)');
+      ctx.fillStyle = haze;
+      ctx.fillRect(0, 0, width, height);
     }
 
     function loop(time: number) {

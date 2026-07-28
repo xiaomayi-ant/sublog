@@ -59,7 +59,7 @@ try {
       },
     },
     {
-      name: 'missing-art-river-contract',
+      name: 'missing-watercolor-shore-contract',
       apply: async (distDir) => {
         const home = path.join(distDir, 'index.html');
         const html = await readFile(home, 'utf8');
