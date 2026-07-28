@@ -1,0 +1,25 @@
+---
+// /research/[type]/[slug] — 覆盖 essays / notes / experiments 三类文章；draft 不生成页面
+import { render } from 'astro:content';
+import ArticleLayout from '../../../layouts/ArticleLayout.astro';
+import { getAllResearch, type ResearchEntry } from '../../../lib/content';
+
+export async function getStaticPaths() {
+  const all = await getAllResearch(); // 已排除 draft
+  return all.map((entry) => ({
+    params: { type: entry.collection, slug: entry.id },
+    props: { entry },
+  }));
+}
+
+interface Props {
+  entry: ResearchEntry;
+}
+
+const { entry } = Astro.props;
+const { Content, headings } = await render(entry);
+---
+
+<ArticleLayout entry={entry} headings={headings}>
+  <Content />
+</ArticleLayout>

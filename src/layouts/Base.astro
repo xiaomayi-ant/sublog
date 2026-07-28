@@ -1,0 +1,37 @@
+---
+// Base — 全站基础布局：lang=zh-CN，SEO meta 占位，nav / main / footer
+import '../styles/tokens.css';
+import '../styles/global.css';
+import SiteNav from '../components/SiteNav.astro';
+import Footer from '../components/Footer.astro';
+
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description = 'Water — 关于时间、流动、智能系统与未来的个人研究与构建空间。' } =
+  Astro.props;
+---
+
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title} · Water</title>
+    <meta name="description" content={description} />
+    {/* SEO / OG 完整方案见 Phase 5，这里先放基础占位 */}
+    <meta property="og:title" content={`${title} · Water`} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <SiteNav />
+    <main class="site-shell">
+      <slot />
+    </main>
+    <Footer />
+  </body>
+</html>

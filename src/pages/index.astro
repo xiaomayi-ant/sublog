@@ -1,0 +1,473 @@
+---
+// 首页 — 开篇构图 / 河流 / 大号入口 / 时间流 / 星点层
+import Base from '../layouts/Base.astro';
+import { getAllResearch, TYPE_LABELS, articleUrl, formatDate } from '../lib/content';
+
+// ── 时间流数据 ─────────────────────────────────────────────
+// 从三个 Content Collections 读取（合并、排除 draft、按日期倒序取前 5 条）。
+const stream = (await getAllResearch()).slice(0, 5).map((entry) => ({
+  date: formatDate(entry.data.pubDate),
+  title: entry.data.title,
+  type: TYPE_LABELS[entry.collection].en.slice(0, -1).toUpperCase(), // Essays→ESSAY
+  href: articleUrl(entry),
+}));
+
+// 河流路径的两种形态（SMIL 形变用，保持命令结构一致才能插值）
+const riverA =
+  'M-20 118 C 180 70, 340 168, 540 118 S 900 60, 1120 118 S 1360 170, 1460 108';
+const riverB =
+  'M-20 108 C 180 160, 340 66, 540 112 S 900 172, 1120 104 S 1360 64, 1460 118';
+
+const entries = [
+  {
+    num: '01',
+    zh: '研究',
+    en: 'RESEARCH',
+    desc: '思考、实验、技术文章和长期问题',
+    href: '/research',
+  },
+  {
+    num: '02',
+    zh: '项目',
+    en: 'PROJECTS',
+    desc: '正在构建的工具、系统和独立产品',
+    href: '/projects',
+  },
+];
+---
+
+<Base title="如斯" description="时间如水。记录正在形成的想法，构建可以被使用的东西。">
+  <!-- 星点层：低密度慢速漂移，reduced-motion 时静态（脚本见文件末尾） -->
+  <canvas id="star-field" aria-hidden="true"></canvas>
+
+  <!-- 1. 开篇构图 -->
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="hero-identity">
+      <svg
+        class="mark"
+        viewBox="0 0 64 64"
+        width="56"
+        height="56"
+        role="img"
+        aria-label="甲骨文意象标识：日、川与星点"
+      >
+        <!-- 日 -->
+        <circle class="mark-sun" cx="22" cy="20" r="10" fill="none" stroke="currentColor" stroke-width="2.5" />
+        <line x1="22" y1="20" x2="22" y2="20" stroke="none" />
+        <!-- 川 / 水：三道弯曲竖流 -->
+        <path class="mark-flow" d="M16 38 C 18 44, 14 50, 16 56" fill="none" stroke-width="2.5" stroke-linecap="round" />
+        <path class="mark-flow" d="M24 36 C 26 43, 22 50, 24 57" fill="none" stroke-width="2.5" stroke-linecap="round" />
+        <path class="mark-flow" d="M32 38 C 34 44, 30 50, 32 56" fill="none" stroke-width="2.5" stroke-linecap="round" />
+        <!-- 星点 -->
+        <circle class="mark-star" cx="48" cy="14" r="1.8" />
+        <circle class="mark-star" cx="54" cy="26" r="1.4" />
+        <circle class="mark-star mark-star--sun" cx="44" cy="34" r="1.6" />
+      </svg>
+      <h1 id="hero-title">如斯</h1>
+    </div>
+
+    <p class="hero-statement">时间如水。<br />记录正在形成的想法，构建可以被使用的东西。</p>
+    <p class="hero-sub meta">Researching what moves, building what remains.</p>
+  </section>
+
+  <!-- 2. 河流：横贯页面的结构线 -->
+  <div class="river-wrap" aria-hidden="true">
+    <svg id="river" viewBox="0 0 1440 220" preserveAspectRatio="none">
+      <path class="river-ghost" d={riverA} fill="none" />
+      <path class="river-main" d={riverA} fill="none">
+        <animate
+          attributeName="d"
+          values={`${riverA};${riverB};${riverA}`}
+          dur="26s"
+          repeatCount="indefinite"
+        />
+      </path>
+    </svg>
+  </div>
+
+  <!-- 3. 大号排印入口 -->
+  <section class="entries" aria-label="站点入口">
+    {
+      entries.map(({ num, zh, en, desc, href }) => (
+        <a class="entry" href={href}>
+          <span class="entry-num meta">{num}</span>
+          <span class="entry-body">
+            <span class="entry-title">
+              {zh}
+              <span class="entry-en meta">{en}</span>
+            </span>
+            <span class="entry-desc">{desc}</span>
+          </span>
+          <span class="entry-dot" aria-hidden="true" />
+        </a>
+      ))
+    }
+  </section>
+
+  <!-- 4. 时间流 -->
+  <section class="stream" aria-labelledby="stream-title">
+    <h2 id="stream-title" class="stream-heading meta">时间流 · STREAM</h2>
+    <ul>
+      {
+        stream.map(({ date, title, type, href }) => (
+          <li>
+            <a href={href} class="stream-item">
+              <span class="stream-date meta">{date}</span>
+              <span class="stream-title">{title}</span>
+              <span class="stream-type meta">{type}</span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+</Base>
+
+<style>
+  /* ── 星点层画布 ── */
+  #star-field {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  /* ── 开篇构图 ── */
+  .hero {
+    padding-top: var(--space-2xl);
+  }
+
+  .hero-identity {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--space-md);
+  }
+
+  .mark {
+    color: var(--color-ink);
+    transition: color var(--duration-slow) var(--ease-out);
+  }
+
+  .mark .mark-flow {
+    stroke: var(--color-river);
+    transition: stroke var(--duration-slow) var(--ease-out);
+  }
+
+  .mark .mark-star {
+    fill: var(--color-river);
+    transition: fill var(--duration-slow) var(--ease-out);
+  }
+
+  .mark .mark-star--sun {
+    fill: var(--color-sun);
+  }
+
+  /* 轻微 hover 状态变化：日染阳黄、川更亮 */
+  .hero-identity:hover .mark-sun {
+    stroke: var(--color-sun);
+  }
+
+  .hero-identity:hover .mark-star {
+    fill: var(--color-sun);
+  }
+
+  #hero-title {
+    font-size: var(--text-4xl);
+    letter-spacing: 0.06em;
+  }
+
+  .hero-statement {
+    margin-top: var(--space-xl);
+    font-family: var(--font-serif);
+    font-size: var(--text-xl);
+    line-height: 2;
+    max-width: var(--measure);
+  }
+
+  .hero-sub {
+    margin-top: var(--space-md);
+  }
+
+  /* ── 河流 ── */
+  .river-wrap {
+    margin-block: var(--space-xl) var(--space-2xl);
+    margin-inline: calc(50% - 50vw); /* 横贯整个视口宽度 */
+  }
+
+  #river {
+    width: 100%;
+    height: clamp(80px, 16vw, 220px);
+  }
+
+  .river-ghost {
+    stroke: var(--color-sky);
+    stroke-width: 10;
+    stroke-linecap: round;
+    opacity: 0.55;
+  }
+
+  .river-main {
+    stroke: var(--color-river);
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+
+  /* ── 大号入口 ── */
+  .entries {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .entry {
+    position: relative;
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-lg);
+    padding-block: var(--space-lg);
+    color: var(--color-ink);
+    text-decoration: none;
+    border-top: 1px solid var(--color-line);
+  }
+
+  .entry:last-child {
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .entry:hover {
+    text-decoration: none;
+  }
+
+  /* 下划线流动：天蓝水线从左向右漫过 */
+  .entry::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -1px;
+    width: 100%;
+    height: 2px;
+    background: var(--color-river);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform var(--duration-slow) var(--ease-out);
+  }
+
+  .entry:hover::after {
+    transform: scaleX(1);
+  }
+
+  .entry-num {
+    width: 2.5rem;
+    flex-shrink: 0;
+    transition: color var(--duration-fast) var(--ease-out);
+  }
+
+  .entry:hover .entry-num {
+    color: var(--color-river);
+  }
+
+  .entry-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+
+  .entry-title {
+    font-family: var(--font-serif);
+    font-size: var(--text-3xl);
+    line-height: 1.2;
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-md);
+  }
+
+  .entry-desc {
+    color: var(--color-ink-soft);
+    font-size: var(--text-base);
+    transition: color var(--duration-fast) var(--ease-out);
+  }
+
+  .entry:hover .entry-desc {
+    color: var(--color-ink);
+  }
+
+  /* 阳黄光点：hover 时安静地出现 */
+  .entry-dot {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--color-sun);
+    opacity: 0;
+    transform: translateY(-50%) scale(0.5);
+    transition:
+      opacity var(--duration-slow) var(--ease-out),
+      transform var(--duration-slow) var(--ease-out);
+  }
+
+  .entry:hover .entry-dot {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+
+  /* ── 时间流 ── */
+  .stream {
+    margin-top: var(--space-2xl);
+    max-width: var(--measure-wide);
+  }
+
+  .stream-heading {
+    margin-bottom: var(--space-lg);
+  }
+
+  .stream-item {
+    display: grid;
+    grid-template-columns: 7.5rem 1fr auto;
+    align-items: baseline;
+    gap: var(--space-lg);
+    padding-block: var(--space-sm);
+    color: var(--color-ink);
+    text-decoration: none;
+  }
+
+  .stream-item:hover {
+    text-decoration: none;
+  }
+
+  .stream-title {
+    font-family: var(--font-serif);
+    font-size: var(--text-lg);
+    background-image: linear-gradient(var(--color-river), var(--color-river));
+    background-repeat: no-repeat;
+    background-size: 0% 1px;
+    background-position: 0 100%;
+    transition: background-size var(--duration-slow) var(--ease-out);
+  }
+
+  .stream-item:hover .stream-title {
+    background-size: 100% 1px;
+  }
+
+  .stream-type {
+    color: var(--color-ink-faint);
+  }
+
+  @media (max-width: 40rem) {
+    .stream-item {
+      grid-template-columns: 6.5rem 1fr;
+    }
+
+    .stream-type {
+      display: none;
+    }
+
+    .entry-title {
+      font-size: var(--text-2xl);
+    }
+  }
+</style>
+
+<script>
+  // 河流与星点层的动效控制；reduced-motion 时全部降级为静态。
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  // 1. 河流 SMIL 动画降级
+  const river = document.getElementById('river') as unknown as SVGSVGElement | null;
+  function syncRiver() {
+    if (!river || typeof river.pauseAnimations !== 'function') return;
+    if (reduceMotion.matches) {
+      river.pauseAnimations();
+      river.setCurrentTime(0);
+    } else {
+      river.unpauseAnimations();
+    }
+  }
+  syncRiver();
+
+  // 2. 星点层：<40 点、慢速漂移、聚集在页面边缘；reduced-motion 时只画一帧
+  const canvas = document.getElementById('star-field') as HTMLCanvasElement | null;
+  if (canvas) {
+    const ctx = canvas.getContext('2d');
+    const COUNT = 32;
+    const INK = '16, 35, 63';
+    const BLUE = '36, 107, 255';
+
+    type Star = { x: number; y: number; r: number; phase: number; speed: number; tint: string };
+
+    let stars: Star[] = [];
+    let raf = 0;
+
+    function resize() {
+      if (!canvas || !ctx) return;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = canvas.clientWidth * dpr;
+      canvas.height = canvas.clientHeight * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      seed();
+      draw(0);
+    }
+
+    function seed() {
+      const w = canvas!.clientWidth;
+      const h = canvas!.clientHeight;
+      stars = Array.from({ length: COUNT }, (_, i) => {
+        // 聚集在左右两缘与顶部，中央留白
+        const band = i % 3;
+        const x =
+          band === 0
+            ? Math.random() * w * 0.14
+            : band === 1
+              ? w * (0.86 + Math.random() * 0.14)
+              : Math.random() * w;
+        const y = band === 2 ? Math.random() * h * 0.2 : Math.random() * h;
+        return {
+          x,
+          y,
+          r: 0.8 + Math.random() * 1.4,
+          phase: Math.random() * Math.PI * 2,
+          speed: 0.00012 + Math.random() * 0.0002,
+          tint: Math.random() < 0.25 ? BLUE : INK,
+        };
+      });
+    }
+
+    function draw(t: number) {
+      if (!canvas || !ctx) return;
+      ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+      for (const s of stars) {
+        const dx = Math.sin(t * s.speed + s.phase) * 6;
+        const dy = Math.cos(t * s.speed * 0.8 + s.phase) * 5;
+        const twinkle = 0.5 + 0.5 * Math.sin(t * s.speed * 2 + s.phase * 3);
+        ctx.beginPath();
+        ctx.arc(s.x + dx, s.y + dy, s.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${s.tint}, ${0.12 + twinkle * 0.2})`;
+        ctx.fill();
+      }
+    }
+
+    function loop(t: number) {
+      draw(t);
+      raf = requestAnimationFrame(loop);
+    }
+
+    function syncStars() {
+      cancelAnimationFrame(raf);
+      if (reduceMotion.matches) {
+        draw(0); // 静态一帧
+      } else {
+        raf = requestAnimationFrame(loop);
+      }
+    }
+
+    resize();
+    syncStars();
+    window.addEventListener('resize', resize);
+    reduceMotion.addEventListener('change', () => {
+      syncRiver();
+      syncStars();
+    });
+  }
+</script>

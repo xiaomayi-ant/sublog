@@ -1,0 +1,125 @@
+---
+// /research/tags/[tag] — 该标签下全部类型的文章
+import Base from '../../../layouts/Base.astro';
+import Meta from '../../../components/Meta.astro';
+import {
+  getAllResearch,
+  getAllTags,
+  TYPE_LABELS,
+  articleUrl,
+  formatDate,
+  type ResearchCollection,
+} from '../../../lib/content';
+
+export async function getStaticPaths() {
+  const all = await getAllResearch();
+  const tags = await getAllTags();
+  return tags.map((tag) => ({
+    params: { tag },
+    props: { entries: all.filter((entry) => entry.data.tags.includes(tag)) },
+  }));
+}
+
+const { tag } = Astro.params;
+const { entries } = Astro.props;
+---
+
+<Base title={`#${tag}`} description={`标签 ${tag} 下的全部研究内容。`}>
+  <header class="page-head">
+    <Meta items={['Tag']} />
+    <h1>#{tag}</h1>
+    <p class="lede">{entries.length} 条记录</p>
+  </header>
+
+  <ul class="list">
+    {
+      entries.map((entry) => (
+        <li class="item">
+          <span class="item-date meta">{formatDate(entry.data.pubDate)}</span>
+          <a class="item-title" href={articleUrl(entry)}>
+            {entry.data.title}
+          </a>
+          <span class="item-type meta">
+            {TYPE_LABELS[entry.collection as ResearchCollection].en}
+          </span>
+        </li>
+      ))
+    }
+  </ul>
+
+  <p class="back-wrap"><a class="back meta" href="/research">← 返回研究</a></p>
+</Base>
+
+<style>
+  .page-head {
+    padding-top: var(--space-xl);
+    max-width: var(--measure);
+  }
+
+  h1 {
+    font-size: var(--text-3xl);
+    margin-top: var(--space-sm);
+    font-family: var(--font-mono);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+
+  .lede {
+    margin-top: var(--space-md);
+    color: var(--color-ink-soft);
+  }
+
+  .list {
+    margin-top: var(--space-xl);
+  }
+
+  .item {
+    display: grid;
+    grid-template-columns: 6.5rem 1fr auto;
+    align-items: baseline;
+    gap: var(--space-lg);
+    padding-block: var(--space-md);
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .item-title {
+    font-family: var(--font-serif);
+    font-size: var(--text-lg);
+    color: var(--color-ink);
+    text-decoration: none;
+    justify-self: start;
+    background-image: linear-gradient(var(--color-river), var(--color-river));
+    background-repeat: no-repeat;
+    background-size: 0% 1px;
+    background-position: 0 100%;
+    transition: background-size var(--duration-slow) var(--ease-out);
+  }
+
+  .item-title:hover {
+    background-size: 100% 1px;
+  }
+
+  .item-type {
+    color: var(--color-ink-faint);
+  }
+
+  .back-wrap {
+    margin-top: var(--space-2xl);
+  }
+
+  .back {
+    text-decoration: none;
+  }
+
+  .back:hover {
+    color: var(--color-river);
+    text-decoration: none;
+  }
+
+  @media (max-width: 40rem) {
+    .item {
+      grid-template-columns: 1fr;
+      gap: var(--space-2xs);
+    }
+  }
+</style>

@@ -1,0 +1,52 @@
+/* Water — 设计 tokens
+   比例感：暖白背景 ~75% / 墨蓝文字 ~18% / 河蓝 ~6% / 阳黄 ~1%（仅限高光、hover、激活态） */
+
+:root {
+  /* 色彩 */
+  --color-bg: #fff9ec;        /* 暖白 */
+  --color-ink: #10233f;       /* 墨蓝 */
+  --color-river: #246bff;     /* 河蓝（主色） */
+  --color-sky: #cfe5ff;       /* 天蓝 */
+  --color-sun: #f5c85b;       /* 阳黄（仅高光） */
+
+  /* 派生色 */
+  --color-ink-soft: rgba(16, 35, 63, 0.64);
+  --color-ink-faint: rgba(16, 35, 63, 0.38);
+  --color-line: rgba(16, 35, 63, 0.14);
+  --color-river-soft: rgba(36, 107, 255, 0.12);
+
+  /* 字体栈：不引入外链字体，构建离线可过；中文标题宋体感，正文中文无衬线，英文 metadata 用 mono */
+  --font-serif: "Noto Serif SC", "Songti SC", "STSong", "SimSun", serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB",
+    "Source Han Sans SC", "Microsoft YaHei", sans-serif;
+  --font-mono: ui-monospace, "IBM Plex Mono", "SF Mono", Menlo, Consolas, monospace;
+
+  /* 排版尺度（1.25 近似比例） */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.563rem;
+  --text-2xl: 1.953rem;
+  --text-3xl: 2.441rem;
+  --text-4xl: clamp(2.75rem, 8vw, 4.5rem);
+
+  /* 间距 */
+  --space-2xs: 0.25rem;
+  --space-xs: 0.5rem;
+  --space-sm: 0.75rem;
+  --space-md: 1.25rem;
+  --space-lg: 2rem;
+  --space-xl: 3.5rem;
+  --space-2xl: 6rem;
+  --space-3xl: 10rem;
+
+  /* 行宽 */
+  --measure: 34rem;           /* 正文窄行宽 */
+  --measure-wide: 64rem;      /* 页面内容最大宽度 */
+
+  /* 动效 */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 160ms;
+  --duration-slow: 480ms;
+}

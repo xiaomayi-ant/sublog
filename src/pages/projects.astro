@@ -1,0 +1,149 @@
+---
+// /projects — 结构化项目索引：编号 + 宋体项目名 + tagline + mono metadata 行，非卡片网格
+import Base from '../layouts/Base.astro';
+import Meta from '../components/Meta.astro';
+import { getAllProjects, projectUrl, STATUS_LABELS } from '../lib/content';
+
+const projects = await getAllProjects();
+---
+
+<Base title="项目" description="正在构建的工具、系统和独立产品。">
+  <header class="page-head">
+    <Meta items={['Projects']} />
+    <h1>项目</h1>
+    <p class="lede">正在构建的工具、系统和独立产品。</p>
+  </header>
+
+  <ul class="list">
+    {
+      projects.map((project, i) => (
+        <li>
+          <a class="project" href={projectUrl(project)}>
+            <span class="project-num meta">
+              PROJECT {String(i + 1).padStart(2, '0')}
+            </span>
+            <span class="project-name">{project.data.title}</span>
+            <span class="project-tagline">{project.data.tagline}</span>
+            <span class="project-meta meta">
+              <span class={`status status--${project.data.status}`}>
+                <span class="status-dot" aria-hidden="true" />
+                {STATUS_LABELS[project.data.status]}
+              </span>
+              <span aria-hidden="true">·</span>
+              <span>Type {project.data.type}</span>
+              <span aria-hidden="true">·</span>
+              <span>Built {project.data.built}</span>
+            </span>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</Base>
+
+<style>
+  .page-head {
+    padding-top: var(--space-xl);
+    max-width: var(--measure);
+  }
+
+  h1 {
+    font-size: var(--text-3xl);
+    margin-top: var(--space-sm);
+  }
+
+  .lede {
+    margin-top: var(--space-md);
+    color: var(--color-ink-soft);
+  }
+
+  .list {
+    margin-top: var(--space-xl);
+  }
+
+  .project {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-2xs);
+    padding-block: var(--space-lg);
+    border-top: 1px solid var(--color-line);
+    color: var(--color-ink);
+    text-decoration: none;
+  }
+
+  .list li:last-child .project {
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .project:hover {
+    text-decoration: none;
+  }
+
+  .project-num {
+    color: var(--color-ink-faint);
+    transition: color var(--duration-fast) var(--ease-out);
+  }
+
+  .project:hover .project-num {
+    color: var(--color-river);
+  }
+
+  .project-name {
+    font-family: var(--font-serif);
+    font-size: var(--text-2xl);
+    line-height: 1.3;
+    justify-self: start;
+    background-image: linear-gradient(var(--color-river), var(--color-river));
+    background-repeat: no-repeat;
+    background-size: 0% 2px;
+    background-position: 0 100%;
+    transition: background-size var(--duration-slow) var(--ease-out);
+  }
+
+  .project:hover .project-name {
+    background-size: 100% 2px;
+  }
+
+  .project-tagline {
+    color: var(--color-ink-soft);
+    margin-top: var(--space-2xs);
+  }
+
+  .project-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-xs);
+    margin-top: var(--space-xs);
+    color: var(--color-ink-faint);
+  }
+
+  .status {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2xs);
+  }
+
+  /* 状态点：active 河蓝 / paused 天蓝 / archived 灰 */
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
+
+  .status--active .status-dot {
+    background: var(--color-river);
+  }
+
+  .status--paused .status-dot {
+    background: #7fa8e0; /* 天蓝加深一档，保证浅底上可辨 */
+  }
+
+  .status--archived .status-dot {
+    background: var(--color-ink-faint);
+  }
+
+  .status--active {
+    color: var(--color-river);
+  }
+</style>

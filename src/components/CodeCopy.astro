@@ -1,0 +1,69 @@
+---
+// CodeCopy — 给 .prose 内的代码块注入复制按钮（样式 + 内联脚本），供文章/项目布局共用
+---
+
+<style is:global>
+  .prose pre {
+    position: relative;
+  }
+
+  .prose .copy-btn {
+    position: absolute;
+    top: var(--space-xs);
+    right: var(--space-xs);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-ink-soft);
+    background: var(--color-bg);
+    border: 1px solid var(--color-line);
+    border-radius: 3px;
+    padding: 0.15em 0.6em;
+    cursor: pointer;
+    opacity: 0;
+    transition:
+      opacity var(--duration-fast) var(--ease-out),
+      color var(--duration-fast) var(--ease-out);
+  }
+
+  .prose pre:hover .copy-btn,
+  .prose .copy-btn:focus-visible {
+    opacity: 1;
+  }
+
+  .prose .copy-btn:hover {
+    color: var(--color-river);
+  }
+
+  .prose .copy-btn.copied {
+    color: var(--color-river);
+    opacity: 1;
+  }
+</style>
+
+<script>
+  // 给每个 .prose pre 注入一个小复制按钮
+  document.querySelectorAll<HTMLPreElement>('.prose pre').forEach((pre) => {
+    const btn = document.createElement('button');
+    btn.className = 'copy-btn';
+    btn.type = 'button';
+    btn.textContent = 'Copy';
+    btn.addEventListener('click', async () => {
+      const code = pre.querySelector('code')?.innerText ?? pre.innerText;
+      try {
+        await navigator.clipboard.writeText(code);
+        btn.textContent = 'Copied';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = 'Copy';
+          btn.classList.remove('copied');
+        }, 1600);
+      } catch {
+        btn.textContent = 'Failed';
+        setTimeout(() => (btn.textContent = 'Copy'), 1600);
+      }
+    });
+    pre.appendChild(btn);
+  });
+</script>

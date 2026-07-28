@@ -1,0 +1,170 @@
+---
+// ArticleLayout — 文章详情：大宋体标题 + Meta 元信息 + 可折叠 TOC + Prose 排版 + 代码复制
+import Base from './Base.astro';
+import Meta from '../components/Meta.astro';
+import Prose from '../components/Prose.astro';
+import CodeCopy from '../components/CodeCopy.astro';
+import type { MarkdownHeading } from 'astro';
+import { TYPE_LABELS, formatDate, type ResearchEntry } from '../lib/content';
+
+interface Props {
+  entry: ResearchEntry;
+  headings: MarkdownHeading[];
+}
+
+const { entry, headings } = Astro.props;
+const { title, description, pubDate, tags } = entry.data;
+const typeLabel = TYPE_LABELS[entry.collection];
+
+// TOC 只收 h2/h3
+const toc = headings.filter((h) => h.depth === 2 || h.depth === 3);
+---
+
+<Base title={title} description={description}>
+  <article class="article">
+    <header class="article-head">
+      <Meta items={[formatDate(pubDate), typeLabel.en, ...tags.map((t) => `#${t}`)]} />
+      <h1>{title}</h1>
+      <p class="article-desc">{description}</p>
+      {
+        tags.length > 0 && (
+          <p class="article-tags">
+            {tags.map((tag) => (
+              <a class="tag meta" href={`/research/tags/${tag}`}>
+                {tag}
+              </a>
+            ))}
+          </p>
+        )
+      }
+    </header>
+
+    {
+      toc.length > 0 && (
+        <details class="toc">
+          <summary class="meta">目录 · Contents</summary>
+          <ul>
+            {toc.map((h) => (
+              <li class:list={[{ 'toc-sub': h.depth === 3 }]}>
+                <a href={`#${h.slug}`}>{h.text}</a>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )
+    }
+
+    <Prose>
+      <slot />
+    </Prose>
+
+    <footer class="article-foot">
+      <a class="back meta" href="/research">← 返回研究</a>
+    </footer>
+  </article>
+  <CodeCopy />
+</Base>
+
+<style>
+  .article {
+    padding-top: var(--space-xl);
+  }
+
+  .article-head {
+    max-width: var(--measure);
+  }
+
+  h1 {
+    font-size: var(--text-3xl);
+    margin-top: var(--space-md);
+    line-height: 1.4;
+  }
+
+  .article-desc {
+    margin-top: var(--space-md);
+    color: var(--color-ink-soft);
+  }
+
+  .article-tags {
+    display: flex;
+    gap: var(--space-sm);
+    margin-top: var(--space-md);
+  }
+
+  .tag {
+    color: var(--color-ink-faint);
+    text-decoration: none;
+  }
+
+  .tag::before {
+    content: '#';
+  }
+
+  .tag:hover {
+    color: var(--color-river);
+    text-decoration: none;
+  }
+
+  /* 可折叠 TOC：纯 CSS details/summary */
+  .toc {
+    max-width: var(--measure);
+    margin-top: var(--space-xl);
+    padding: var(--space-md) var(--space-lg);
+    border-left: 2px solid var(--color-sky);
+    background: rgba(207, 229, 255, 0.18);
+  }
+
+  .toc summary {
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .toc summary::before {
+    content: '▸ ';
+    color: var(--color-river);
+  }
+
+  .toc[open] summary::before {
+    content: '▾ ';
+  }
+
+  .toc ul {
+    margin-top: var(--space-sm);
+  }
+
+  .toc li {
+    padding-block: var(--space-2xs);
+  }
+
+  .toc li.toc-sub {
+    padding-left: var(--space-lg);
+  }
+
+  .toc a {
+    color: var(--color-ink-soft);
+    text-decoration: none;
+    font-size: var(--text-sm);
+    transition: color var(--duration-fast) var(--ease-out);
+  }
+
+  .toc a:hover {
+    color: var(--color-river);
+  }
+
+  .article :global(.prose) {
+    margin-top: var(--space-xl);
+  }
+
+  .article-foot {
+    margin-top: var(--space-2xl);
+  }
+
+  .back {
+    text-decoration: none;
+  }
+
+  .back:hover {
+    color: var(--color-river);
+    text-decoration: none;
+  }
+</style>

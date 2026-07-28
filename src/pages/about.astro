@@ -1,0 +1,36 @@
+---
+// /about — Phase 5 待建：个人叙事 + "Be water" 题跋；先放极简占位避免导航死链
+import Base from '../layouts/Base.astro';
+import Meta from '../components/Meta.astro';
+---
+
+<Base title="About" description="关于 Sumoer。">
+  <header class="page-head">
+    <Meta items={['About']} />
+    <h1>关于</h1>
+    <p class="lede">“Be water, my friend.”</p>
+  </header>
+  <p class="placeholder meta">Phase 5 — 个人叙事与题跋待建。</p>
+</Base>
+
+<style>
+  .page-head {
+    padding-top: var(--space-xl);
+    max-width: var(--measure);
+  }
+
+  h1 {
+    font-size: var(--text-3xl);
+    margin-top: var(--space-sm);
+  }
+
+  .lede {
+    margin-top: var(--space-md);
+    font-family: var(--font-serif);
+    color: var(--color-ink-soft);
+  }
+
+  .placeholder {
+    margin-top: var(--space-2xl);
+  }
+</style>

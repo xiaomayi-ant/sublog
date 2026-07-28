@@ -1,0 +1,147 @@
+---
+// /research — 编辑式目录索引：按类型分组（Essays / Notes / Experiments），排除 draft
+import Base from '../layouts/Base.astro';
+import Meta from '../components/Meta.astro';
+import { getResearchByType, TYPE_LABELS, articleUrl, formatDate } from '../lib/content';
+
+const groups = await getResearchByType();
+---
+
+<Base title="研究" description="关于智能系统、工具和时间的长期记录。">
+  <header class="page-head">
+    <Meta items={['Research']} />
+    <h1>研究</h1>
+    <p class="lede">关于智能系统、工具和时间的长期记录。</p>
+  </header>
+
+  {
+    groups.map(({ name, entries }) => (
+      <section class="group" aria-labelledby={`group-${name}`}>
+        <h2 id={`group-${name}`} class="group-heading">
+          <span class="meta">{TYPE_LABELS[name].en}</span>
+          <span class="group-zh">{TYPE_LABELS[name].zh}</span>
+        </h2>
+        {entries.length === 0 ? (
+          <p class="empty meta">暂无内容</p>
+        ) : (
+          <ul>
+            {entries.map((entry) => (
+              <li class="item">
+                <span class="item-date meta">{formatDate(entry.data.pubDate)}</span>
+                <a class="item-title" href={articleUrl(entry)}>
+                  {entry.data.title}
+                </a>
+                <span class="item-tags">
+                  {entry.data.tags.map((tag) => (
+                    <a class="tag meta" href={`/research/tags/${tag}`}>
+                      {tag}
+                    </a>
+                  ))}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    ))
+  }
+</Base>
+
+<style>
+  .page-head {
+    padding-top: var(--space-xl);
+    max-width: var(--measure);
+  }
+
+  h1 {
+    font-size: var(--text-3xl);
+    margin-top: var(--space-sm);
+  }
+
+  .lede {
+    margin-top: var(--space-md);
+    color: var(--color-ink-soft);
+  }
+
+  .group {
+    margin-top: var(--space-2xl);
+  }
+
+  .group-heading {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-md);
+    padding-bottom: var(--space-sm);
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .group-zh {
+    font-family: var(--font-serif);
+    font-size: var(--text-xl);
+  }
+
+  .empty {
+    margin-top: var(--space-lg);
+  }
+
+  .item {
+    display: grid;
+    grid-template-columns: 6.5rem 1fr auto;
+    align-items: baseline;
+    gap: var(--space-lg);
+    padding-block: var(--space-md);
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .item-date {
+    flex-shrink: 0;
+  }
+
+  .item-title {
+    font-family: var(--font-serif);
+    font-size: var(--text-lg);
+    color: var(--color-ink);
+    text-decoration: none;
+    background-image: linear-gradient(var(--color-river), var(--color-river));
+    background-repeat: no-repeat;
+    background-size: 0% 1px;
+    background-position: 0 100%;
+    transition: background-size var(--duration-slow) var(--ease-out);
+    justify-self: start;
+  }
+
+  .item-title:hover {
+    background-size: 100% 1px;
+  }
+
+  .item-tags {
+    display: flex;
+    gap: var(--space-sm);
+  }
+
+  .tag {
+    color: var(--color-ink-faint);
+    text-decoration: none;
+    transition: color var(--duration-fast) var(--ease-out);
+  }
+
+  .tag::before {
+    content: '#';
+  }
+
+  .tag:hover {
+    color: var(--color-river);
+    text-decoration: none;
+  }
+
+  @media (max-width: 40rem) {
+    .item {
+      grid-template-columns: 1fr;
+      gap: var(--space-2xs);
+    }
+
+    .item-tags {
+      order: 3;
+    }
+  }
+</style>

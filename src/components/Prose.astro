@@ -1,0 +1,74 @@
+---
+// Prose — 文章排版容器：窄行宽、宽松垂直节奏
+---
+
+<div class="prose">
+  <slot />
+</div>
+
+<style>
+  .prose {
+    max-width: var(--measure);
+    font-size: var(--text-base);
+    line-height: 1.9;
+  }
+
+  .prose :global(p + p) {
+    margin-top: var(--space-md);
+  }
+
+  .prose :global(h2) {
+    font-size: var(--text-xl);
+    margin-top: var(--space-2xl);
+    margin-bottom: var(--space-md);
+  }
+
+  .prose :global(h3) {
+    font-size: var(--text-lg);
+    margin-top: var(--space-xl);
+    margin-bottom: var(--space-sm);
+  }
+
+  .prose :global(ul),
+  .prose :global(ol) {
+    padding-left: 1.25em;
+    margin-top: var(--space-md);
+  }
+
+  .prose :global(ul) {
+    list-style: disc;
+  }
+
+  .prose :global(ol) {
+    list-style: decimal;
+  }
+
+  .prose :global(li + li) {
+    margin-top: var(--space-2xs);
+  }
+
+  .prose :global(blockquote) {
+    margin: var(--space-lg) 0;
+    padding-left: var(--space-md);
+    border-left: 2px solid var(--color-sky);
+    color: var(--color-ink-soft);
+  }
+
+  .prose :global(code) {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+    background: var(--color-river-soft);
+    padding: 0.1em 0.35em;
+    border-radius: 3px;
+  }
+
+  .prose :global(a) {
+    text-decoration: underline;
+  }
+
+  .prose :global(hr) {
+    border: none;
+    border-top: 1px solid var(--color-line);
+    margin: var(--space-xl) 0;
+  }
+</style>
