@@ -9,14 +9,29 @@
   data-color-focus="sunlight-diagonal"
   data-motion-rhythm="6s-breathe-3s-highlight"
   data-type-system="editorial-serif-sans"
-  data-intro-motion="first-visit-stagger-out"
+  data-intro-motion="first-visit-word-reveal"
 >
   <div class="hero-frame">
     <div class="hero-copy">
       <p class="hero-kicker">SUMOER — RESEARCH & BUILD / 2026</p>
       <h1 id="home-title" aria-label="Be water, my friend.">
-        <span class="intro-word intro-word--soft" aria-hidden="true">Be water,</span>
-        <span class="intro-word intro-word--strong" aria-hidden="true">my friend.</span>
+        <span class="intro-line intro-line--water" aria-hidden="true">
+          <span class="intro-be">Be</span>
+          <span class="intro-space">&nbsp;</span>
+          <span class="intro-water">water</span><span class="intro-comma">,</span>
+        </span>
+        <span class="intro-line intro-line--friend" aria-hidden="true">
+          <span class="intro-letter" style="--letter-delay: 330ms">m</span>
+          <span class="intro-letter" style="--letter-delay: 378ms">y</span>
+          <span class="intro-space">&nbsp;</span>
+          <span class="intro-letter" style="--letter-delay: 426ms">f</span>
+          <span class="intro-letter" style="--letter-delay: 474ms">r</span>
+          <span class="intro-letter" style="--letter-delay: 522ms">i</span>
+          <span class="intro-letter" style="--letter-delay: 570ms">e</span>
+          <span class="intro-letter" style="--letter-delay: 618ms">n</span>
+          <span class="intro-letter" style="--letter-delay: 666ms">d</span>
+          <span class="intro-letter" style="--letter-delay: 714ms">.</span>
+        </span>
       </h1>
 
       <div class="hero-description">
@@ -127,36 +142,42 @@
     color: #173e46;
   }
 
-  .intro-word {
+  .intro-line {
     display: block;
     width: max-content;
     max-width: 100%;
     transform-origin: left center;
   }
 
-  .intro-word--soft {
+  .intro-line--water {
     font-style: italic;
     font-weight: 500;
-    color: rgba(23, 62, 70, 0.72);
   }
 
-  .intro-word--strong {
+  .intro-be,
+  .intro-comma {
+    color: rgba(23, 62, 70, 0.68);
+  }
+
+  .intro-water {
+    color: #2b8f94;
+  }
+
+  .intro-line--friend {
     font-weight: 700;
-    color: #173e46;
+    color: #0047ab;
   }
 
-  h1[data-intro-state='playing'] .intro-word--soft {
-    animation: intro-word-out 720ms cubic-bezier(0.4, 0, 0.2, 1) 760ms forwards;
+  .intro-letter {
+    display: inline-block;
   }
 
-  h1[data-intro-state='playing'] .intro-word--strong {
-    animation: intro-word-out 720ms cubic-bezier(0.4, 0, 0.2, 1) 980ms forwards;
+  h1[data-intro-state='playing'] .intro-line--water {
+    animation: intro-group-in 380ms var(--ease-out) 60ms both;
   }
 
-  h1[data-intro-state='done'] .intro-word {
-    opacity: 0;
-    filter: blur(5px);
-    transform: translate3d(0, -0.16em, 0);
+  h1[data-intro-state='playing'] .intro-letter {
+    animation: intro-letter-in 300ms var(--ease-out) var(--letter-delay) both;
   }
 
   .hero-description {
@@ -314,17 +335,31 @@
     }
   }
 
-  @keyframes intro-word-out {
+  @keyframes intro-group-in {
     from {
+      opacity: 0;
+      filter: blur(4px);
+      transform: translate3d(0, 0.16em, 0);
+    }
+
+    to {
       opacity: 1;
       filter: blur(0);
       transform: translate3d(0, 0, 0);
     }
+  }
+
+  @keyframes intro-letter-in {
+    from {
+      opacity: 0;
+      filter: blur(3px);
+      transform: translate3d(0, 0.18em, 0);
+    }
 
     to {
-      opacity: 0;
-      filter: blur(5px);
-      transform: translate3d(0, -0.16em, 0);
+      opacity: 1;
+      filter: blur(0);
+      transform: translate3d(0, 0, 0);
     }
   }
 
@@ -378,7 +413,8 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    h1[data-intro-state] .intro-word {
+    h1[data-intro-state] .intro-line,
+    h1[data-intro-state] .intro-letter {
       opacity: 1;
       filter: none;
       transform: none;
@@ -408,8 +444,8 @@
     let introSeen = false;
 
     try {
-      introSeen = sessionStorage.getItem('water-intro-seen') === 'true';
-      if (!introSeen) sessionStorage.setItem('water-intro-seen', 'true');
+      introSeen = sessionStorage.getItem('water-intro-reveal-v2') === 'true';
+      if (!introSeen) sessionStorage.setItem('water-intro-reveal-v2', 'true');
     } catch {
       // Storage can be unavailable in privacy modes; the one-shot animation still remains safe.
     }
@@ -418,7 +454,7 @@
       introTitle.dataset.introState = 'playing';
       window.setTimeout(() => {
         introTitle.dataset.introState = 'done';
-      }, 1800);
+      }, 1120);
     }
   }
 

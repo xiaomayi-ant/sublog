@@ -104,7 +104,7 @@ try {
         const html = await readFile(home, 'utf8');
         await writeFile(
           home,
-          html.replace('data-intro-motion="first-visit-stagger-out"', 'data-intro-motion="none"'),
+          html.replace('data-intro-motion="first-visit-word-reveal"', 'data-intro-motion="none"'),
         );
       },
     },

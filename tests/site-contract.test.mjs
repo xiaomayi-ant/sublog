@@ -192,19 +192,29 @@ test('the home hero uses a measured editorial typography hierarchy', async () =>
     home,
     /关注智能系统、界面，以及人在技术中的判断。记录尚未定型的想法，也做可以被使用的东西。/,
   );
-  assert.match(home, /data-intro-motion="first-visit-stagger-out"/);
+  assert.match(home, /data-intro-motion="first-visit-word-reveal"/);
   assert.match(home, /aria-label="Be water, my friend\."/);
-  assert.match(home, /class="intro-word intro-word--soft"[^>]*>Be water,<\/span>/);
-  assert.match(home, /class="intro-word intro-word--strong"[^>]*>my friend\.<\/span>/);
+  assert.match(home, /class="intro-be"[^>]*>Be<\/span>/);
+  assert.match(home, /class="intro-water"[^>]*>water<\/span>/);
+  assert.match(
+    home,
+    /class="intro-be"[^>]*>Be<\/span><span class="intro-space"[^>]*>&nbsp;<\/span><span class="intro-water"[^>]*>water<\/span>/,
+  );
+  assert.match(home, /class="intro-line intro-line--friend"/);
+  assert.match(home, /style="--letter-delay: 330ms"[^>]*>m<\/span>/);
+  assert.match(home, /style="--letter-delay: 714ms"[^>]*>\.<\/span>/);
   assert.doesNotMatch(
     home,
     /观察、研究，也构建。|阅读研究|查看项目|class="hero-links"|Water \/ Personal field notes|Observe · make · let flow/i,
   );
   assert.match(css, /font-size:clamp\(4\.25rem,6\.62vw,5\.5rem\)/);
   assert.match(css, /letter-spacing:-\.03em/);
-  assert.match(css, /\.intro-word--soft[^}]*font-style:italic/);
-  assert.match(css, /\.intro-word--strong[^}]*font-weight:700/);
+  assert.match(css, /\.intro-water[^}]*color:#2b8f94/);
+  assert.match(css, /\.intro-line--friend[^}]*color:#0047ab/);
+  assert.match(css, /\.intro-line--friend[^}]*font-weight:700/);
   assert.match(css, /\.hero-description[^}]*font-family:var\(--font-sans\)/);
-  assert.match(css, /animation:[^;}]*intro-word-out/);
-  assert.match(home, /sessionStorage\.getItem\([`'"]water-intro-seen[`'"]\)/);
+  assert.match(css, /animation:[^;}]*intro-group-in/);
+  assert.match(css, /animation:[^;}]*intro-letter-in/);
+  assert.doesNotMatch(css, /intro-word-out/);
+  assert.match(home, /sessionStorage\.getItem\([`'"]water-intro-reveal-v2[`'"]\)/);
 });
