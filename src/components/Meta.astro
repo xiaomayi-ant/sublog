@@ -2,20 +2,19 @@
 // Meta — 小号英文 mono 元信息行（日期 / 类型 / 标签等）
 interface Props {
   items: string[];
-  as?: 'p' | 'div';
 }
 
-const { items, as: Tag = 'p' } = Astro.props;
+const { items } = Astro.props;
 ---
 
-<Tag class="meta-line">
+<p class="meta-line">
   {items.map((item, i) => (
     <>
       {i > 0 && <span class="meta-sep" aria-hidden="true">·</span>}
       <span>{item}</span>
     </>
   ))}
-</Tag>
+</p>
 
 <style>
   .meta-line {

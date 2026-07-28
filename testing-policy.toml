@@ -4,6 +4,7 @@ inherits = "global-2026-07-25"
 [commands]
 test = "npm test"
 contract = "npm run test:contract"
+mutation_changed = "npm run test:mutation"
 
 [boundaries]
 integration = ["src/pages/**", "src/content.config.ts", "src/lib/content.ts"]

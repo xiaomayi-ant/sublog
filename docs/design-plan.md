@@ -3,6 +3,16 @@
 > 方向定义见 `site-direction.md`；本文档是落地的模块拆解与分阶段 TODO。
 > 技术栈：Astro（内容驱动、Markdown Content Collections、默认零 JS）。
 
+## Release Status
+
+The initial release is complete on the `codex-feat` branch. The production build, route and metadata contracts, internal links, draft exclusion, mutation controls, desktop layout, and mobile layout have been verified.
+
+Deployment requires a real public origin at build time:
+
+```sh
+SITE_URL=https://water.your-domain.tld npm run build
+```
+
 ## 设计模块
 
 1. **设计系统层** — 色彩 tokens（#FFF9EC / #10233F / #246BFF / #CFE5FF / #F5C85B，比例 75/18/6/1，黄色仅限高光/hover/激活态）、字体（中文宋体标题 + 中文无衬线正文 + 英文 sans/mono metadata）、窄行宽排版、全局 `prefers-reduced-motion` 基线。
@@ -23,6 +33,6 @@
 - [x] Phase 1 — 设计系统：tokens.css、字体方案、全局样式、Meta/Prose/SiteNav/Footer 组件
 - [x] Phase 2 — 首页：SVG mark、河流动画、首屏构图、大号入口 + hover、时间流、星点层、页脚
 - [x] Phase 3 — Research：索引页（类型分组 + 标签）、文章详情模板（TOC/代码复制/高亮）、标签页、RSS、占位文章
-- [ ] Phase 4 — Projects：索引页、详情页模板（metadata + 叙事结构 + 截图 + 链接）、首个项目
-- [ ] Phase 5 — About + 收尾：About 页、SEO/OG/sitemap/favicon、性能检查、reduced-motion 与移动端走查
+- [x] Phase 4 — Projects：索引页、详情页模板（metadata + 叙事结构 + 系统序列视觉 + 可选链接）、两个项目案例
+- [x] Phase 5 — About + 收尾：About 页、SEO/OG/sitemap/favicon、404、可访问性、性能检查、reduced-motion 与移动端走查
 - [ ] Phase 6（二期）— /now、动效增强、子域名方案

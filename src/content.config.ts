@@ -1,5 +1,6 @@
-import { defineCollection, z } from 'astro:content';
+import { defineCollection } from 'astro:content';
 import { glob } from 'astro/loaders';
+import { z } from 'astro/zod';
 
 // 统一的研究内容 schema：标题、摘要、发布日期、标签数组、草稿标记。
 // essays / notes / experiments 三类共用，Phase 3 的 /research 索引按类型分组、按标签筛选。
@@ -38,8 +39,8 @@ const projects = defineCollection({
     type: z.string(),
     built: z.string(),
     pubDate: z.coerce.date(),
-    demo: z.string().url().optional(),
-    repo: z.string().url().optional(),
+    demo: z.url().optional(),
+    repo: z.url().optional(),
     cover: z.string().optional(),
     featured: z.boolean().default(false),
     draft: z.boolean().default(false),

@@ -8,13 +8,21 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "test": "npm run test:contract",
+    "check": "astro check",
+    "test": "npm run check && npm run test:contract && npm run test:links && npm run test:mutation",
     "test:contract": "npm run build && node --test tests/site-contract.test.mjs",
+    "test:links": "node --test tests/link-contract.test.mjs",
+    "test:mutation": "node scripts/verify-contract-mutations.mjs",
     "preview": "astro preview",
     "astro": "astro"
   },
   "dependencies": {
     "@astrojs/rss": "^4.0.19",
     "astro": "^7.1.4"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "@types/node": "^26.1.2",
+    "typescript": "^6.0.3"
   }
 }

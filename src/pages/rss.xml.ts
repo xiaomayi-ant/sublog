@@ -8,7 +8,7 @@ export async function GET(context: APIContext) {
   return rss({
     title: 'Water — 研究',
     description: '关于智能系统、工具和时间的长期记录。',
-    site: context.site ?? 'https://water.example.com',
+    site: context.site ?? 'https://water.localhost',
     items: entries.map((entry) => ({
       title: entry.data.title,
       description: entry.data.description,
