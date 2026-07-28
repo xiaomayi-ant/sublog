@@ -97,6 +97,17 @@ try {
         );
       },
     },
+    {
+      name: 'missing-intro-motion',
+      apply: async (distDir) => {
+        const home = path.join(distDir, 'index.html');
+        const html = await readFile(home, 'utf8');
+        await writeFile(
+          home,
+          html.replace('data-intro-motion="first-visit-stagger-out"', 'data-intro-motion="none"'),
+        );
+      },
+    },
   ];
 
   const survivors = [];
@@ -117,7 +128,7 @@ try {
     throw new Error(`Unexplained surviving contract mutations: ${survivors.join(', ')}`);
   }
 
-  console.log('mutation_changed: 7 killed / 0 unexplained');
+  console.log('mutation_changed: 8 killed / 0 unexplained');
 } finally {
   await rm(mutationRoot, { recursive: true });
 }

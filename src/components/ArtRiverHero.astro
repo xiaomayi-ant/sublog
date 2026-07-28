@@ -9,29 +9,21 @@
   data-color-focus="sunlight-diagonal"
   data-motion-rhythm="6s-breathe-3s-highlight"
   data-type-system="editorial-serif-sans"
+  data-intro-motion="first-visit-stagger-out"
 >
   <div class="hero-frame">
     <div class="hero-copy">
       <p class="hero-kicker">SUMOER — RESEARCH & BUILD / 2026</p>
-      <h1 id="home-title">时间如水。</h1>
+      <h1 id="home-title" aria-label="Be water, my friend.">
+        <span class="intro-word intro-word--soft" aria-hidden="true">Be water,</span>
+        <span class="intro-word intro-word--strong" aria-hidden="true">my friend.</span>
+      </h1>
 
       <div class="hero-description">
-        <p class="hero-statement">观察、研究，也构建。</p>
         <p>
           关注智能系统、界面，以及人在技术中的判断。记录尚未定型的想法，也做可以被使用的东西。
         </p>
       </div>
-
-      <nav class="hero-links" aria-label="首页主要入口">
-        <a href="/research">
-          <span>阅读研究</span>
-          <span class="link-en meta" aria-hidden="true">Research</span>
-        </a>
-        <a href="/projects">
-          <span>查看项目</span>
-          <span class="link-en meta" aria-hidden="true">Projects</span>
-        </a>
-      </nav>
     </div>
 
     <figure
@@ -127,93 +119,57 @@
   }
 
   h1 {
-    font-size: clamp(5rem, 8.2vw, 8.25rem);
+    font-family: "Iowan Old Style", Baskerville, "Times New Roman", serif;
+    font-size: clamp(4.25rem, 6.62vw, 5.5rem);
     font-weight: 400;
-    line-height: 0.92;
-    letter-spacing: -0.045em;
+    line-height: 1.08;
+    letter-spacing: -0.03em;
     color: #173e46;
   }
 
+  .intro-word {
+    display: block;
+    width: max-content;
+    max-width: 100%;
+    transform-origin: left center;
+  }
+
+  .intro-word--soft {
+    font-style: italic;
+    font-weight: 500;
+    color: rgba(23, 62, 70, 0.72);
+  }
+
+  .intro-word--strong {
+    font-weight: 700;
+    color: #173e46;
+  }
+
+  h1[data-intro-state='playing'] .intro-word--soft {
+    animation: intro-word-out 720ms cubic-bezier(0.4, 0, 0.2, 1) 760ms forwards;
+  }
+
+  h1[data-intro-state='playing'] .intro-word--strong {
+    animation: intro-word-out 720ms cubic-bezier(0.4, 0, 0.2, 1) 980ms forwards;
+  }
+
+  h1[data-intro-state='done'] .intro-word {
+    opacity: 0;
+    filter: blur(5px);
+    transform: translate3d(0, -0.16em, 0);
+  }
+
   .hero-description {
-    display: grid;
-    gap: 0.85rem;
     max-width: 27rem;
     margin-top: 2.2rem;
     font-family: var(--font-sans);
     color: rgba(23, 62, 70, 0.74);
   }
 
-  .hero-statement {
-    font-family: var(--font-serif);
-    font-size: clamp(1.35rem, 1.8vw, 1.55rem);
-    font-weight: 400;
-    line-height: 1.45;
-    letter-spacing: -0.015em;
-    color: #173e46;
-  }
-
-  .hero-description p:last-child {
+  .hero-description p {
     max-width: 26.5rem;
     font-size: clamp(0.98rem, 1.15vw, 1.08rem);
     line-height: 1.78;
-  }
-
-  .hero-links {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    max-width: 29rem;
-    margin-top: 2.25rem;
-    border-block: 1px solid rgba(23, 62, 70, 0.18);
-  }
-
-  .hero-links a {
-    position: relative;
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 0.92rem 1rem 0.92rem 0;
-    font-family: var(--font-sans);
-    font-size: 0.9rem;
-    font-weight: 500;
-    letter-spacing: 0.015em;
-    color: #173e46;
-    text-decoration: none;
-  }
-
-  .hero-links a + a {
-    padding-left: 1rem;
-    border-left: 1px solid rgba(23, 62, 70, 0.18);
-  }
-
-  .hero-links a::after {
-    position: absolute;
-    right: 1rem;
-    bottom: -1px;
-    left: 0;
-    height: 2px;
-    content: '';
-    background: #66c7c3;
-    transform: scaleX(0);
-    transform-origin: left;
-    transition: transform var(--duration-slow) var(--ease-out);
-  }
-
-  .hero-links a + a::after {
-    left: 1rem;
-  }
-
-  .hero-links a:hover::after,
-  .hero-links a:focus-visible::after {
-    transform: scaleX(1);
-  }
-
-  .link-en {
-    font-family: var(--font-sans);
-    font-size: 0.625rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: rgba(23, 62, 70, 0.46);
   }
 
   .shore-art {
@@ -358,6 +314,20 @@
     }
   }
 
+  @keyframes intro-word-out {
+    from {
+      opacity: 1;
+      filter: blur(0);
+      transform: translate3d(0, 0, 0);
+    }
+
+    to {
+      opacity: 0;
+      filter: blur(5px);
+      transform: translate3d(0, -0.16em, 0);
+    }
+  }
+
   @media (max-width: 58rem) {
     .hero-frame {
       grid-template-columns: minmax(20rem, 1fr) auto;
@@ -373,9 +343,6 @@
       font-size: clamp(3.6rem, 8vw, 5.5rem);
     }
 
-    .hero-statement {
-      font-size: 1.25rem;
-    }
   }
 
   @media (max-width: 44rem) {
@@ -399,8 +366,7 @@
       font-size: clamp(3.65rem, 17vw, 5.4rem);
     }
 
-    .hero-description,
-    .hero-links {
+    .hero-description {
       max-width: none;
     }
 
@@ -412,6 +378,13 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
+    h1[data-intro-state] .intro-word {
+      opacity: 1;
+      filter: none;
+      transform: none;
+      animation: none;
+    }
+
     .shore-artwork,
     .shore-wash,
     .shore-wash::after {
@@ -429,6 +402,26 @@
 </style>
 
 <script>
+  const introTitle = document.getElementById('home-title');
+
+  if (introTitle) {
+    let introSeen = false;
+
+    try {
+      introSeen = sessionStorage.getItem('water-intro-seen') === 'true';
+      if (!introSeen) sessionStorage.setItem('water-intro-seen', 'true');
+    } catch {
+      // Storage can be unavailable in privacy modes; the one-shot animation still remains safe.
+    }
+
+    if (!introSeen) {
+      introTitle.dataset.introState = 'playing';
+      window.setTimeout(() => {
+        introTitle.dataset.introState = 'done';
+      }, 1800);
+    }
+  }
+
   const hero = document.querySelector('.shore-hero') as HTMLElement | null;
   const artwork = document.querySelector('.artwork-drift') as HTMLElement | null;
   const canvas = document.getElementById('shore-light') as HTMLCanvasElement | null;
