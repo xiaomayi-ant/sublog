@@ -24,3 +24,11 @@ pnpm-debug.log*
 .idea/
 .worktrees/
 worktrees/
+
+# 部署运维：只在本地保留。
+# 仓库是公开的，而这些文件写着生产机 IP、部署用户与目录结构 ——
+# 对读代码的人没有价值，对扫 SSH 的人有。想公开的话补一次提交即可，反过来要改写历史。
+docs/deployment.md
+scripts/deploy-site.mjs
+scripts/server/
+tests/deployment-contract.test.mjs

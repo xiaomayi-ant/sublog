@@ -16,9 +16,29 @@ html {
   -webkit-font-smoothing: antialiased;
 }
 
+/* nav / main / footer 竖排，main 吃掉中间所有余量 —— 页脚永远压在底边，
+   短页面上不会浮在半空。 */
 body {
+  display: flex;
+  flex-direction: column;
   margin: 0;
-  min-height: 100vh;
+  min-height: 100svh;
+}
+
+main {
+  display: flex;
+  flex: 1 0 auto;
+  flex-direction: column;
+}
+
+/* 首页钉成标准两屏：一屏首屏（导航 + 河 + 标题 + 问句），一屏收尾（最近写的 +
+   时间线 + 页脚），文档总高恰好 200svh，不留第三屏的零头。
+
+   钉在 body 上而不是各段各写高度：main 是 flex:1，它会自动吃掉
+   「200svh − 导航 − 页脚」，第二屏的高度因此不需要知道页脚有多高。
+   用 min-height 而非 height —— 视口太矮时内容照常往下长，不裁切。 */
+body:has(.home-flow) {
+  min-height: 200svh;
 }
 
 ::selection {

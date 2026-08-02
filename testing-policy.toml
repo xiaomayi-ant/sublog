@@ -10,7 +10,7 @@ mutation_changed = "npm run test:mutation"
 integration = ["src/pages/**", "src/content.config.ts", "src/lib/content.ts"]
 
 [effects]
-production_write = []
+production_write = ["scripts/deploy-site.mjs", "scripts/server/bootstrap-water.sh", "scripts/server/remote-release.sh"]
 credentials = []
 
 [budgets]

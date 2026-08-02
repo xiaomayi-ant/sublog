@@ -3,25 +3,55 @@
    背景色全站唯一：首屏与其余版块共用 --color-bg，不再各自铺色。 */
 
 :root {
-  /* 色彩 */
+  /* 色彩 —— 单一色相轴：浅水 → 深水 → 墨，外加一个深蓝与一束暖光。
+     这条色阶来自 riverRenderer 里河流自己的配色，页面沿用它，两者才是同一种材质。
+     括号内是对白底的对比度，决定它能不能承载文字。 */
   --color-bg: #fff;           /* 清澈白（全站统一底色） */
-  --color-ink: #10233f;       /* 墨蓝 */
-  --color-river: #246bff;     /* 河蓝（主色） */
-  --color-sky: #cfe5ff;       /* 天蓝 */
-  --color-sun: #f5c85b;       /* 阳黄（仅高光） */
-  --color-black: #0a0a0a;     /* 纯黑（"Be"） */
 
-  /* 派生色 */
-  --color-ink-soft: rgba(16, 35, 63, 0.64);
-  --color-ink-faint: rgba(16, 35, 63, 0.38);
-  --color-line: rgba(16, 35, 63, 0.14);
-  --color-river-soft: rgba(36, 107, 255, 0.12);
+  --water-100: #c8f1ee;       /* 浅水（仅填充） */
+  --water-300: #84dcd9;       /* （仅填充） */
+  --water-500: #4ab8ca;       /* 河面 2.54:1 —— 仅图形，不可承载文字 */
+  --water-700: #26788f;       /* 深水 5.04:1 */
+  --water-900: #13303a;       /* 最深的水，河流色阶的末端 13.89:1 */
+
+  /* 文字不再属于水的色相轴。河水是唯一的颜色，墨只负责和它形成冷暖搭配。
+     彩度 C* 是这里唯一重要的量：旧的冷墨 #13303a 之所以看得出偏蓝，是因为 C*=12.1；
+     一旦把彩度压到 2 左右，暖意在感知上就等于不存在，只剩"更黑"。
+     蓝色能又深又艳，暖色不行 —— sRGB 里暖调保住彩度就必须提亮。
+     色相角要对准：河水的 Lab 色相是 216°，真正的互补方向是 36°。
+     偏到 70° 附近就成了橄榄／卡其，读作"发黄的黑"而不是"与水相对的暖"。 */
+  --color-ink: #4c3630;       /* 赭墨 Lab 41°（距互补 5°）C*11.7 11.18:1 */
+  --color-river: #1651be;     /* 深蓝 7.11:1（原 #246bff 只有 4.54:1，压线） */
+  --color-sky: var(--water-100);
+  --color-sun: #f5c85b;       /* 唯一暖光 1.58:1 —— 只做高光，永不承载文字 */
+
+  /* 暖赭：整页唯一的暖强调，只给"属于人"的东西（履历珠子、now）。
+     Lab 色相 61°，距墨仅 20°（同族、彩度调高），距河流 130°（真正的互补方向）。
+     4.68:1 —— 候选里唯一能同时承载 12px 文字和 7px 圆点的。
+     --color-sun 做不到：1.58:1，小圆点在白底上几乎看不见。 */
+  --color-ember: #a8632c;     /* 4.68:1 */
+
+  /* 派生色：从 ink / river 派生，不再各处自造 rgba */
+  --color-ink-soft: rgba(76, 54, 48, 0.72);
+  --color-ink-faint: rgba(76, 54, 48, 0.46);
+  --color-line: rgba(76, 54, 48, 0.16);
+  --color-river-soft: rgba(22, 81, 190, 0.1);
 
   /* 字体栈：不引入外链字体，构建离线可过；中文标题宋体感，正文中文无衬线，英文 metadata 用 mono */
   --font-serif: "Noto Serif SC", "Songti SC", "STSong", "SimSun", serif;
   --font-sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB",
     "Source Han Sans SC", "Microsoft YaHei", sans-serif;
   --font-mono: ui-monospace, "IBM Plex Mono", "SF Mono", Menlo, Consolas, monospace;
+  /* 履历标签专用：Gill Sans 的意大利体。
+     它是真正画出来的斜体 —— 单层 a、书写感的 e —— 而不是把正体斜切（合成斜体
+     字宽与正体完全相同，是可以测出来的）。字重 400，不抢戏；无衬线，不会和标题的
+     Iowan Old Style 变成两款衬线打架；也是候选里最窄的，时间轴上更宽裕。
+     Windows 退到 Candara，再退到系统无衬线。不引入外链字体。 */
+  --font-label: "Gill Sans", "Gill Sans MT", Candara, var(--font-sans);
+
+  /* 浮光的金：下划线的浮光与时间轴珠子共用它，两者是同一种"光" */
+  --color-glint: #e8a63c;
+
   /* 导航与首屏共用的编辑体：比 sans/mono 更灵动，大小写混排不做全大写 */
   --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, Baskerville,
     "Songti SC", "Times New Roman", serif;

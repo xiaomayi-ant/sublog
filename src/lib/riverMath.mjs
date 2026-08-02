@@ -6,7 +6,23 @@ const DEFAULTS = {
   progress: 0,
   seed: 17,
   curvatureLimit: true,
+  // 画布 宽/高。中心线活在归一化单位方格里，但会被各向异性地画到非方形画布上；
+  // 法线和偏移必须在按纵横比校正过的空间里算，否则弯道内侧会折出尖点。
+  // 1 表示不校正（旧行为），仅用于纯数学测试。
+  aspect: 1,
 };
+
+// 半宽相对曲率半径的上限：比值 < 1 才不会折出尖点，0.78 留 22% 余量。
+const CUSP_LIMIT = 0.78;
+// 饱和指数：越大，越只在临界处才收窄，平缓河段几乎不受影响。
+const CUSP_SOFTNESS = 4;
+
+// 平滑饱和，取代硬 Math.min —— 硬截断会在钳制生效处留下宽度突变的折痕。
+function softCuspLimit(halfWidth, curvature) {
+  if (!(curvature > 1e-6)) return halfWidth;
+  const ratio = (halfWidth * curvature) / CUSP_LIMIT;
+  return halfWidth * (1 + ratio ** CUSP_SOFTNESS) ** (-1 / CUSP_SOFTNESS);
+}
 
 export function clamp(value, minimum, maximum) {
   return Math.min(maximum, Math.max(minimum, value));
@@ -54,8 +70,10 @@ export function sampleCenterline(position, suppliedOptions = {}) {
   const scrollMorph =
     travellingBend * gaussian(s, 0.52, 0.23) +
     lerp(0.055, -0.075, progress) * gaussian(s, 0.79, 0.14);
+  // 河岸基本是确定的：这里只留极慢的漂移（横穿全河约 230 秒），近乎静止。
+  // 流动感必须来自水体内部的纹理平移，而不是让岸线上下摆——那会读成丝带。
   const organic =
-    (smoothNoise(s * 4.6 + options.time * 0.026, options.seed) - 0.5) *
+    (smoothNoise(s * 4.6 - options.time * 0.02, options.seed) - 0.5) *
     0.045 *
     clamp(options.turbulence, 0, 1.5);
 
@@ -81,13 +99,15 @@ export function riverWidth(position, suppliedOptions = {}) {
 export function centerlineCurvature(position, suppliedOptions = {}) {
   const options = optionsWithDefaults(suppliedOptions);
   const s = clamp(position, 0, 1);
+  const aspect = Math.max(1e-6, options.aspect);
   const epsilon = 0.004;
   const before = sampleCenterline(clamp(s - epsilon, 0, 1), options);
   const center = sampleCenterline(s, options);
   const after = sampleCenterline(clamp(s + epsilon, 0, 1), options);
-  const firstX = (after.x - before.x) / (2 * epsilon);
+  // x 乘 aspect：两轴统一成"画布高度"单位，曲率才是屏幕上真正看到的那个曲率
+  const firstX = ((after.x - before.x) / (2 * epsilon)) * aspect;
   const firstY = (after.y - before.y) / (2 * epsilon);
-  const secondX = (after.x - 2 * center.x + before.x) / (epsilon * epsilon);
+  const secondX = ((after.x - 2 * center.x + before.x) / (epsilon * epsilon)) * aspect;
   const secondY = (after.y - 2 * center.y + before.y) / (epsilon * epsilon);
   const speedSquared = firstX * firstX + firstY * firstY;
 
@@ -98,11 +118,13 @@ export function centerlineCurvature(position, suppliedOptions = {}) {
 export function buildRibbonSample(position, radius = 1, suppliedOptions = {}) {
   const options = optionsWithDefaults(suppliedOptions);
   const s = clamp(position, 0, 1);
+  const aspect = Math.max(1e-6, options.aspect);
   const epsilon = 0.0008;
   const before = sampleCenterline(clamp(s - epsilon, 0, 1), options);
   const after = sampleCenterline(clamp(s + epsilon, 0, 1), options);
   const center = sampleCenterline(s, options);
-  const deltaX = after.x - before.x;
+  // 切线／法线都在校正后的空间里，left/right 再换算回归一化 x
+  const deltaX = (after.x - before.x) * aspect;
   const deltaY = after.y - before.y;
   const length = Math.hypot(deltaX, deltaY) || 1;
   const tangent = {
@@ -115,12 +137,11 @@ export function buildRibbonSample(position, radius = 1, suppliedOptions = {}) {
   };
   const requestedHalfWidth = riverWidth(s, options) * radius;
   const curvature = centerlineCurvature(s, options);
-  const cuspSafeHalfWidth = curvature > 1e-6 ? 0.78 / curvature : requestedHalfWidth;
   const halfWidth =
     options.curvatureLimit === false
       ? requestedHalfWidth
-      : Math.min(requestedHalfWidth, cuspSafeHalfWidth);
-  const offsetX = normal.x * halfWidth;
+      : softCuspLimit(requestedHalfWidth, curvature);
+  const offsetX = (normal.x * halfWidth) / aspect;
   const offsetY = normal.y * halfWidth;
 
   return {

@@ -3,6 +3,7 @@
 import '../styles/tokens.css';
 import '../styles/global.css';
 import SiteNav from '../components/SiteNav.astro';
+import SiteFooter from '../components/SiteFooter.astro';
 
 interface Props {
   title: string;
@@ -55,5 +56,6 @@ const socialImage = new URL(image, site);
     <main id="content" class="site-shell">
       <slot />
     </main>
+    <SiteFooter />
   </body>
 </html>

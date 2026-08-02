@@ -1,0 +1,381 @@
+---
+// LifeTimeline — 横向履历轴：年份等距，一个线稿小人从起点走到今天。
+import {
+  WALK_SPAN_MS,
+  WALK_STEP_MS,
+  axisPosition,
+  axisYears,
+  milestoneFor,
+  revealDelay,
+  shouldLabelYear,
+  todayPosition,
+} from '../lib/timeline';
+
+const years = axisYears();
+const now = todayPosition();
+
+// 里程碑只到"年"这一级，所以直接并进年份刻度：有事的那一年珠子是实心的，
+// 另开一套点会和年份珠子叠在同一个坐标上。
+const ticks = years.map((year) => {
+  const position = axisPosition(year, 1);
+  const milestone = milestoneFor(year);
+
+  return {
+    year,
+    position,
+    reveal: revealDelay(position, now),
+    labelled: shouldLabelYear(year, years),
+    // 斜杠即换行：'ChatBot / LangGraph' 单行有 118px，比一年的间距还宽；
+    // 拆成两行之后最宽的一行只剩 72px，全部标签就能排在同一行基线上，
+    // 不必上下交错，也就不需要把标签接回珠子的引线。
+    lines: milestone ? milestone.label.split('/').map((part) => part.trim()) : [],
+  };
+});
+---
+
+<section
+  class="life"
+  aria-label="履历时间线"
+  data-timeline="year-axis-walk"
+  style={`--walk-span: ${WALK_SPAN_MS}ms; --walk-step: ${WALK_STEP_MS}ms`}
+>
+  <div class="life-scroll">
+    <div class="life-axis">
+      <div class="life-track" style={`--now: ${(now * 100).toFixed(2)}%`}>
+        <div class="life-line" aria-hidden="true"></div>
+
+        <ol class="life-years">
+          {
+            ticks.map((tick) => (
+              <li
+                class:list={[tick.lines.length > 0 && 'has-mark']}
+                style={`--pos: ${(tick.position * 100).toFixed(2)}%; --reveal: ${tick.reveal}ms`}
+              >
+                <span class="year-bead" aria-hidden="true" />
+                {tick.labelled && <span class="year-label meta">{tick.year}</span>}
+                {tick.lines.length > 0 && (
+                  <span class="mark-label">
+                    {tick.lines.map((line) => (
+                      <span class="mark-line">{line}</span>
+                    ))}
+                  </span>
+                )}
+              </li>
+            ))
+          }
+        </ol>
+
+        <span class="life-now">
+          <span class="now-bead" aria-hidden="true" />
+          <span class="now-label meta">now</span>
+        </span>
+
+        <span class="life-walker" aria-hidden="true">
+          <svg viewBox="0 0 26 30" width="26" height="30" fill="none" stroke="currentColor"
+            stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            {/* 大头短肢的比例：卡通感来自比例，不来自表情和填色 */}
+            <circle cx="13" cy="7.5" r="6" />
+            <path d="M13 13.5v7" />
+            <g class="walk-a">
+              <path d="M13 15.4 7.6 18.4M13 15.4l5.4 3" />
+              <path d="M13 20.5 8.4 28M13 20.5 17.8 28" />
+            </g>
+            <g class="walk-b">
+              <path d="M13 15.4 8.6 19.6M13 15.4l4.4 1.6" />
+              <path d="M13 20.5 11 28M13 20.5 15.4 27.4" />
+            </g>
+          </svg>
+        </span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  /* --walk-span / --walk-step 由 lib/timeline.ts 注入：
+     刻度的显现延迟要用同一个时长反推，两边各写一份迟早会漂。 */
+  .life {
+    position: relative;
+    z-index: 1;
+    margin-top: clamp(4rem, 10vw, 7rem);
+  }
+
+  /* 窄屏放不下十个年份，改成横向滑动 —— 用手指划着走时间线，
+     比把一条横轴压成竖排更贴近它本来的意思 */
+  .life-scroll {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+
+  .life-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  .life-axis {
+    /* 左右各留出半个年份标签的余量：首尾刻度居中对齐，
+       没有这层内边距 2017 会被容器边缘裁掉半个 */
+    padding-block: 2.5rem 4.5rem;
+    padding-inline: 1.75rem;
+  }
+
+  /* 百分比位置对着 track 解析，所以标签能溢出到上面那层内边距里而不被裁 */
+  .life-track {
+    position: relative;
+    min-width: 40.5rem;
+    height: 2.5rem;
+  }
+
+  /* ── 年份：串珠成链，珠子在线上，年份在珠子上方 ── */
+  .life-years li {
+    position: absolute;
+    top: 50%;
+    left: var(--pos);
+    transform: translate(-50%, -50%);
+    white-space: nowrap;
+  }
+
+  .year-bead {
+    display: block;
+    width: 5px;
+    height: 5px;
+    margin-inline: auto;
+    border-radius: 50%;
+    background: var(--color-bg);
+    box-shadow: inset 0 0 0 1.5px var(--color-ink-faint);
+  }
+
+  .year-label {
+    position: absolute;
+    bottom: 1.05rem;
+    left: 50%;
+    transform: translateX(-50%);
+    color: var(--color-ink-faint);
+  }
+
+  /* ── 轴线：两端都出头 ──
+     左边越过 2017 再淡出 = 之前的时间也存在，只是没记；
+     右边越过今天再淡出 = 线还在，只是还没走到。 */
+  .life-line {
+    position: absolute;
+    top: 50%;
+    right: -1.75rem;
+    left: -1.75rem;
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      transparent 0,
+      var(--color-line) 1.75rem,
+      var(--color-line) calc(100% - 3.5rem),
+      transparent 100%
+    );
+  }
+
+  /* ── 里程碑：有事的那一年，珠子变实心，标签排在轴下方 ── */
+  /* 空心，且用浮光的金 —— 珠子和悬停时的下划线是同一种光。
+     金在白底上只有 2.11:1，所以环加粗到 2.2px 才立得住；
+     now 保持更深的赭色，它是"人此刻在哪"，需要压得住整条线。 */
+  .life-years .has-mark .year-bead {
+    width: 8px;
+    height: 8px;
+    background: var(--color-bg);
+    box-shadow: inset 0 0 0 2.2px var(--color-glint);
+  }
+
+  .mark-label {
+    position: absolute;
+    font-family: var(--font-label);
+    font-style: italic;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+    top: 0.95rem;
+    left: 50%;
+    transform: translateX(-50%);
+    color: var(--color-ink-soft);
+    font-size: var(--text-sm);
+    line-height: 1.45;
+    text-align: center;
+  }
+
+  /* 斜杠拆出来的每一段各占一行 —— 这是标签不互相碰的全部机制 */
+  .mark-line {
+    display: block;
+    white-space: nowrap;
+  }
+
+  /* ── now：位置由 todayPosition() 算出，随真实时间自己往右挪 ── */
+  .life-now {
+    position: absolute;
+    top: 50%;
+    left: var(--now);
+    transform: translate(-50%, -50%);
+  }
+
+  .now-bead {
+    display: block;
+    width: 6px;
+    height: 6px;
+    margin-inline: auto;
+    border-radius: 50%;
+    background: var(--color-ember);
+  }
+
+  /* 年份标在线上方，now 标在线下方 —— 否则会和小人叠在一起 */
+  .now-label {
+    position: absolute;
+    top: 0.85rem;
+    left: 50%;
+    transform: translateX(-50%);
+    color: var(--color-ember);
+    letter-spacing: 0.14em;
+  }
+
+  /* ── 走路的小人 ── */
+  .life-walker {
+    position: absolute;
+    top: 50%;
+    left: var(--now);
+    display: block;
+    color: var(--color-ink-soft);
+    /* 脚踩在线上：向上挪一个身高，再减去线宽 */
+    transform: translate(-50%, calc(-100% + 1px));
+  }
+
+  .walk-b {
+    opacity: 0;
+  }
+
+  /* ── 刻度跟着脚步长出来 ──
+     三个状态：无属性（没有 JS／偏好减少动效）= 全部直接可见；
+     armed = 脚本已就位、还没滚到，先藏起来；playing = 按各自的延迟显现。
+     没有 armed 这一档的话，从"全可见"切到"开始走"会闪一下全空。 */
+  .life[data-walk='armed'] .life-years li,
+  .life[data-walk='armed'] .life-now {
+    opacity: 0;
+  }
+
+  .life[data-walk='playing'] .life-years li {
+    animation: tick-in 420ms var(--ease-out) var(--reveal) both;
+  }
+
+  .life[data-walk='playing'] .life-now {
+    animation: tick-in 520ms var(--ease-out) var(--walk-span) both;
+  }
+
+  @keyframes tick-in {
+    from {
+      opacity: 0;
+      transform: translate(-50%, calc(-50% + 3px));
+    }
+
+    to {
+      opacity: 1;
+      transform: translate(-50%, -50%);
+    }
+  }
+
+  /* 行进只走一次：到了 now 就停在那儿，不回头重播 —— 循环会变成装饰噪音。
+     但迈步是 infinite：人停在 now，腿不停，表示还在往前走。 */
+  .life[data-walk='playing'] .life-walker {
+    animation:
+      walk-across var(--walk-span) linear both,
+      walk-bob var(--walk-step) steps(1) infinite;
+  }
+
+  .life[data-walk='playing'] .walk-a {
+    animation: step-a var(--walk-step) steps(1) infinite;
+  }
+
+  .life[data-walk='playing'] .walk-b {
+    animation: step-b var(--walk-step) steps(1) infinite;
+  }
+
+  @keyframes walk-bob {
+    0%,
+    49% {
+      margin-top: 0;
+    }
+
+    50%,
+    100% {
+      margin-top: -1.5px;
+    }
+  }
+
+  @keyframes walk-across {
+    from {
+      left: 0%;
+    }
+
+    to {
+      left: var(--now);
+    }
+  }
+
+  @keyframes step-a {
+    0%,
+    49% {
+      opacity: 1;
+    }
+
+    50%,
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes step-b {
+    0%,
+    49% {
+      opacity: 0;
+    }
+
+    50%,
+    100% {
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .life[data-walk='playing'] .life-walker,
+    .life[data-walk='playing'] .walk-a,
+    .life[data-walk='playing'] .walk-b {
+      animation: none;
+    }
+  }
+</style>
+
+<script>
+  const life = document.querySelector<HTMLElement>('.life');
+
+  if (life && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    // 先藏起来。脚本在 DOM 就绪时执行，而这一段在首屏之下，
+    // 所以观众看不到"由可见变不可见"这一下。
+    life.dataset.walk = 'armed';
+
+    const start = () => {
+      life.dataset.walk = 'playing';
+    };
+
+    if (!('IntersectionObserver' in window)) {
+      // 没有观察器就直接走，总好过小人永远停在起点
+      start();
+    } else {
+      // 滚到这一段、并且进来了一小截，才开始走；走一次就断开观察，不重播。
+      // rootMargin 的负下边距让它晚一点触发 —— 刚在视口边缘冒头就起步，
+      // 观众其实还没看到它。
+      const observer = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            if (!entry.isIntersecting) continue;
+            start();
+            observer.disconnect();
+          }
+        },
+        { threshold: 0.3, rootMargin: '0px 0px -8% 0px' },
+      );
+
+      observer.observe(life);
+    }
+  }
+</script>

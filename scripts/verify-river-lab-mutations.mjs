@@ -104,11 +104,23 @@ const mutations = [
   [
     'disabled-curvature-limit',
     riverMathSource,
+    (source) => source.replace('softCuspLimit(requestedHalfWidth, curvature)', 'requestedHalfWidth'),
+    runMathTest,
+  ],
+  [
+    // 切线丢掉 aspect = 回到在被压扁的单位方格里算法线，弯道内侧会重新折出尖点
+    'unaspected-ribbon-tangent',
+    riverMathSource,
     (source) =>
-      source.replace(
-        'Math.min(requestedHalfWidth, cuspSafeHalfWidth)',
-        'requestedHalfWidth',
-      ),
+      source.replace('const deltaX = (after.x - before.x) * aspect;', 'const deltaX = after.x - before.x;'),
+    runMathTest,
+  ],
+  [
+    // 偏移不换算回归一化 x = 河宽随方向变化，屏幕上厚薄不均
+    'anisotropic-bank-offset',
+    riverMathSource,
+    (source) =>
+      source.replace('const offsetX = (normal.x * halfWidth) / aspect;', 'const offsetX = normal.x * halfWidth;'),
     runMathTest,
   ],
 ];

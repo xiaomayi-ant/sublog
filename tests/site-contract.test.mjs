@@ -175,7 +175,7 @@ test('the home uses one persistent mathematical river instead of a framed artwor
 
   assert.match(home, /data-home-river="locked-preset"/);
   assert.match(home, /data-river-entry="present-from-first-frame"/);
-  assert.match(home, /data-river-continuity="hero-to-entries"/);
+  assert.match(home, /data-river-scope="hero-only"/);
   assert.match(
     home,
     /<canvas id="home-river-canvas" class="home-river-canvas" aria-hidden="true"/,
@@ -185,11 +185,22 @@ test('the home uses one persistent mathematical river instead of a framed artwor
   assert.match(home, /data-flow="1"/);
   assert.match(home, /data-layers="8"/);
   assert.match(home, /data-surface="unified-page-bg"/);
-  assert.match(home, /data-color-focus="sunlight-diagonal"/);
+  // 首屏不再铺暖光，左上角那层黄色蒙版已移除，底色就是全站底色
+  assert.match(home, /data-color-focus="clear-water"/);
+  assert.doesNotMatch(home, /home-river-sun/);
+  // 守的是"河流图层里没有暖色蒙版"，不是"整份 CSS 里不许出现这个色值" ——
+  // 后者会把别处合法的金色浮光一起误伤
+  for (const [rule] of css.matchAll(/\.home-river-[a-z-]+\[[^{]*\{[^}]*\}/g)) {
+    assert.doesNotMatch(rule, /245,\s*200,\s*91|#f5c85b|207,\s*96/, `warm wash back in: ${rule.slice(0, 60)}`);
+  }
   assert.match(home, /data-motion-rhythm="material-flow-scroll-bend"/);
   assert.match(css, /--color-bg:#fff/);
   assert.match(css, /\.home-river-field[^}]*position:absolute/);
-  assert.match(css, /\.home-river-viewport[^}]*position:sticky/);
+  // 河不再被钉在视口顶部：它待在首屏的盒子里，随首屏一起滚走
+  assert.doesNotMatch(css, /\.home-river-viewport[^}]*position:sticky/);
+  // 河仍然满幅出血：首屏不能裁它，否则会被剪到内容宽
+  assert.match(css, /\.home-river-field[^}]*calc\(50% - 50vw\)/);
+  assert.doesNotMatch(css, /\.shore-hero[^}]*overflow:hidden/);
   assert.match(css, /\.home-river-canvas[^}]*width:100%/);
   assert.match(css, /\.home-river-canvas[^}]*height:100%/);
   assert.match(javascript, /createRiverRenderer/);
@@ -210,20 +221,17 @@ test('the home hero uses a measured editorial typography hierarchy', async () =>
   assert.match(home, /data-type-system="editorial-serif-sans"/);
   assert.doesNotMatch(home, /SUMOER — RESEARCH & BUILD \/ 2026|class="hero-kicker"/);
   assert.match(home, /data-stream="typewriter"/);
-  assert.match(home, /class="type type--zh"[^>]*>人类和AI的区别是什么？<\/span>/);
+  assert.match(home, /class="type type--zh"[^>]*>在智力方面，人类和AI的区别是什么？<\/span>/);
   assert.match(
     home,
-    /class="type type--en"[^>]*>What is the difference between a human and an AI\?<\/span>/,
+    /class="type type--en"[^>]*>In terms of intelligence, what separates a human from an AI\?<\/span>/,
   );
   assert.match(home, /class="type type--zh"[^>]*>AI目前的边界是什么？<\/span>/);
   assert.match(home, /class="type type--en"[^>]*>Where are the boundaries of AI today\?<\/span>/);
   assert.doesNotMatch(home, /class="hero-description"/);
-  assert.match(css, /\.type--en[^}]*font-style:italic/);
-  assert.match(css, /@keyframes type-in/);
   assert.match(home, /data-intro-motion="per-load-word-reveal"/);
   assert.match(home, /aria-label="Be water, my friend\."/);
   assert.match(home, /class="intro-be"[^>]*>Be<\/span>/);
-  assert.match(home, /class="intro-water"[^>]*><span class="intro-water-fill"[^>]*>water<\/span><\/span>/);
   assert.match(
     home,
     /class="intro-be"[^>]*>Be<\/span><span class="intro-space"[^>]*>&nbsp;<\/span><span class="intro-water"[^>]*><span class="intro-water-fill"[^>]*>water<\/span><\/span>/,
@@ -232,23 +240,35 @@ test('the home hero uses a measured editorial typography hierarchy', async () =>
   assert.match(home, /class="intro-be" style="--word-delay: 120ms"/);
   assert.match(home, /class="intro-water" style="--word-delay: 620ms"/);
   assert.match(home, /style="--letter-delay: 1180ms"[^>]*>m<\/span>/);
-  assert.match(home, /style="--letter-delay: 1330ms"[^>]*>y<\/span>/);
   assert.match(home, /style="--letter-delay: 2380ms"[^>]*>\.<\/span>/);
-  assert.doesNotMatch(
-    home,
-    /观察、研究，也构建。|阅读研究|查看项目|class="hero-links"|Water \/ Personal field notes|Observe · make · let flow/i,
-  );
+  assert.match(css, /@keyframes type-in/);
+
+  // 命令行读感只保留三样：等宽、方块光标、逐行输出；无提示符、无背景板
+  assert.match(home, /data-stream-form="plain-lines"/);
+  assert.doesNotMatch(home, /class="prompt"|❯|class="terminal"/);
+  // 问句退出命令行方言：中文无衬线、英文编辑体斜体，光标是细线不是方块
+  assert.match(css, /\.type--zh[^}]*font-family:var\(--font-sans\)/);
+  assert.match(css, /\.type--en[^}]*font-family:var\(--font-display\)/);
+  assert.match(css, /\.type--en[^}]*font-style:italic/);
+  assert.doesNotMatch(css, /\.hero-questions[^}]*font-family:var\(--font-mono\)/);
+  assert.match(css, /\.type[^}]*border-right:2px/);
+  // 左边缘与标题对齐；压缩器会把 align-self + justify-self 合成 place-self
+  assert.match(css, /\.hero-questions[^}]*(?:justify-self:start|place-self:start(?:[;}]| start))/);
   assert.match(css, /font-size:clamp\(4\.25rem,6\.62vw,5\.5rem\)/);
   assert.match(css, /letter-spacing:-\.03em/);
   assert.match(home, /data-water-color="liquid-glass"/);
-  assert.match(home, /data-friend-color="hermes-blue"/);
-  assert.match(css, /\.intro-be[^}]*color:(?:#0a0a0a|var\(--color-black\))/);
+  assert.match(home, /data-friend-color="ink"/);
+  // 标题只保留两个色彩声部：墨 + 玻璃。纯黑是全站唯一无色相、且比墨更深的颜色，
+  // 深蓝虽在轴上但更饱和 —— 两者都不该再出现在标题里。
+  assert.match(css, /\.intro-be[^}]*color:var\(--color-ink\)/);
+  assert.doesNotMatch(css, /#0a0a0a|--color-black/);
   assert.match(css, /\.intro-water-fill[^}]*background-clip:text/);
   assert.match(css, /\.intro-water-fill[^}]*animation:[^;}]*water-surface/);
   assert.match(css, /\.intro-water-fill[^}]*:before[^}]*animation:[^;}]*water-flow/);
-  assert.match(css, /\.intro-line--friend[^}]*color:#0000f2/);
-  assert.match(css, /\.intro-line--friend[^}]*font-weight:700/);
-  assert.match(css, /\.hero-questions[^}]*font-family:var\(--font-sans\)/);
+  assert.match(css, /\.intro-line--friend[^}]*color:(?:#4c3630db|rgba\(76,54,48,\.86\))/);
+  // 减重：不再是整页最重的元素
+  assert.doesNotMatch(css, /\.intro-line--friend[^}]*font-weight:700/);
+  assert.match(css, /\.intro-line--friend[^}]*font-weight:500/);
   assert.match(css, /animation:[^;}]*intro-word-in/);
   assert.match(css, /animation:[^;}]*intro-letter-in/);
   assert.match(css, /@keyframes water-flow/);
@@ -262,26 +282,196 @@ test('the home reads as one continuous page without structural divider lines', a
 
   assert.match(home, /data-page-flow="continuous-no-dividers"/);
   assert.match(css, /\.shore-hero[^}]*border:0/);
-  assert.match(css, /\.entry[^}]*border:0/);
   assert.doesNotMatch(home, /Currently thinking about|Made by Sumoer|class="site-footer"/);
-  assert.doesNotMatch(css, /\.entry[^}]*:after[^}]*scaleX/);
 });
 
-test('each home entry carries its own three-row list', async () => {
+// 主页的结构：气质（引言 + 问句）→ 人（一句身份）→ 作品（裸列表）→ 收尾。
+// 大号入口卡片已移除 —— 顶部导航已经有同样的四个目的地，卡片是伪装成内容的导航。
+test('the home is an identity statement followed by a bare writing list', async () => {
   const home = await readRoute('/');
   const css = await readBuiltCss();
 
-  for (const list of ['blog', 'github']) {
-    const block = home.match(new RegExp(`<ul class="entry-list" data-entry-list="${list}"[\\s\\S]*?</ul>`))?.[0];
-    assert.ok(block, `home should render the ${list} entry list`);
-    assert.equal((block.match(/class="row(?: row--empty)?"/g) ?? []).length, 3);
-    assert.match(block, /class="row-date meta"[^>]*>\d{4}\.\d{2}\.\d{2}<|class="row-date meta"[^>]*>—/);
+  // 裸列表：只有日期和标题，没有小标题／编号／分类
+  const list = home.match(/<section class="recent"[\s\S]*?<\/section>/)?.[0];
+  assert.ok(list, 'home should render the recent-writing list');
+  assert.match(list, /data-home-index="recent-writing"/);
+  assert.equal((list.match(/class="row"/g) ?? []).length, 3);
+  assert.match(list, /class="row-date meta"[^>]*>\d{4}\.\d{2}\.\d{2}</);
+  assert.doesNotMatch(list, /<h2|entry-num|全部 \d+ 篇/);
+
+  // 入口卡片不该再出现
+  assert.doesNotMatch(home, /class="entry"|class="entry-list"|entry-title/);
+  assert.doesNotMatch(home, />Github<\/span>|>Blog<\/span>/);
+
+  // 身份句已从首屏移到页脚，首屏只剩气质与问题
+  assert.doesNotMatch(home, /hero-identity/);
+
+  // 收尾：落款 + About / More / Contact 三栏 + 最底的工具行
+  const foot = home.match(/<footer class="site-foot[\s\S]*?<\/footer>/)?.[0];
+  assert.ok(foot, 'home should render the footer');
+  assert.match(foot, /data-footer="about-more-contact"/);
+  assert.match(foot, /class="foot-name"[^>]*>sumoer</);
+  assert.match(foot, /class="foot-tagline"[^>]*>Vision: world peace</);
+  for (const head of ['About', 'More', 'Contact']) {
+    assert.match(foot, new RegExp(`class="foot-head"[^>]*>\\s*${head}`), `footer needs the ${head} column`);
+  }
+  assert.match(foot, /href="\/rss\.xml"[^>]*>RSS</);
+
+  // 页脚只说一种话：栏头不再借 .meta 的等宽体 —— 衬线名字 + 等宽栏头 + 无衬线条目
+  // 是三款字体挤在同一块两百像素高的区域里，那正是它看起来乱的原因
+  assert.doesNotMatch(foot, /class="[^"]*\bmeta\b/, 'the footer must not fall back to the mono meta voice');
+
+  // 三栏是内容宽度 + space-between，不是等分网格：等分会把末栏推离内容右边缘
+  const footCss = await readFile(new URL('../src/components/SiteFooter.astro', import.meta.url), 'utf8');
+  assert.match(footCss, /\.foot-nav\s*{[^}]*justify-content:\s*space-between/);
+  assert.doesNotMatch(footCss, /\.foot-top\s*{[^}]*grid-template-columns/);
+
+  // 还没有去处的条目必须是不可点的文字 —— 死链接比"还没好"更糟
+  const pending = [...foot.matchAll(/class="foot-pending"[^>]*>([^<]+)</g)].map((m) => m[1]);
+  for (const label of pending) {
+    assert.doesNotMatch(foot, new RegExp(`<a[^>]*>\\s*${label}`), `"${label}" must not render as a link`);
+  }
+  // 外链要带 rel 与角标
+  assert.match(foot, /href="https:\/\/github\.com\/xiaomayi-ant"[^>]*rel="noreferrer"/);
+  assert.match(foot, /class="foot-out"/);
+
+  // 首页钉成标准两屏 —— 曾经只是"在 831px 视口下恰好等于 2.00 页"的巧合：
+  // 视口一变（700px → 2.4 屏，1000px → 1.6 屏）就散了。三条一起才钉得住。
+  const homeCss = await readBuiltCss();
+  assert.match(homeCss, /body:has\(\.home-flow\)\{[^}]*min-height:200svh/);
+  // 首屏不能再被固定 rem 封顶，否则屏幕一高，第二屏就从下边缘探头进来。
+  // 只管基础规则；窄屏的 media query 里仍然允许封顶 —— 手机上一屏装不下首屏是应该的。
+  assert.match(homeCss, /\.shore-hero[^{]*\{[^}]*min-height:calc\(100svh - 5\.25rem\)/);
+  const heroSrc = await readFile(new URL('../src/components/ArtRiverHero.astro', import.meta.url), 'utf8');
+  const heroBaseRule = heroSrc.match(/\n {2}\.shore-hero \{([\s\S]*?)\n {2}\}/)?.[1];
+  assert.ok(heroBaseRule, 'ArtRiverHero should keep a base .shore-hero rule');
+  assert.doesNotMatch(heroBaseRule, /min-height:\s*min\(/, 'the hero must not be capped below one screen');
+  // 第二屏靠 flex 吃余量，因此不需要知道页脚有多高
+  assert.match(homeCss, /\.home-tail[^{]*\{[^}]*flex:1 0 auto/);
+
+  // 履历轴：年份等距，右端不收口，一个线稿小人停在今天
+  const life = home.match(/<section class="life"[\s\S]*?<\/section>/)?.[0];
+  assert.ok(life, 'home should render the life timeline');
+  assert.match(life, /data-timeline="year-axis-walk"/);
+  assert.match(life, /class="life-walker"/);
+  assert.match(life, /<svg viewBox="0 0 26 30"/);
+  // 串珠成链：每一年一颗珠子落在线上
+  assert.equal((life.match(/class="year-bead"/g) ?? []).length, 10);
+  // now 的位置由 todayPosition() 算出，随真实时间自己往右挪
+  assert.match(life, /class="life-now"/);
+  assert.match(life, /class="now-label meta"[^>]*>now</);
+  assert.match(life, /--now: \d+\.\d+%/);
+  // 刻度跟着脚步长出来：每个刻度带自己的显现时刻，且沿轴递增
+  const reveals = [...life.matchAll(/--reveal: (\d+)ms/g)].map((match) => Number(match[1]));
+  assert.equal(reveals.length, 10);
+  assert.equal(reveals[0], 0);
+  for (let index = 1; index < reveals.length; index += 1) {
+    assert.ok(reveals[index] > reveals[index - 1], `reveal delays must rise: ${reveals.join(', ')}`);
+  }
+  assert.ok(reveals.at(-1) < 9600, 'the last year must appear before he stops');
+  assert.match(css, /data-walk=armed\][^}]*opacity:0/);
+  assert.match(css, /animation:[^;}]*tick-in/);
+
+  // 履历：七条里程碑并进年份刻度，有事的那一年珠子变实心，标签排在轴下方
+  const CV = ['Office', 'MySQL', 'BI', 'Random Forest', 'CNN', 'GPT-3\\.5', 'ChatBot', 'LangGraph', 'Multi-Agent', 'Harness'];
+  for (const line of CV) {
+    assert.match(life, new RegExp(`class="mark-line"[^>]*>${line}<`), `timeline should carry "${line}"`);
+  }
+  assert.equal((life.match(/class="mark-label"/g) ?? []).length, CV.length);
+  // 冷=时间与水，暖=走在其中的人：履历的标记归暖赭，河流与悬停的光保持冷
+  assert.match(css, /--color-ember:#a8632c/);
+  // 珠子是空心的：环，不是实心点
+  // 珠子与浮光同色：同一种光。金太浅，环要加粗才立得住
+  assert.match(css, /--color-glint:#e8a63c/);
+  assert.match(css, /\.has-mark[^}]*\.year-bead[^}]*inset 0 0 0 2\.2px var\(--color-glint\)/);
+  assert.match(css, /\.has-mark[^}]*\.year-bead[^}]*background:var\(--color-bg\)/);
+  assert.match(css, /\.now-bead[^}]*var\(--color-ember\)/);
+  assert.doesNotMatch(css, /\.now-bead[^}]*var\(--color-river\)/);
+
+  // 斜杠即换行：每段各占一行，长标签才排得下同一行基线。
+  // 当前八条都是单词，机制仍然在位 —— 标签里不该留下裸的斜杠。
+  assert.match(css, /\.mark-line[^}]*display:block/);
+  // 履历标签用人文主义无衬线，和标题的衬线、日期的等宽都区分开
+  // 真斜体而不是合成斜体，字重 400 —— 有笔意但不抢戏
+  assert.match(css, /--font-label:"Gill Sans"/);
+  assert.match(css, /\.mark-label[^}]*font-style:italic/);
+  assert.doesNotMatch(css, /\.mark-label[^}]*font-weight:800/);
+  assert.match(css, /\.mark-label[^}]*font-family:var\(--font-label\)/);
+  assert.doesNotMatch(life, /class="mark-line"[^>]*>[^<]*\//);
+  // 轴线两端都出头：左边越过 2017，右边越过今天
+  assert.match(css, /\.life-line[^}]*left:-1\.75rem/);
+  assert.match(css, /\.life-line[^}]*transparent 0/);
+  assert.match(css, /\.year-bead[^}]*border-radius:50%/);
+  // 首尾刻度不被裁：轴留出左右内边距，位置对着内层 track 解析
+  assert.match(css, /\.life-axis[^}]*padding-inline:1\.75rem/);
+  assert.match(css, /\.life-track[^}]*position:relative/);
+  for (const year of [2017, 2020, 2026]) {
+    assert.match(life, new RegExp(`>${year}<`), `axis should label ${year}`);
+  }
+  assert.match(css, /\.life-line[^}]*transparent 100%\)/);
+  // 走一次就停，不循环
+  assert.match(css, /animation:[^;}]*walk-across/);
+  // 迈步次数必须和走完全程的时长对齐，否则腿会先于人停下
+  // 行进一次就停在 now，但迈步 infinite —— 人停下、腿不停，表示还在往前走
+  // 时长由 lib/timeline.ts 注入到行内样式，CSS 里不再各写一份
+  assert.match(life, /--walk-span: 9600ms/);
+  assert.match(life, /--walk-step: 480ms/);
+  assert.match(css, /step-a var\(--walk-step\) steps\(1\) infinite/);
+  assert.match(css, /walk-across var\(--walk-span\)[^;}]*both/);
+  // 逗号也要排除：animation 简写里多条动画用逗号分隔，不然会跨条误匹配到 walk-bob 的 infinite
+  assert.doesNotMatch(css, /walk-across[^;},]*infinite/);
+
+  // 补上字号阶梯里 39px 与 17px 之间那一档
+  assert.match(css, /\.row-title[^}]*font-size:1\.0625rem/);
+
+  // 悬停时亮起来的是光不是墨：两端消隐的渐变 + 溢出边界的辉光，
+  // 不允许退回实色的 --color-river 直线
+  // 一小段金色浮光：短、细、两端消隐、带柔和的散射。
+  // 不能用河流的青 —— 那是这一页的底色，下划线用它就成了背景的一部分。
+  // 浮光要比最长的标题还长，否则起不到反馈作用
+  assert.match(css, /\.row-title[^}]*:after[^}]*width:max\(20rem,100%\)/);
+  assert.match(css, /\.row-title[^}]*:after[^}]*height:1px/);
+  assert.match(css, /\.row-title[^}]*:after[^}]*box-shadow:0 0 6px #e8a63c/);
+  assert.match(css, /\.row-title[^}]*:after[^}]*linear-gradient\(90deg,(?:#0000|transparent) 0%/);
+  assert.doesNotMatch(css, /\.row-title[^}]*:after[^}]*4ab8ca/);
+});
+
+// 配色原则：河水独占颜色，文字退出色相竞争，只与它形成冷暖搭配。
+// 墨曾经等于 --water-900（距河水仅 7°），那不是搭配，是融进去。
+test('the river owns the colour and type only pairs with it', async () => {
+  const css = await readBuiltCss();
+
+  for (const token of [
+    '--water-100:#c8f1ee',
+    '--water-300:#84dcd9',
+    '--water-500:#4ab8ca',
+    '--water-700:#26788f',
+    '--water-900:#13303a',
+  ]) {
+    assert.match(css, new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `missing ${token}`);
   }
 
-  // 列表字号必须小于入口标题，才读得出从属关系
-  assert.match(css, /\.row-title[^}]*font-size:\.9375rem/);
-  assert.match(css, /\.entry-num[^}]*color:#0000f2/);
-  assert.doesNotMatch(home, /时间流 · STREAM/);
+  assert.match(css, /--color-river:#1651be/);
+
+  // 墨是暖中性，色相在河水对面；它不再派生自水的色阶
+  assert.match(css, /--color-ink:#4c3630/);
+  assert.doesNotMatch(css, /--color-ink:var\(--water-900\)/);
+
+  // 纯原色蓝、纯黑、旧藏青、自造灰蓝都不该再出现在产物里
+  assert.doesNotMatch(css, /#0000f2|#0000ff/i);
+  assert.doesNotMatch(css, /#0a0a0a|--color-black/);
+  assert.doesNotMatch(css, /#10233f|#173e46/i);
+  assert.doesNotMatch(css, /#7fa8e0|#6e99d4/i);
+  assert.doesNotMatch(css, /rgba\(23,62,70/);
+});
+
+// 落款是全站的：Blog / About / Github 之前结尾是硬断的
+test('every page ends with the same signature', async () => {
+  for (const route of ['/', '/blog', '/about', '/projects', '/404']) {
+    const html = await readRoute(route);
+    assert.match(html, /<footer class="site-foot/, `${route} should end with the signature`);
+    assert.match(html, /class="foot-name"[^>]*>sumoer</, `${route} should carry the name`);
+  }
 });
 
 test('the primary nav is English-only, includes Home, and underlines the current section', async () => {

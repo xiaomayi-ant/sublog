@@ -45,12 +45,23 @@ export const RIVER_PRESETS = Object.freeze({
 
 export const HOME_RIVER_PRESET = RIVER_PRESETS.watercolor;
 
+/** 河心的顺流速度（px/s）。两岸趋近于零，见 laneFlow()。 */
+const CENTRE_FLOW_PIXELS_PER_SECOND = 62;
+
+/**
+ * 明渠流的横向速度剖面：贴壁不动、河心最快。
+ * lane ∈ [-1, 1]，-1/1 是两岸。抛物线是教科书形态，够读得出中间快、两边慢。
+ * @param {number} lane
+ */
+function laneFlow(lane) {
+  return Math.max(0, 1 - lane * lane);
+}
+
 /**
  * @param {{
  *   canvas: HTMLCanvasElement,
  *   initialState?: Partial<RiverState>,
  *   getProgress?: () => number,
- *   getOpacity?: (progress: number) => number,
  *   observeElement?: Element,
  *   yOffset?: number,
  * }} configuration
@@ -60,7 +71,6 @@ export function createRiverRenderer(configuration) {
     canvas,
     initialState = HOME_RIVER_PRESET,
     getProgress = () => 0,
-    getOpacity = () => 1,
     observeElement = canvas,
     yOffset = 0,
   } = configuration;
@@ -89,19 +99,26 @@ export function createRiverRenderer(configuration) {
   }
 
   function optionsAt(time) {
+    // 让几何跟着画布的真实比例走，而不是在被压扁的单位方格里算
+    const aspect = canvasHeight > 0 ? canvasWidth / canvasHeight : 1;
+    // 画布越窄越高，同一条曲线被拉得越陡，河宽就追不上曲率半径，只能靠钳制救场、
+    // 一路收放。所以窄屏按比例收敛弯度；aspect ≥ 1.6 的横屏不受影响。
+    const bendScale = Math.min(1, aspect / 1.6);
+
     return {
-      bend: state.bend,
+      bend: state.bend * bendScale,
       width: state.width,
       turbulence: state.turbulence,
       time: time * state.flow,
       progress: scrollProgress,
       seed: 17,
+      aspect,
     };
   }
 
   function traceRibbon(radius, time, seedOffset) {
     if (!context || !ribbonContext) return false;
-    const options = { ...optionsAt(time), curvatureLimit: false };
+    const options = optionsAt(time);
     const samples = Math.max(100, Math.round(canvasWidth / 8));
     let previous;
 
@@ -110,9 +127,10 @@ export function createRiverRenderer(configuration) {
 
     for (let index = 0; index <= samples; index += 1) {
       const s = index / samples;
+      // 河宽也是河道的属性，几乎不随时间变
       const pulse =
         1 +
-        (smoothNoise(s * 8 + time * 0.025, 83 + seedOffset) - 0.5) *
+        (smoothNoise(s * 8 - time * 0.05, 83 + seedOffset) - 0.5) *
           state.turbulence *
           0.1;
       const sample = buildRibbonSample(s, radius * pulse, options);
@@ -156,11 +174,15 @@ export function createRiverRenderer(configuration) {
   function drawWash(time) {
     if (!context) return;
     const layerCount = Math.round(state.layers);
+    // 这条浅水→深水的色阶就是全站色板的来源：前三档对应 tokens.css 的
+    // --water-100 / 300 / 500，最深一档是 --color-river #1651be。
+    // 改这里要同步改那边，否则标题与河会脱色。
     const colors = [
-      [200, 241, 238],
-      [132, 220, 217],
-      [74, 184, 202],
-      [42, 128, 194],
+      [222, 252, 250],
+      [140, 240, 236],
+      [78, 212, 228],
+      [74, 186, 234],
+      [66, 152, 228],
     ];
 
     for (let layer = layerCount - 1; layer >= 0; layer -= 1) {
@@ -168,8 +190,9 @@ export function createRiverRenderer(configuration) {
       const radius = 1.38 - depth * 0.68;
       const colorIndex = Math.min(colors.length - 1, Math.floor(depth * colors.length));
       const [red, green, blue] = colors[colorIndex];
-      const cobaltBoost = colorIndex === colors.length - 1 ? state.cobalt : 0;
-      const alpha = 0.028 + depth * 0.035 + cobaltBoost * 0.035;
+      const cobaltBoost = colorIndex >= colors.length - 2 ? state.cobalt : 0;
+      // 深端再提亮 + 加成再降：八层叠加后仍不压向黑
+      const alpha = 0.032 + depth * 0.04 + cobaltBoost * 0.018;
       if (traceRibbon(radius, time, layer * 19)) {
         compositeRibbon(`rgb(${red}, ${green}, ${blue})`, alpha);
       }
@@ -177,10 +200,11 @@ export function createRiverRenderer(configuration) {
 
     if (traceRibbon(0.72, time, 103) && ribbonContext) {
       const core = ribbonContext.createLinearGradient(0, 0, canvasWidth, canvasHeight);
-      core.addColorStop(0, 'rgb(205, 246, 241)');
-      core.addColorStop(0.55, 'rgb(49, 168, 196)');
-      core.addColorStop(1, 'rgb(22, 81, 190)');
-      compositeRibbon(core, 0.045 + state.cobalt * 0.055);
+      core.addColorStop(0, 'rgb(222, 252, 250)');
+      core.addColorStop(0.42, 'rgb(78, 212, 228)');
+      core.addColorStop(0.72, 'rgb(96, 182, 250)');
+      core.addColorStop(1, 'rgb(66, 152, 228)');
+      compositeRibbon(core, 0.05 + state.cobalt * 0.038);
     }
   }
 
@@ -193,6 +217,9 @@ export function createRiverRenderer(configuration) {
     for (let fiber = 0; fiber < fiberCount; fiber += 1) {
       const lane = fiberCount === 1 ? 0 : (fiber / (fiberCount - 1)) * 2 - 1;
       const laneRadius = lane * (0.76 + smoothNoise(fiber * 0.61, 211) * 0.2);
+      const profile = laneFlow(lane);
+      // 相邻纤维的差异是平滑的（噪声按 fiber 缓变），所以是剪切，不是各走各的
+      const shear = 0.78 + smoothNoise(fiber * 0.34, 911) * 0.44;
       const options = optionsAt(time);
       context.beginPath();
 
@@ -200,10 +227,9 @@ export function createRiverRenderer(configuration) {
         const s = index / sampleCount;
         const sample = buildRibbonSample(s, 0, options);
         const lateralOffset = riverWidth(s, options) * laneRadius;
+        // 纤维本身是静止的河道纹路，流动交给下面的虚线偏移去做
         const flutter =
-          (smoothNoise(s * 12 + time * 0.035 + fiber, 307) - 0.5) *
-          state.turbulence *
-          0.006;
+          (smoothNoise(s * 12 + fiber, 307) - 0.5) * state.turbulence * 0.006;
         const point = pointToCanvas({
           x: sample.center.x,
           y: sample.center.y + lateralOffset + flutter,
@@ -212,31 +238,70 @@ export function createRiverRenderer(configuration) {
         else context.lineTo(point.x, point.y);
       }
 
-      const isCobalt = fiber % 7 === 0;
-      context.strokeStyle = isCobalt
-        ? `rgba(22, 73, 186, ${0.045 + state.cobalt * 0.1})`
-        : `rgba(39, 153, 173, ${0.03 + state.turbulence * 0.022})`;
-      context.lineWidth = isCobalt ? 0.8 : 0.45;
+      // 三种条纹：白沫、青流、深流。流动只有靠它们才看得见——之前 alpha 0.055
+      // 的纤维虽然在动，但被静止的水体完全淹没，实测位移读不出来。
+      // 岸边的条纹一并压淡：不动的水不该有明显的流痕
+      const presence = 0.32 + 0.68 * profile;
+      const tone = fiber % 3;
+      if (tone === 0) {
+        context.strokeStyle = `rgba(255, 255, 255, ${(0.16 + state.turbulence * 0.1) * presence})`;
+        context.lineWidth = 0.85;
+      } else if (tone === 1) {
+        context.strokeStyle = `rgba(64, 186, 206, ${(0.12 + state.turbulence * 0.07) * presence})`;
+        context.lineWidth = 0.62;
+      } else {
+        context.strokeStyle = `rgba(74, 152, 216, ${(0.08 + state.cobalt * 0.08) * presence})`;
+        context.lineWidth = 0.72;
+      }
+
+      // 顺流：虚线沿路径平移。河道本身不动，动的是描在它上面的条纹 —— 这正是
+      // "岸线确定、水在流"的模型。每条纤维错开相位，条纹才不会整齐划一。
+      const dashUnit = Math.max(24, canvasWidth * 0.055);
+      context.setLineDash([dashUnit, dashUnit * 0.85, dashUnit * 0.22, dashUnit * 0.7]);
+      // 相位必须在各条纤维之间保持相干：错开太多（曾用 0.37 个周期）会让任意一列上
+      // 总有一部分是亮段，总量恒定 —— 读起来是闪烁而不是平移。小幅错开只为斜切一点角度。
+      // 速度按剖面取，再叠一点逐条的剪切差异，免得整条河像刚体在平移。
+      const flow = CENTRE_FLOW_PIXELS_PER_SECOND * profile * shear;
+      context.lineDashOffset = -(time * flow + fiber * dashUnit * 0.045);
       context.stroke();
+      context.setLineDash([]);
     }
   }
 
+  // 焦散：清水里光折射到水底的那些游动亮纹。清澈感主要来自它，而不是来自更淡的底色。
   function drawLight(time) {
     if (!context) return;
     const options = optionsAt(time);
     const sampleCount = Math.max(70, Math.round(canvasWidth / 14));
-    context.beginPath();
+    // 压到刚好能感觉到"有光"，不该抢戏；速度也放慢一个量级
+    const strands = [
+      { lane: 0, alpha: 0.26, weight: 0.85, drift: 0 },
+      { lane: -0.34, alpha: 0.15, weight: 0.6, drift: 1.7 },
+      { lane: 0.41, alpha: 0.12, weight: 0.55, drift: 3.4 },
+    ];
 
-    for (let index = 0; index <= sampleCount; index += 1) {
-      const sample = buildRibbonSample(index / sampleCount, 0, options);
-      const point = pointToCanvas(sample.center);
-      if (index === 0) context.moveTo(point.x, point.y);
-      else context.lineTo(point.x, point.y);
+    context.lineCap = 'round';
+
+    for (const strand of strands) {
+      context.beginPath();
+
+      for (let index = 0; index <= sampleCount; index += 1) {
+        const s = index / sampleCount;
+        const sample = buildRibbonSample(s, 0, options);
+        // 每股在河道内横向漂移，亮纹才会互相错开、像在流动
+        const wander =
+          Math.sin(s * 9.3 - time * 0.09 + strand.drift) * 0.14 +
+          Math.sin(s * 21.7 - time * 0.05 + strand.drift) * 0.06;
+        const lateral = riverWidth(s, options) * (strand.lane + wander);
+        const point = pointToCanvas({ x: sample.center.x, y: sample.center.y + lateral });
+        if (index === 0) context.moveTo(point.x, point.y);
+        else context.lineTo(point.x, point.y);
+      }
+
+      context.strokeStyle = `rgba(240, 253, 255, ${strand.alpha})`;
+      context.lineWidth = strand.weight;
+      context.stroke();
     }
-
-    context.strokeStyle = 'rgba(255, 252, 229, 0.3)';
-    context.lineWidth = 0.8;
-    context.stroke();
   }
 
   function render(timestamp = 0, settleProgress = false) {
@@ -245,11 +310,8 @@ export function createRiverRenderer(configuration) {
     const follow = reducedMotionQuery.matches || settleProgress ? 1 : 0.12;
     scrollProgress += (targetProgress - scrollProgress) * follow;
     const time = reducedMotionQuery.matches ? 0 : timestamp * 0.001;
-    const opacity = clamp(getOpacity(scrollProgress), 0, 1);
-
     context.clearRect(0, 0, canvasWidth, canvasHeight);
     context.save();
-    context.globalAlpha = opacity;
     drawWash(time);
     drawFibers(time);
     drawLight(time);

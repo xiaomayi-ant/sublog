@@ -6,7 +6,7 @@
   class="home-river-field"
   data-home-river="locked-preset"
   data-river-entry="present-from-first-frame"
-  data-river-continuity="hero-to-entries"
+  data-river-scope="hero-only"
   data-bend="1.3"
   data-width="1.26"
   data-flow="1"
@@ -15,7 +15,6 @@
 >
   <div class="home-river-viewport">
     <canvas id="home-river-canvas" class="home-river-canvas" aria-hidden="true"></canvas>
-    <div class="home-river-sun"></div>
     <div class="home-river-quiet"></div>
   </div>
 </div>
@@ -27,22 +26,13 @@
   } from '../lib/riverRenderer.mjs';
 
   const canvas = document.querySelector<HTMLCanvasElement>('#home-river-canvas');
-  const homeFlow = document.querySelector<HTMLElement>('.home-flow');
 
-  if (canvas && homeFlow) {
-    const flow = homeFlow;
-    const progress = () => {
-      const bounds = flow.getBoundingClientRect();
-      const travel = Math.max(1, bounds.height - window.innerHeight);
-      return Math.min(1, Math.max(0, -bounds.top / travel));
-    };
-
+  if (canvas) {
+    // 河固定在首屏，形态不再随滚动变化 —— getProgress 保持默认的 0。
+    // 它跟着首屏一起滚走，而不是被钉在视口顶部让页面从背后滑过。
     createRiverRenderer({
       canvas,
       initialState: HOME_RIVER_PRESET,
-      getProgress: progress,
-      getOpacity: (value: number) => 1 - value * 0.58,
-      observeElement: flow,
       yOffset: -0.08,
     });
   }
@@ -58,11 +48,11 @@
     overflow: clip;
   }
 
+  /* 不再 sticky：河待在首屏这个盒子里，随它一起滚走 */
   .home-river-viewport {
-    position: sticky;
-    top: 0;
+    position: relative;
     width: 100%;
-    height: 100svh;
+    height: 100%;
     overflow: hidden;
   }
 
@@ -73,42 +63,22 @@
     height: 100%;
   }
 
-  .home-river-sun,
   .home-river-quiet {
     position: absolute;
     inset: 0;
     pointer-events: none;
   }
 
-  .home-river-sun {
-    background:
-      linear-gradient(
-        136deg,
-        rgba(255, 207, 96, 0.13),
-        rgba(255, 228, 157, 0.035) 24%,
-        transparent 48%
-      ),
-      radial-gradient(circle at 9% 4%, rgba(255, 222, 142, 0.19), transparent 25%);
-    mix-blend-mode: multiply;
-  }
-
+  /* 原来这里还有一个覆盖标题区的白色椭圆（0.88 alpha），用来给文字腾出可读的底。
+     实测那一带河流本身就只有 rgb(231,247,251)，墨压上去是 10.17:1 —— 白椭圆
+     换来的 1 点对比度，代价是把河的左半边洗掉了。只保留底部的收边。 */
   .home-river-quiet {
-    background:
-      radial-gradient(
-        ellipse 34% 43% at 19% 35%,
-        rgba(255, 255, 255, 0.88) 0%,
-        rgba(255, 255, 255, 0.66) 44%,
-        rgba(255, 255, 255, 0.12) 72%,
-        transparent 100%
-      ),
-      linear-gradient(to bottom, transparent 70%, rgba(255, 255, 255, 0.3) 100%);
+    background: linear-gradient(to bottom, transparent 70%, rgba(255, 255, 255, 0.3) 100%);
   }
 
   @media (max-width: 44rem) {
     .home-river-viewport {
-      position: absolute;
-      top: 0;
-      height: min(48rem, 100svh);
+      height: 100%;
     }
 
     .home-river-canvas {
@@ -116,14 +86,7 @@
     }
 
     .home-river-quiet {
-      background:
-        radial-gradient(
-          ellipse 70% 44% at 32% 32%,
-          rgba(255, 255, 255, 0.92) 0%,
-          rgba(255, 255, 255, 0.68) 52%,
-          transparent 100%
-        ),
-        linear-gradient(to bottom, transparent 58%, #fff 94%);
+      background: linear-gradient(to bottom, transparent 58%, #fff 94%);
     }
   }
 </style>

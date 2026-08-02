@@ -1,16 +1,19 @@
 ---
-// ArtRiverHero — editorial title and questions over the persistent mathematical river.
+// ArtRiverHero — editorial title and questions over the mathematical river.
+import HomeRiver from './HomeRiver.astro';
 ---
 
 <section
   class="shore-hero"
   aria-labelledby="home-title"
   data-surface="unified-page-bg"
-  data-color-focus="sunlight-diagonal"
+  data-color-focus="clear-water"
   data-motion-rhythm="material-flow-scroll-bend"
   data-type-system="editorial-serif-sans"
   data-intro-motion="per-load-word-reveal"
 >
+  <HomeRiver />
+
   <div class="hero-frame">
     <div class="hero-copy">
       <h1
@@ -18,7 +21,7 @@
         aria-label="Be water, my friend."
         data-intro-state="playing"
         data-water-color="liquid-glass"
-        data-friend-color="hermes-blue"
+        data-friend-color="ink"
       >
         <span class="intro-line intro-line--water" aria-hidden="true">
           <span class="intro-be" style="--word-delay: 120ms">Be</span>
@@ -41,26 +44,33 @@
         </span>
       </h1>
 
-      <div class="hero-questions" data-stream="typewriter">
-        <p class="question">
-          <span class="type type--zh">人类和AI的区别是什么？</span>
-          <span class="type type--en">What is the difference between a human and an AI?</span>
-        </p>
-        <p class="question">
-          <span class="type type--zh">AI目前的边界是什么？</span>
-          <span class="type type--en">Where are the boundaries of AI today?</span>
-        </p>
-      </div>
     </div>
+
+    <div class="hero-questions" data-stream="typewriter" data-stream-form="plain-lines">
+      <p class="question">
+        <span class="type type--zh">在智力方面，人类和AI的区别是什么？</span>
+        <span class="type type--en">In terms of intelligence, what separates a human from an AI?</span>
+      </p>
+      <p class="question">
+        <span class="type type--zh">AI目前的边界是什么？</span>
+        <span class="type type--en">Where are the boundaries of AI today?</span>
+      </p>
+    </div>
+
   </div>
 </section>
 
 <style>
+  /* 首屏不再满幅出血：河流已经是独立的满幅图层，这里只剩文字。
+     让它跟着 .site-shell 的盒子走，标题的左边缘才和导航、入口区共用一条线 ——
+     两个容器各自算宽度（64rem vs 76rem）时，最大的那个元素反而是唯一不对齐的。 */
+  /* 不要 overflow:hidden —— 河的图层是 inset:0 calc(50% - 50vw) 的满幅出血，
+     一裁就被剪到内容宽。纵向由这个盒子限定即可，横向必须放它出去。 */
+  /* 整整一屏，减去导航 —— 原来封在 49rem 是为了大屏上别拉太长，
+     但那也意味着屏幕一高，第二屏的内容就从下边缘探头进来，首屏不再是"一屏"。 */
   .shore-hero {
     position: relative;
-    min-height: min(49rem, calc(100svh - 5.25rem));
-    margin-inline: calc(50% - 50vw);
-    overflow: hidden;
+    min-height: calc(100svh - 5.25rem);
     background: transparent;
     border: 0;
   }
@@ -68,9 +78,7 @@
   .hero-frame {
     position: relative;
     display: grid;
-    width: min(100% - 5rem, 76rem);
     min-height: inherit;
-    margin-inline: auto;
     padding-block: clamp(2rem, 4vh, 3rem);
   }
 
@@ -83,7 +91,7 @@
   }
 
   h1 {
-    color: #173e46;
+    color: var(--color-ink);
     font-family: "Iowan Old Style", Baskerville, "Times New Roman", serif;
     font-size: clamp(4.25rem, 6.62vw, 5.5rem);
     font-weight: 400;
@@ -105,7 +113,7 @@
 
   .intro-be {
     display: inline-block;
-    color: var(--color-black);
+    color: var(--color-ink);
   }
 
   .intro-water,
@@ -113,19 +121,22 @@
     display: inline-block;
   }
 
+  /* 逗号字形小，同样透明度会看不见，提一档但保持同一种水青 */
   .intro-comma {
-    color: rgba(23, 62, 70, 0.16);
+    color: rgba(74, 184, 202, 0.55);
   }
 
   .intro-water-fill {
     position: relative;
     display: inline-block;
-    color: rgba(23, 62, 70, 0.15);
+    /* 字身几乎全透（合成后 #ccebf0，1.25:1）；字形交给边缘去撑。
+       原来这里有四种阴影色（含一档天蓝 141,203,255），一个词里就有七种色相 ——
+       全部并回青色轴，只留：上缘白高光、一侧青色折射、下方投影。 */
+    color: rgba(74, 184, 202, 0.28);
     text-shadow:
       -0.015em -0.016em 0 rgba(255, 255, 255, 0.95),
-      0.018em 0 0.012em rgba(86, 199, 201, 0.34),
-      -0.018em 0 0.012em rgba(146, 186, 255, 0.26),
-      0 0.055em 0.5em rgba(52, 122, 148, 0.24);
+      0.016em 0.004em 0.01em rgba(94, 214, 224, 0.6),
+      0 0.06em 0.55em rgba(58, 150, 176, 0.3);
     animation: water-surface 5.5s ease-in-out infinite;
     will-change: transform;
   }
@@ -138,11 +149,11 @@
     color: transparent;
     background-image: linear-gradient(
       104deg,
-      transparent 30%,
-      rgba(60, 148, 178, 0.42) 43%,
-      rgba(126, 208, 224, 0.5) 50%,
-      rgba(60, 148, 178, 0.34) 57%,
-      transparent 70%
+      transparent 28%,
+      rgba(58, 164, 186, 0.5) 42%,
+      rgba(150, 232, 240, 0.72) 50%,
+      rgba(58, 164, 186, 0.42) 58%,
+      transparent 72%
     );
     background-size: 260% 100%;
     background-clip: text;
@@ -151,9 +162,11 @@
     will-change: background-position;
   }
 
+  /* 减重：700 字重 × 85px × 满彩度赭墨曾是整页最重的元素，与"轻灵"直接冲突。
+     大字的对比度标准是 3.0，这里 7.31:1 仍有两倍余量。正文的 --color-ink 不动。 */
   .intro-line--friend {
-    color: #0000f2;
-    font-weight: 700;
+    color: rgba(76, 54, 48, 0.86);
+    font-weight: 500;
   }
 
   .intro-letter {
@@ -170,19 +183,26 @@
     animation: intro-letter-in 300ms var(--ease-out) var(--letter-delay) both;
   }
 
+  /* 无背景板，就是一块文字；左边缘与标题对齐 */
   .hero-questions {
-    max-width: 32rem;
-    margin-top: clamp(3.25rem, 7vh, 5rem);
-    color: rgba(23, 62, 70, 0.74);
-    font-family: var(--font-sans);
+    position: relative;
+    z-index: 2;
+    justify-self: start;
+    align-self: start;
+    width: max-content;
+    max-width: min(100%, 46rem);
+    margin-top: clamp(2.5rem, 6vh, 4.5rem);
+    color: var(--color-ink-soft);
   }
 
   .question + .question {
-    margin-top: 1.35rem;
+    margin-top: 1.4rem;
   }
 
   .type {
     display: block;
+    /* content-box：动画写的是文字宽度，光标的边框才不会吃掉末尾字符 */
+    box-sizing: content-box;
     width: max-content;
     max-width: 100%;
     overflow: hidden;
@@ -191,20 +211,25 @@
   }
 
   .type--zh {
-    font-size: clamp(1rem, 1.2vw, 1.12rem);
-    line-height: 1.75;
-    letter-spacing: 0.01em;
+    font-family: var(--font-sans);
+    font-size: clamp(0.98rem, 1.15vw, 1.08rem);
+    line-height: 1.85;
+    letter-spacing: 0.02em;
   }
 
+  /* 等宽是工程师的方言，和"思考 AI"的定位相斥；换回编辑体斜体，
+     它和标题同源，读作同一句话的另一种写法，而不是第二个问题。 */
   .type--en {
-    color: rgba(23, 62, 70, 0.52);
+    color: var(--color-ink-faint);
     font-family: var(--font-display);
-    font-size: clamp(0.9rem, 1.05vw, 1rem);
     font-style: italic;
-    line-height: 1.7;
+    font-size: clamp(0.88rem, 1vw, 0.96rem);
+    letter-spacing: 0;
+    line-height: 1.85;
   }
 
-  .hero-questions[data-stream-state='playing'] .type {
+  /* 光标只属于"正在敲的那一行"，还没轮到的行不该先亮着一个方块 */
+  .hero-questions[data-stream-state='playing'] .type[data-typed='typing'] {
     border-right-color: currentColor;
   }
 
@@ -351,27 +376,39 @@
 </style>
 
 <script>
+  import { paceLines } from '../lib/typewriter.mjs';
+
   const questions = document.querySelector<HTMLElement>('.hero-questions');
   const typeMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
   if (questions && !typeMotion.matches) {
-    const TITLE_DONE = 2850;
-    const GAP = 180;
-    const SPEED = { zh: 70, en: 22 };
     const lines = [...questions.querySelectorAll<HTMLElement>('.type')];
     const range = document.createRange();
-    let start = TITLE_DONE;
 
-    lines.forEach((line, index) => {
-      const chars = (line.textContent ?? '').trim().length;
-      if (chars === 0) return;
-
-      const speed = line.classList.contains('type--en') ? SPEED.en : SPEED.zh;
-      const duration = chars * speed;
+    // 量文字本身的宽度：.type 是块级元素，scrollWidth 会给出整栏宽，光标会跑过头
+    const measured = lines.map((line) => {
       range.selectNodeContents(line);
-      line.style.setProperty('--type-width', `${Math.ceil(range.getBoundingClientRect().width)}px`);
-      line.style.animation = `type-in ${duration}ms steps(${chars}) ${start}ms both`;
+      return {
+        line,
+        width: Math.ceil(range.getBoundingClientRect().width),
+        characters: (line.textContent ?? '').trim().length,
+      };
+    });
+
+    // 排期只依赖像素宽度，中英文因此以同一速度推进（见 lib/typewriter.mjs）
+    const plans = paceLines(measured);
+
+    measured.forEach(({ line, width, characters }, index) => {
+      if (characters === 0) return;
+      const { delay, duration, steps } = plans[index];
+
+      line.style.setProperty('--type-width', `${width}px`);
+      line.style.animation = `type-in ${duration}ms steps(${steps}) ${delay}ms both`;
       if (index === lines.length - 1) line.classList.add('type--last');
+
+      line.addEventListener('animationstart', () => {
+        line.dataset.typed = 'typing';
+      }, { once: true });
 
       line.addEventListener(
         'animationend',
@@ -382,8 +419,6 @@
         },
         { once: true },
       );
-
-      start += duration + GAP;
     });
 
     questions.dataset.streamState = 'playing';

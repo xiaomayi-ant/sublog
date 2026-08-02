@@ -1,102 +1,44 @@
 ---
-// 首页 — 艺术河流首屏 / 两个大号入口，各自带一列最新条目
+// 首页 — 气质（首屏引言与问句）→ 人（一句身份）→ 作品（最近写的）→ 收尾
 import Base from '../layouts/Base.astro';
 import ArtRiverHero from '../components/ArtRiverHero.astro';
-import HomeRiver from '../components/HomeRiver.astro';
-import {
-  getAllProjects,
-  getAllResearch,
-  articleUrl,
-  projectUrl,
-  formatDate,
-} from '../lib/content';
+import LifeTimeline from '../components/LifeTimeline.astro';
+import { getAllResearch, articleUrl, formatDate } from '../lib/content';
 
-// ── 入口下的条目列 ─────────────────────────────────────────
-// Blog 列：三个 Content Collections 合并、排除 draft、按日期倒序取前 3 条。
-const ROWS_PER_ENTRY = 3;
-
-const blogRows = (await getAllResearch()).slice(0, ROWS_PER_ENTRY).map((entry) => ({
+// 最近写的：三个 collection 合并、排除 draft、按日期倒序。
+// 用绝对日期而不是"7 天前"——站点是静态构建的，相对时间会停在构建那一刻。
+const recent = (await getAllResearch()).slice(0, 3).map((entry) => ({
   date: formatDate(entry.data.pubDate),
   title: entry.data.title,
   href: articleUrl(entry),
 }));
 
-// Github 列：已发布的项目；不足 3 条的位置留占位行，等具体项目填进来。
-const githubRows = (await getAllProjects()).slice(0, ROWS_PER_ENTRY).map((project) => ({
-  date: formatDate(project.data.pubDate),
-  title: project.data.title,
-  href: projectUrl(project),
-}));
-
-const githubPlaceholders = Math.max(0, ROWS_PER_ENTRY - githubRows.length);
-
-const entries = [
-  {
-    num: '01',
-    title: 'Blog',
-    desc: '思考、实验、技术文章和长期问题',
-    href: '/blog',
-    list: 'blog',
-    rows: blogRows,
-    placeholders: 0,
-  },
-  {
-    num: '02',
-    title: 'Github',
-    desc: '正在构建的工具、系统和独立产品',
-    href: '/projects',
-    list: 'github',
-    rows: githubRows,
-    placeholders: githubPlaceholders,
-  },
-];
 ---
 
 <Base
   title="Be water, my friend."
-  description="关注智能系统、界面，以及人在技术中的判断。记录尚未定型的想法，也做可以被使用的东西。"
+  description="sumoer 的个人站：AI 的执行框架、模型应用，以及判断它们有没有变好的评估。"
 >
   <div class="home-flow" data-page-flow="continuous-no-dividers">
-    <HomeRiver />
-    <div class="home-content">
-      <ArtRiverHero />
+    <ArtRiverHero />
 
-      <!-- 2. 大号入口 + 各自的条目列 -->
-      <section class="entries" aria-label="站点入口">
-        {
-          entries.map(({ num, title, desc, href, list, rows, placeholders }) => (
-            <div class="entry-col">
-              <a class="entry" href={href}>
-                <span class="entry-num meta">{num}</span>
-                <span class="entry-body">
-                  <span class="entry-title">{title}</span>
-                  <span class="entry-desc">{desc}</span>
-                </span>
-                <span class="entry-dot" aria-hidden="true" />
-              </a>
-
-              <ul class="entry-list" data-entry-list={list} aria-label={`${title} 最新条目`}>
-                {rows.map((row) => (
-                  <li>
-                    <a class="row" href={row.href}>
-                      <span class="row-date meta">{row.date}</span>
-                      <span class="row-title">{row.title}</span>
-                    </a>
-                  </li>
-                ))}
-                {Array.from({ length: placeholders }).map(() => (
-                  <li>
-                    <span class="row row--empty" aria-hidden="true">
-                      <span class="row-date meta">————</span>
-                      <span class="row-title">待填充</span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))
-        }
+    <div class="home-tail">
+      <section class="recent" aria-label="最近写的" data-home-index="recent-writing">
+        <ul>
+          {
+            recent.map(({ date, title, href }) => (
+              <li>
+                <a class="row" href={href}>
+                  <span class="row-date meta">{date}</span>
+                  <span class="row-title">{title}</span>
+                </a>
+              </li>
+            ))
+          }
+        </ul>
       </section>
+
+      <LifeTimeline />
     </div>
   </div>
 </Base>
@@ -104,106 +46,34 @@ const entries = [
 <style>
   .home-flow {
     position: relative;
-    display: flow-root;
+    display: flex;
+    flex: 1 0 auto;
+    flex-direction: column;
     background: var(--color-bg);
   }
 
-  .home-content {
+  /* 第二屏：吃掉首屏之后的全部余量，内容居中。
+     余量均分到上下两侧，就不会像原来那样时间线和页脚之间空出一大块、
+     而时间线又紧贴在最近写的下面。 */
+  .home-tail {
+    display: flex;
+    flex: 1 0 auto;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  /* 最近写的：没有小标题、没有编号、没有分类，只有日期和标题 */
+  .recent {
     position: relative;
     z-index: 1;
   }
 
-  /* ── 大号入口 ── */
-  .entries {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: clamp(3rem, 8vw, 7rem);
-    margin-top: clamp(1.5rem, 3vw, 3rem);
-    padding-bottom: clamp(1.5rem, 3vw, 2.5rem);
-  }
-
-  .entry {
-    position: relative;
-    display: flex;
-    align-items: baseline;
-    gap: var(--space-lg);
-    padding: var(--space-sm) var(--space-md);
-    margin-inline: calc(var(--space-md) * -1);
-    color: var(--color-ink);
-    text-decoration: none;
-    border: 0;
-    border-radius: 1rem;
-    transition: background-color var(--duration-slow) var(--ease-out);
-  }
-
-  .entry:hover {
-    text-decoration: none;
-    /* 不用分割线，也不要成片的蓝：只留一层刚好能读出"选中"的水色 */
-    background-color: rgba(36, 107, 255, 0.014);
-  }
-
-  .entry-num {
-    width: 2.5rem;
-    flex-shrink: 0;
-    color: #0000f2;
-  }
-
-  .entry-body {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-xs);
-  }
-
-  .entry-title {
-    font-family: var(--font-display);
-    font-size: var(--text-3xl);
-    line-height: 1.2;
-    letter-spacing: -0.01em;
-  }
-
-  .entry-desc {
-    color: var(--color-ink-soft);
-    font-size: var(--text-base);
-    transition: color var(--duration-fast) var(--ease-out);
-  }
-
-  .entry:hover .entry-desc {
-    color: var(--color-ink);
-  }
-
-  /* 阳黄光点：hover 时安静地出现 */
-  .entry-dot {
-    position: absolute;
-    right: var(--space-md);
-    top: 50%;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--color-sun);
-    opacity: 0;
-    transform: translateY(-50%) scale(0.5);
-    transition:
-      opacity var(--duration-slow) var(--ease-out),
-      transform var(--duration-slow) var(--ease-out);
-  }
-
-  .entry:hover .entry-dot {
-    opacity: 1;
-    transform: translateY(-50%) scale(1);
-  }
-
-  /* ── 入口下的条目列：明确从属于上方入口，字号比入口小一档 ── */
-  .entry-list {
-    margin-top: var(--space-md);
-    padding-left: calc(2.5rem + var(--space-lg));
-  }
-
   .row {
     display: grid;
-    grid-template-columns: 6rem minmax(0, 1fr);
+    grid-template-columns: 7rem minmax(0, 1fr);
     align-items: baseline;
     gap: var(--space-md);
-    padding-block: 0.42rem;
+    padding-block: 0.55rem;
     color: var(--color-ink);
     text-decoration: none;
   }
@@ -213,48 +83,88 @@ const entries = [
   }
 
   .row-date {
-    font-size: 0.6875rem;
     color: var(--color-ink-faint);
   }
 
+  /* 顺便补上字号阶梯里 39px 与 17px 之间那一档 */
   .row-title {
-    font-size: 0.9375rem;
+    position: relative;
+    /* 收缩到文字宽：它是网格项，默认会撑满整列，
+       浮光居中就会落在文字右边的空白里 */
+    justify-self: start;
+    max-width: 100%;
+    font-family: var(--font-display);
+    font-size: 1.0625rem;
     line-height: 1.6;
-    background-image: linear-gradient(var(--color-river), var(--color-river));
-    background-repeat: no-repeat;
-    background-size: 0% 1px;
-    background-position: 0 100%;
-    transition: background-size var(--duration-slow) var(--ease-out);
   }
 
-  .row:hover .row-title {
-    background-size: 100% 1px;
+  /* 悬停时亮起来的是一小段浮光，不是一条贯通的线。
+     用金色而不是河流的青：河流是这一页的底色，下划线再用它就成了背景的一部分；
+     阳光是落在东西上的，才有"被照到"的意思。
+     --color-sun 的 1.58:1 在别处是缺陷（承载不了文字），在"弱的浮光"上恰好合适。
+     短（3rem）、细（1px）、两端消隐、从中间绽开 —— 让它读作一道反光而不是一条边框。 */
+  .row-title::after {
+    position: absolute;
+    bottom: -0.16em;
+    left: 50%;
+    /* 至少 20rem，且不短于标题本身。最长的标题 242px，浮光 320px ——
+       它比字长，才读作"光落在这一行上"，而不是一小截下划线。
+       3rem 那一版太短，几乎起不到反馈作用。 */
+    width: max(20rem, 100%);
+    height: 1px;
+    content: '';
+    background-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(245, 200, 91, 0.5) 22%,
+      rgba(232, 166, 60, 0.95) 50%,
+      rgba(245, 200, 91, 0.5) 78%,
+      transparent 100%
+    );
+    background-size: 180% 100%;
+    background-position: 0% 50%;
+    box-shadow: 0 0 6px 0 rgba(232, 166, 60, 0.34);
+    opacity: 0;
+    transform: translateX(-50%) scaleX(0.2);
+    transform-origin: center;
+    transition:
+      transform var(--duration-slow) var(--ease-out),
+      opacity var(--duration-fast) var(--ease-out);
   }
 
-  .row--empty {
-    color: var(--color-ink-faint);
+  .row:hover .row-title::after,
+  .row:focus-visible .row-title::after {
+    opacity: 1;
+    transform: translateX(-50%) scaleX(1);
+    /* 亮芯在这一小段里缓慢游走，光才是"浮"的 */
+    animation: light-drift 7s linear infinite;
   }
 
-  .row--empty .row-title {
-    background-image: none;
+  @keyframes light-drift {
+    from {
+      background-position: 0% 50%;
+    }
+
+    to {
+      background-position: -180% 50%;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .row-title::after {
+      transition: opacity var(--duration-fast) var(--ease-out);
+      transform: translateX(-50%) scaleX(1);
+    }
+
+    .row:hover .row-title::after,
+    .row:focus-visible .row-title::after {
+      animation: none;
+    }
   }
 
   @media (max-width: 40rem) {
-    .entries {
-      grid-template-columns: 1fr;
-      gap: var(--space-xl);
-    }
-
-    .entry-title {
-      font-size: var(--text-2xl);
-    }
-
-    .entry-list {
-      padding-left: var(--space-md);
-    }
-
     .row {
-      grid-template-columns: 5.5rem minmax(0, 1fr);
+      grid-template-columns: 5.75rem minmax(0, 1fr);
       gap: var(--space-sm);
     }
   }

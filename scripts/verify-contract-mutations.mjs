@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -108,7 +108,8 @@ try {
       },
     },
     {
-      name: 'collapsed-entry-lists',
+      // 少一条 = 主页不再是完整的"最近写的"
+      name: 'truncated-writing-list',
       apply: async (distDir) => {
         const home = path.join(distDir, 'index.html');
         const html = await readFile(home, 'utf8');
@@ -124,13 +125,108 @@ try {
       },
     },
     {
-      name: 'missing-sunlight-focus',
+      // 把墨拉回水的色相轴 = 文字重新和河水融成一体，冷暖搭配消失
+      name: 'ink-collapsed-into-water',
+      apply: async (distDir) => {
+        const assetsRoot = path.join(distDir, '_astro');
+        const files = await readdir(assetsRoot);
+        const sheet = files.find((file) => file.endsWith('.css') && file.startsWith('Base'));
+        const target = path.join(assetsRoot, sheet);
+        const css = await readFile(target, 'utf8');
+        await writeFile(target, css.replace('--color-ink:#4c3630', '--color-ink:var(--water-900)'));
+      },
+    },
+    {
+      // 把深水蓝换回纯原色蓝 = 配色重新脱离色相轴
+      name: 'foreign-primary-blue',
+      apply: async (distDir) => {
+        const assetsRoot = path.join(distDir, '_astro');
+        const files = await readdir(assetsRoot);
+        const sheet = files.find((file) => file.endsWith('.css') && file.startsWith('Base'));
+        const target = path.join(assetsRoot, sheet);
+        const css = await readFile(target, 'utf8');
+        await writeFile(target, css.replace('--color-river:#1651be', '--color-river:#0000f2'));
+      },
+    },
+    {
+      // 拆掉页脚的三块结构 = 页面重新失去收尾
+      name: 'footer-loses-signature',
+      apply: async (distDir) => {
+        const home = path.join(distDir, 'index.html');
+        const html = await readFile(home, 'utf8');
+        await writeFile(home, html.replace('data-footer="about-more-contact"', 'data-footer="none"'));
+      },
+    },
+    {
+      name: 'plain-question-form',
+      apply: async (distDir) => {
+        const home = path.join(distDir, 'index.html');
+        const html = await readFile(home, 'utf8');
+        await writeFile(home, html.replace('data-stream-form="plain-lines"', 'data-stream-form="none"'));
+      },
+    },
+    {
+      // 履历标记退回深蓝 = 人和水又变成同一个色族，冷暖分工消失
+      name: 'timeline-marks-back-to-cool',
+      apply: async (distDir) => {
+        const assetsRoot = path.join(distDir, '_astro');
+        const files = await readdir(assetsRoot);
+        const sheet = files.find((file) => file.endsWith('.css') && file.startsWith('index'));
+        const target = path.join(assetsRoot, sheet);
+        const css = await readFile(target, 'utf8');
+        await writeFile(target, css.replaceAll('var(--color-ember)', 'var(--color-river)'));
+      },
+    },
+    {
+      // 抹掉辉光 = 下划线退回一条实色的线，"光"的读感消失
+      name: 'flattened-hover-light',
+      apply: async (distDir) => {
+        const assetsRoot = path.join(distDir, '_astro');
+        const files = await readdir(assetsRoot);
+        const sheet = files.find((file) => file.endsWith('.css') && file.startsWith('index'));
+        const target = path.join(assetsRoot, sheet);
+        const css = await readFile(target, 'utf8');
+        await writeFile(target, css.replace('box-shadow:0 0 6px #e8a63c57', 'box-shadow:none'));
+      },
+    },
+    {
+      // 掉一条履历 = 时间线不再是完整的那条路
+      name: 'dropped-milestone',
+      apply: async (distDir) => {
+        const home = path.join(distDir, 'index.html');
+        const html = await readFile(home, 'utf8');
+        await writeFile(home, html.replace(/<span class="mark-label"[\s\S]*?<\/span><\/span>/, ''));
+      },
+    },
+    {
+      // 所有刻度同时显现 = 时间不再是被走出来的，退回布景
+      name: 'ticks-appear-at-once',
+      apply: async (distDir) => {
+        const home = path.join(distDir, 'index.html');
+        const html = await readFile(home, 'utf8');
+        await writeFile(home, html.replace(/--reveal: \d+ms/g, '--reveal: 0ms'));
+      },
+    },
+    {
+      // 把河重新钉回视口顶部 = 它又会跟着滚动往下走
+      name: 'sticky-river-again',
+      apply: async (distDir) => {
+        const assetsRoot = path.join(distDir, '_astro');
+        const files = await readdir(assetsRoot);
+        const sheet = files.find((file) => file.endsWith('.css') && file.startsWith('index'));
+        const target = path.join(assetsRoot, sheet);
+        const css = await readFile(target, 'utf8');
+        await writeFile(target, css.replace('.home-river-viewport', '.home-river-viewport{position:sticky}.home-river-viewport'));
+      },
+    },
+    {
+      name: 'reintroduced-warm-wash',
       apply: async (distDir) => {
         const home = path.join(distDir, 'index.html');
         const html = await readFile(home, 'utf8');
         await writeFile(
           home,
-          html.replace('data-color-focus="sunlight-diagonal"', 'data-color-focus="none"'),
+          html.replace('data-color-focus="clear-water"', 'data-color-focus="sunlight-diagonal"'),
         );
       },
     },
@@ -198,7 +294,7 @@ try {
     throw new Error(`Unexplained surviving contract mutations: ${survivors.join(', ')}`);
   }
 
-  console.log('mutation_changed: 15 killed / 0 unexplained');
+  console.log('mutation_changed: 24 killed / 0 unexplained');
 } finally {
   await rm(mutationRoot, { recursive: true });
 }
