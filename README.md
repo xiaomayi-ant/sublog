@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="./public/og-default.svg" alt="Water — 如斯" width="720" />
+  <img src="./docs/media/home.webp" alt="The Water home page: a watercolour river behind the line Be water, my friend." width="720" />
 
   # Water
 
@@ -12,11 +12,11 @@
 
 ## Why Water
 
-Water is not a conventional developer portfolio. It is an editorial, Chinese-led personal world built around one idea:
+Water is not a conventional developer portfolio. It is an editorial, Chinese-led personal world built around one line — the home page's title, the words the hero spells out, and the closing quote on `/about`:
 
-> Research what moves. Build what remains.
+> Be water, my friend.
 
-The visual system connects three layers: an ancient-character-inspired identity gives the site memory, a blue river gives it motion, and sparse points give it a quiet sense of the future.
+The visual system has three layers. A watercolour river carries the motion. A typewriter reveals, one line at a time, the questions the site is actually about — what separates a human from an AI, where the boundaries of AI are today. A life timeline underneath gives the whole thing a sense of duration.
 
 | Route | Purpose | Content model |
 | --- | --- | --- |
