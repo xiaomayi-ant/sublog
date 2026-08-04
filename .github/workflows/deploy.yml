@@ -15,6 +15,9 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # 只需要建 Release。不需要、也拿不到任何生产机凭据。
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -64,45 +67,21 @@ jobs:
           '
           echo "id=$RELEASE" >> "$GITHUB_OUTPUT"
 
-      - name: Configure SSH
+      - name: Package
         env:
-          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          DEPLOY_HOST_KEY: ${{ secrets.DEPLOY_HOST_KEY }}
-        run: |
-          set -eu
-          mkdir -p ~/.ssh
-          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          printf '%s\n' "$DEPLOY_HOST_KEY" > ~/.ssh/known_hosts
-          chmod 644 ~/.ssh/known_hosts
-
-      # 这把 key 在服务器上被 authorized_keys 的 command= 锁死，只认 recv / promote 两个动作。
-      # 即使这一步被注入任意命令，对端也只会回 "forbidden action"。
-      - name: Upload release
-        env:
-          TARGET: ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}
           RELEASE: ${{ steps.rel.outputs.id }}
-        run: |
-          set -euo pipefail
-          tar czf - -C dist . \
-            | ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes "$TARGET" "recv $RELEASE"
+        run: tar czf "site.tar.gz" -C dist .
 
-      - name: Promote release
+      # 发布产物，等服务器自己来取。CI 不持有任何进入生产机的凭据 ——
+      # 阿里云安全组只放行固定来源 IP，runner 连不进来，方向必须反过来。
+      # 资产名固定为 site.tar.gz，服务器上的轮询脚本按这个名字找。
+      - name: Publish release
         env:
-          TARGET: ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}
+          GH_TOKEN: ${{ github.token }}
           RELEASE: ${{ steps.rel.outputs.id }}
         run: |
           set -eu
-          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes "$TARGET" "promote $RELEASE"
-
-      # 站点目前未完成 ICP 备案、也未启用 443，外网健康检查必然失败，
-      # 所以先不让它拦住发布。这两件事解决后删掉 continue-on-error，让它成为真正的闸门。
-      - name: Health check
-        continue-on-error: true
-        env:
-          SITE_URL: ${{ secrets.SITE_URL }}
-        run: curl --fail --silent --show-error --location --max-time 20 "$SITE_URL/"
-
-      - name: Cleanup
-        if: always()
-        run: rm -f ~/.ssh/deploy_key
+          gh release create "$RELEASE" site.tar.gz \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$RELEASE" \
+            --notes "Automated build of ${GITHUB_SHA}. The production host polls for this and promotes it."
