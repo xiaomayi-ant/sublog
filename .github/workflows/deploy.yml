@@ -18,9 +18,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # 用 24 而不是 engines 里的下限 22.12：package-lock.json 是 npm 11 生成的，
+      # 而 22.12 自带 npm 10，两者对 @emnapi 那条 alpha 传递依赖的解析不一致，
+      # npm ci 会直接判定锁文件不同步。24 自带 npm 11，与本地开发环境同一大版本。
       - uses: actions/setup-node@v4
         with:
-          node-version: '22.12'
+          node-version: '24'
           cache: npm
 
       - run: npm ci
