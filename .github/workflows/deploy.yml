@@ -26,7 +26,12 @@ jobs:
           node-version: '24'
           cache: npm
 
-      - run: npm ci
+      # 这里用 install 而不是 ci：package-lock.json 在 macOS 上生成，
+      # @emnapi/wasi-threads 那条链在 darwin 是 optional 被跳过、依赖没进锁文件，
+      # 到 Linux 上却是必需的，npm ci 因此判定锁文件不同步（两个 Node 大版本都一样）。
+      # 代价是每次跑会重新解析依赖，换来的是构建能进行；紧接着的 npm test 是真正的闸门。
+      # 想恢复 npm ci 的严格性，需要在 Linux 上重新生成一次锁文件。
+      - run: npm install --no-audit --no-fund
 
       # 与本地 deploy-site.mjs 一致：先用 water.localhost 跑完整 gate，
       # 再用真实域名构建一次，免得把测试用的 origin 烤进 canonical 和 RSS。
