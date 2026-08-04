@@ -1,0 +1,100 @@
+name: Deploy
+
+# push 到 main 即构建并发布。手动触发保留给回滚后的重新发布。
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# 同一时间只允许一个部署在跑。服务器侧还有 .deploy-lock，这里是第一道闸。
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.12'
+          cache: npm
+
+      - run: npm ci
+
+      # 与本地 deploy-site.mjs 一致：先用 water.localhost 跑完整 gate，
+      # 再用真实域名构建一次，免得把测试用的 origin 烤进 canonical 和 RSS。
+      - name: Verify
+        run: npm test
+        env:
+          SITE_URL: https://water.localhost
+
+      - name: Build
+        run: npm run build
+        env:
+          SITE_URL: ${{ secrets.SITE_URL }}
+
+      # release id 与本地部署同构：v<版本>-<UTC 时间戳>-<短 sha>
+      - name: Stamp release
+        id: rel
+        env:
+          SITE_URL: ${{ secrets.SITE_URL }}
+        run: |
+          set -eu
+          export RELEASE="v$(node -p "require('./package.json').version")-$(date -u +%Y%m%d%H%M%S)-$(git rev-parse --short=7 HEAD)"
+          node -e '
+            const fs = require("node:fs");
+            fs.writeFileSync("dist/release.json", JSON.stringify({
+              releaseId: process.env.RELEASE,
+              commit: process.env.GITHUB_SHA.slice(0, 7),
+              siteUrl: process.env.SITE_URL,
+              builtAt: new Date().toISOString(),
+            }, null, 2) + "\n");
+          '
+          echo "id=$RELEASE" >> "$GITHUB_OUTPUT"
+
+      - name: Configure SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST_KEY: ${{ secrets.DEPLOY_HOST_KEY }}
+        run: |
+          set -eu
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_HOST_KEY" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      # 这把 key 在服务器上被 authorized_keys 的 command= 锁死，只认 recv / promote 两个动作。
+      # 即使这一步被注入任意命令，对端也只会回 "forbidden action"。
+      - name: Upload release
+        env:
+          TARGET: ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}
+          RELEASE: ${{ steps.rel.outputs.id }}
+        run: |
+          set -euo pipefail
+          tar czf - -C dist . \
+            | ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes "$TARGET" "recv $RELEASE"
+
+      - name: Promote release
+        env:
+          TARGET: ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}
+          RELEASE: ${{ steps.rel.outputs.id }}
+        run: |
+          set -eu
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes "$TARGET" "promote $RELEASE"
+
+      # 站点目前未完成 ICP 备案、也未启用 443，外网健康检查必然失败，
+      # 所以先不让它拦住发布。这两件事解决后删掉 continue-on-error，让它成为真正的闸门。
+      - name: Health check
+        continue-on-error: true
+        env:
+          SITE_URL: ${{ secrets.SITE_URL }}
+        run: curl --fail --silent --show-error --location --max-time 20 "$SITE_URL/"
+
+      - name: Cleanup
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
