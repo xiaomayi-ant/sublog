@@ -71,4 +71,114 @@
     border-top: 1px solid var(--color-line);
     margin: var(--space-xl) 0;
   }
+
+  .prose :global(h4) {
+    font-size: var(--text-base);
+    font-family: var(--font-label);
+    letter-spacing: 0.04em;
+    color: var(--color-ink-soft);
+    margin-top: var(--space-lg);
+    margin-bottom: var(--space-2xs);
+  }
+
+  /* 代码块：Shiki 自带背景色与 overflow-x，这里只补留白和边框，
+     让它和正文的垂直节奏对齐，不额外抢视觉重量。 */
+  .prose :global(pre) {
+    margin: var(--space-lg) 0;
+    padding: var(--space-md);
+    border: 1px solid var(--color-line);
+    border-radius: 4px;
+    font-size: var(--text-sm);
+    line-height: 1.7;
+  }
+
+  /* 代码块里的 code 不要继承行内 code 的底色和内边距 */
+  .prose :global(pre code) {
+    background: none;
+    padding: 0;
+    font-size: inherit;
+  }
+
+  /* 表格：markdown 生成的是裸 <table>，外面没有可以滚动的容器。
+     Astro 7 的默认 markdown 处理器（Sätteri）没有 JS 插件接口，为了包一层 div
+     去换回 remark 管线不划算 —— 所以让 table 自己成为滚动容器。
+     副作用是它不再自动撑满宽度，窄表按内容宽度居左，这在正文里反而更好看。 */
+  .prose :global(table) {
+    display: block;
+    width: fit-content;
+    max-width: 100%;
+    overflow-x: auto;
+    /* 触屏上滚到边界时不要把整页一起带走 */
+    overscroll-behavior-x: contain;
+    border-collapse: collapse;
+    margin: var(--space-lg) 0;
+    font-size: var(--text-sm);
+    line-height: 1.6;
+  }
+
+  /* 单元格给一个最小宽度，列被压到"约 / 45 / 秒"那种竖排之前先转为横滚。
+     用 min-width 而不是给 table 设固定下限：列少的表格照样能自然铺开，
+     列多的才会溢出并滚动，随列数自适应。 */
+  .prose :global(th),
+  .prose :global(td) {
+    min-width: 5.5rem;
+    padding: var(--space-2xs) var(--space-sm);
+    text-align: left;
+    vertical-align: top;
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .prose :global(th) {
+    font-family: var(--font-label);
+    font-weight: 600;
+    font-size: var(--text-xs);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-ink-soft);
+    white-space: nowrap;
+    border-bottom-color: var(--color-ink-faint);
+  }
+
+  /* 图与媒体。markdown 的 ![]() 只生成裸 <img>，要说明文字就手写 <figure>，
+     两种写法这里都覆盖。 */
+  .prose :global(figure) {
+    margin: var(--space-xl) 0;
+  }
+
+  .prose :global(p > img) {
+    margin: var(--space-xl) 0;
+    border-radius: 4px;
+  }
+
+  .prose :global(figure img),
+  .prose :global(figure video) {
+    width: 100%;
+    height: auto;
+    border-radius: 4px;
+  }
+
+  .prose :global(figcaption) {
+    margin-top: var(--space-xs);
+    font-size: var(--text-xs);
+    line-height: 1.6;
+    color: var(--color-ink-soft);
+  }
+
+  /* 嵌入视频（B站 / YouTube）：固定 16:9，iframe 自己撑满，
+     不需要在正文里写死宽高，窄屏也不会溢出。 */
+  .prose :global(.embed) {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    background: var(--color-river-soft);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .prose :global(.embed iframe) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
 </style>
