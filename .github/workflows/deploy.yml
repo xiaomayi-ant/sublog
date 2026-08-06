@@ -85,3 +85,31 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --title "$RELEASE" \
             --notes "Automated build of ${GITHUB_SHA}. The production host polls for this and promotes it."
+
+      # 产物发布 ≠ 线上生效。生产机的 water-pull.timer 每 2 分钟轮询一次 Release，
+      # 拉下来校验后原子切换 —— 而那个脚本的每一条失败路径（api-unreachable /
+      # download-failed / stamp-mismatch / invalid-tag）都只写服务器上的 deploy.log，
+      # 外部没有任何信号。不在这里核对的话，绿色的 workflow 只证明"包发出去了"，
+      # 不证明"线上跑的是这个 commit"，而后者才是我们真正想要的保证。
+      #
+      # 核对手段是构建期就烤进产物的 dist/release.json：它带着 releaseId，
+      # 且轮询脚本已经校验过 tag 与它一致，所以线上读到什么就是线上在跑什么。
+      - name: Verify the live site serves this release
+        env:
+          RELEASE: ${{ steps.rel.outputs.id }}
+          SITE_URL: ${{ secrets.SITE_URL }}
+        run: |
+          set -eu
+          # 轮询间隔 2 分钟，给 6 分钟窗口 —— 够容下一次被 API 限流静默跳过的周期
+          live=''
+          for attempt in $(seq 1 36); do
+            live=$(curl -sf --max-time 10 "$SITE_URL/release.json" | jq -r '.releaseId // empty' || true)
+            if [ "$live" = "$RELEASE" ]; then
+              echo "线上已切换到 $RELEASE（第 $attempt 次探测，约 $((attempt * 10)) 秒）"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::线上 6 分钟内没有切换到 $RELEASE（当前 ${live:-无法读取}）"
+          echo "排查顺序：/srv/water/deploy.log → systemctl status water-pull.service → /srv/water/DEPLOY_DISABLED 是否存在"
+          exit 1
