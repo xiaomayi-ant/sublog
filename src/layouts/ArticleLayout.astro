@@ -4,6 +4,7 @@ import Base from './Base.astro';
 import Meta from '../components/Meta.astro';
 import Prose from '../components/Prose.astro';
 import CodeCopy from '../components/CodeCopy.astro';
+import ArticleRelations from '../components/ArticleRelations.astro';
 import type { MarkdownHeading } from 'astro';
 import { TYPE_LABELS, formatDate, type ResearchEntry } from '../lib/content';
 
@@ -20,7 +21,7 @@ const typeLabel = TYPE_LABELS[entry.collection];
 const toc = headings.filter((h) => h.depth === 2 || h.depth === 3);
 ---
 
-<Base title={title} description={description} ogType="article">
+<Base title={title} description={description} ogType="article" footer="minimal">
   <article class="article">
     <header class="article-head">
       <Meta items={[formatDate(pubDate), typeLabel.en, ...tags.map((t) => `#${t}`)]} />
@@ -57,6 +58,8 @@ const toc = headings.filter((h) => h.depth === 2 || h.depth === 3);
     <Prose>
       <slot />
     </Prose>
+
+    <ArticleRelations entry={entry} />
 
     <footer class="article-foot">
       <a class="back meta" href="/blog">← 返回 Blog</a>

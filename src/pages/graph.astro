@@ -1,0 +1,60 @@
+---
+// /graph — 全站知识图谱：文章（墨）、LLM 抽取的实体（河蓝）、标签（淡墨）。
+// 数据来自构建期只读的 data/graph.db；库不存在时降级为一行说明，页面照常构建。
+import Base from '../layouts/Base.astro';
+import Meta from '../components/Meta.astro';
+import ConceptGraph from '../components/ConceptGraph.astro';
+import { getFullGraph, getGraphStats } from '../lib/graph';
+
+const [{ nodes, edges }, stats] = await Promise.all([getFullGraph(), getGraphStats()]);
+const empty = stats.articles === 0;
+---
+
+<Base title="图谱" description="文章与概念之间的关联图谱。">
+  <header class="page-head">
+    <Meta items={['Graph']} />
+    <h1>图谱</h1>
+    <p class="lede">
+      {
+        empty
+          ? '图谱数据还没有生成 —— 配好 LLM 端点后跑 npm run graph:extract。'
+          : `${stats.articles} 篇文章 · ${stats.concepts} 个概念`
+      }
+    </p>
+  </header>
+
+  {
+    !empty && (
+      <div class="graph-wrap" data-graph-page>
+        <ConceptGraph nodes={nodes} edges={edges} height={560} label="全站知识图谱" />
+        <p class="hint meta">点击节点：文章 → 文章页，概念 → 概念聚合页</p>
+      </div>
+    )
+  }
+</Base>
+
+<style>
+  .page-head {
+    padding-top: var(--space-xl);
+    max-width: var(--measure);
+  }
+
+  h1 {
+    font-size: var(--text-3xl);
+    margin-top: var(--space-sm);
+  }
+
+  .lede {
+    margin-top: var(--space-md);
+    color: var(--color-ink-soft);
+  }
+
+  .graph-wrap {
+    margin-top: var(--space-xl);
+  }
+
+  .hint {
+    margin-top: var(--space-sm);
+    color: var(--color-ink-faint);
+  }
+</style>

@@ -1,0 +1,291 @@
+---
+// ConceptGraph — 手写 canvas 力导向图：文章（墨）与实体（河蓝）、标签（淡墨）。
+// 不引 d3/sigma：节点规模只有几十到几百，O(n²) 排斥力每帧也算得起。
+// 数据以 application/json 内联进页面，点击节点跳对应页；
+// prefers-reduced-motion 时一次性算完布局只画一帧，不动。
+import type { GraphEdge, GraphNode } from '../lib/graph';
+
+interface Props {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  focusId?: string;
+  height?: number;
+  label?: string;
+}
+
+const { nodes, edges, focusId, height = 360, label = '知识图谱：文章与概念的关联' } = Astro.props;
+
+// 实体名来自 LLM，序列化时把 < 转义掉，免得名字里混进 </script> 把页面截断
+const payload = JSON.stringify({ nodes, edges, focusId }).replace(/</g, '\\u003c');
+---
+
+<div class="concept-graph" style={`--graph-height: ${height}px`} data-concept-graph>
+  <canvas class="concept-graph-canvas" role="img" aria-label={label}></canvas>
+  <script type="application/json" class="concept-graph-data" set:html={payload}></script>
+</div>
+
+<style>
+  .concept-graph {
+    height: var(--graph-height);
+    border: 1px solid var(--color-line);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .concept-graph-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: default;
+  }
+</style>
+
+<script>
+  // 力导向布局 + 绘制：每个 data-concept-graph 容器一张图。
+  // 布局用黄金角螺旋起摆（不用随机数，同一批数据每次摆出来一样），
+  // 之后跑固定轮数的 排斥 + 弹簧 + 向心 迭代。
+  interface NodeDatum {
+    id: string;
+    label: string;
+    kind: 'article' | 'entity' | 'tag';
+    href: string;
+  }
+  interface EdgeDatum {
+    source: string;
+    target: string;
+  }
+  interface LayoutNode extends NodeDatum {
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    pinned: boolean;
+  }
+
+  const COLORS: Record<NodeDatum['kind'], string> = {
+    article: '#4c3630', // --color-ink
+    entity: '#1651be', // --color-river
+    tag: 'rgba(76, 54, 48, 0.46)', // --color-ink-faint
+  };
+  const EDGE_COLOR = 'rgba(76, 54, 48, 0.16)'; // --color-line
+  const LABEL_COLOR = 'rgba(76, 54, 48, 0.72)'; // --color-ink-soft
+
+  function layout(nodes: LayoutNode[], edges: EdgeDatum[], ticks: number) {
+    const byId = new Map(nodes.map((node) => [node.id, node]));
+    const links = edges
+      .map((edge) => ({ a: byId.get(edge.source), b: byId.get(edge.target) }))
+      .filter((link): link is { a: LayoutNode; b: LayoutNode } => Boolean(link.a && link.b));
+
+    for (let tick = 0; tick < ticks; tick += 1) {
+      // 冷却：越到后面步长越小，布局慢慢安定下来
+      const alpha = 1 - tick / ticks;
+
+      // 两两排斥（Coulomb 近似，带最短距离截断防炸开）
+      for (let i = 0; i < nodes.length; i += 1) {
+        for (let j = i + 1; j < nodes.length; j += 1) {
+          const a = nodes[i];
+          const b = nodes[j];
+          let dx = a.x - b.x;
+          let dy = a.y - b.y;
+          let dist = Math.hypot(dx, dy);
+          if (dist < 1) {
+            dx = 0.5;
+            dy = 0.5;
+            dist = 1;
+          }
+          const force = (1400 * alpha) / (dist * dist);
+          const fx = (dx / dist) * force;
+          const fy = (dy / dist) * force;
+          a.vx += fx;
+          a.vy += fy;
+          b.vx -= fx;
+          b.vy -= fy;
+        }
+      }
+
+      // 边是弹簧：把相连的节点拉回自然长度
+      for (const { a, b } of links) {
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const dist = Math.max(1, Math.hypot(dx, dy));
+        const force = (dist - 90) * 0.02 * alpha;
+        const fx = (dx / dist) * force;
+        const fy = (dy / dist) * force;
+        a.vx += fx;
+        a.vy += fy;
+        b.vx -= fx;
+        b.vy -= fy;
+      }
+
+      // 向心力：把整图拢在原点附近
+      for (const node of nodes) {
+        node.vx -= node.x * 0.015 * alpha;
+        node.vy -= node.y * 0.015 * alpha;
+      }
+
+      for (const node of nodes) {
+        if (node.pinned) {
+          node.x = 0;
+          node.y = 0;
+          node.vx = 0;
+          node.vy = 0;
+          continue;
+        }
+        node.vx *= 0.85;
+        node.vy *= 0.85;
+        node.x += node.vx;
+        node.y += node.vy;
+      }
+    }
+  }
+
+  function mount(container: HTMLElement) {
+    const canvas = container.querySelector<HTMLCanvasElement>('canvas');
+    const dataTag = container.querySelector<HTMLScriptElement>('.concept-graph-data');
+    if (!canvas || !dataTag) return;
+    // 嵌套函数声明吃不到上面的收窄，换个名字固定下来
+    const target = canvas;
+
+    let data: { nodes: NodeDatum[]; edges: EdgeDatum[]; focusId?: string };
+    try {
+      data = JSON.parse(dataTag.textContent ?? '{}');
+    } catch {
+      return;
+    }
+    if (!Array.isArray(data.nodes) || data.nodes.length === 0) return;
+
+    // 黄金角螺旋起摆：确定性的初始位置，不靠 Math.random
+    const nodes: LayoutNode[] = data.nodes.map((node, index) => {
+      const angle = index * 2.39996;
+      const radius = 12 * Math.sqrt(index + 1);
+      return {
+        ...node,
+        x: radius * Math.cos(angle),
+        y: radius * Math.sin(angle),
+        vx: 0,
+        vy: 0,
+        pinned: node.id === data.focusId,
+      };
+    });
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let view = { width: 0, height: 0, scale: 1, cx: 0, cy: 0 };
+
+    function resize() {
+      const rect = container.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.max(1, Math.round(rect.width * dpr));
+      canvas.height = Math.max(1, Math.round(rect.height * dpr));
+      view.width = rect.width;
+      view.height = rect.height;
+      // 整图适配容器：算出布局的包围盒，等比缩放到留边距后的大小
+      const pad = 28;
+      const xs = nodes.map((node) => node.x);
+      const ys = nodes.map((node) => node.y);
+      const spanX = Math.max(1, Math.max(...xs) - Math.min(...xs));
+      const spanY = Math.max(1, Math.max(...ys) - Math.min(...ys));
+      view.scale = Math.min(
+        (view.width - pad * 2) / spanX,
+        (view.height - pad * 2) / spanY,
+        2.4, // 节点太少时不无限放大
+      );
+      view.cx = (Math.max(...xs) + Math.min(...xs)) / 2;
+      view.cy = (Math.max(...ys) + Math.min(...ys)) / 2;
+    }
+
+    function toScreen(x: number, y: number) {
+      return {
+        x: (x - view.cx) * view.scale + view.width / 2,
+        y: (y - view.cy) * view.scale + view.height / 2,
+      };
+    }
+
+    function draw() {
+      const dpr = window.devicePixelRatio || 1;
+      ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx!.clearRect(0, 0, view.width, view.height);
+
+      ctx!.strokeStyle = EDGE_COLOR;
+      ctx!.lineWidth = 1;
+      const byId = new Map(nodes.map((node) => [node.id, node]));
+      for (const edge of data.edges) {
+        const a = byId.get(edge.source);
+        const b = byId.get(edge.target);
+        if (!a || !b) continue;
+        const pa = toScreen(a.x, a.y);
+        const pb = toScreen(b.x, b.y);
+        ctx!.beginPath();
+        ctx!.moveTo(pa.x, pa.y);
+        ctx!.lineTo(pb.x, pb.y);
+        ctx!.stroke();
+      }
+
+      ctx!.font = '11px -apple-system, "PingFang SC", sans-serif';
+      for (const node of nodes) {
+        const point = toScreen(node.x, node.y);
+        const radius = node.pinned ? 6 : node.kind === 'article' ? 5 : 4;
+        ctx!.fillStyle = COLORS[node.kind];
+        ctx!.beginPath();
+        ctx!.arc(point.x, point.y, radius, 0, Math.PI * 2);
+        ctx!.fill();
+        ctx!.fillStyle = LABEL_COLOR;
+        ctx!.fillText(node.label, point.x + radius + 3, point.y + 4);
+      }
+    }
+
+    function nodeAt(event: MouseEvent) {
+      const rect = canvas!.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      let best: LayoutNode | null = null;
+      let bestDist = 14; // 命中半径：点附近的容差
+      for (const node of nodes) {
+        const point = toScreen(node.x, node.y);
+        const dist = Math.hypot(point.x - x, point.y - y);
+        if (dist < bestDist) {
+          best = node;
+          bestDist = dist;
+        }
+      }
+      return best;
+    }
+
+    canvas.addEventListener('click', (event) => {
+      const node = nodeAt(event);
+      if (node) window.location.href = node.href;
+    });
+    canvas.addEventListener('mousemove', (event) => {
+      canvas!.style.cursor = nodeAt(event) ? 'pointer' : 'default';
+    });
+
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduced) {
+      // 一次性算完，只画一帧 —— 动效减弱的读者看到的是已经安定下来的图
+      layout(nodes, data.edges, 300);
+      resize();
+      draw();
+    } else {
+      // 分帧跑完同样的 300 轮，读者能看到图收拢的过程
+      let tick = 0;
+      const step = () => {
+        layout(nodes, data.edges, 6);
+        resize();
+        draw();
+        tick += 6;
+        if (tick < 300) requestAnimationFrame(step);
+      };
+      resize();
+      requestAnimationFrame(step);
+    }
+
+    // 容器宽度变化（窗口缩放）时重算适配，布局本身不重跑
+    new ResizeObserver(() => {
+      resize();
+      draw();
+    }).observe(container);
+  }
+
+  document.querySelectorAll<HTMLElement>('[data-concept-graph]').forEach(mount);
+</script>

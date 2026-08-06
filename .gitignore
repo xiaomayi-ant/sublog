@@ -32,3 +32,6 @@ docs/deployment.md
 scripts/deploy-site.mjs
 scripts/server/
 tests/deployment-contract.test.mjs
+
+# 知识图谱的本地 SQLite（由 npm run graph:extract 生成，不入库）
+data/*.db

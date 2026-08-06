@@ -4,6 +4,7 @@ import '../styles/tokens.css';
 import '../styles/global.css';
 import SiteNav from '../components/SiteNav.astro';
 import SiteFooter from '../components/SiteFooter.astro';
+import SiteFooterMinimal from '../components/SiteFooterMinimal.astro';
 
 interface Props {
   title: string;
@@ -11,6 +12,8 @@ interface Props {
   image?: string;
   ogType?: 'website' | 'article';
   noIndex?: boolean;
+  // 索引页用完整落款（默认）；文章页传 minimal，只留一条工具行收尾
+  footer?: 'full' | 'minimal';
 }
 
 const {
@@ -19,6 +22,7 @@ const {
   image = '/og-default.svg',
   ogType = 'website',
   noIndex = false,
+  footer = 'full',
 } = Astro.props;
 
 const site = Astro.site ?? new URL('https://water.localhost');
@@ -56,6 +60,6 @@ const socialImage = new URL(image, site);
     <main id="content" class="site-shell">
       <slot />
     </main>
-    <SiteFooter />
+    {footer === 'minimal' ? <SiteFooterMinimal /> : <SiteFooter />}
   </body>
 </html>

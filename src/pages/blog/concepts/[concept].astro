@@ -1,0 +1,135 @@
+---
+// /blog/concepts/[concept] — 该概念（LLM 抽取的实体）下的全部文章。
+// 版式照抄 tags/[tag]：标题 #概念名 + 同一套文章列表，保持全站一致性。
+// 没有 graph.db 时 getStaticPaths 返回空，这些路由干脆不存在。
+import Base from '../../../layouts/Base.astro';
+import Meta from '../../../components/Meta.astro';
+import {
+  TYPE_LABELS,
+  formatDate,
+  getAllResearch,
+  type ResearchCollection,
+  type ResearchEntry,
+} from '../../../lib/content';
+import { getAllConcepts, getConceptArticles } from '../../../lib/graph';
+
+export async function getStaticPaths() {
+  const [concepts, all] = await Promise.all([getAllConcepts(), getAllResearch()]);
+  const byId = new Map(all.map((entry) => [`${entry.collection}/${entry.id}`, entry]));
+  const paths = [];
+  for (const concept of concepts) {
+    const articles = await getConceptArticles(concept.nameNorm);
+    const entries = articles
+      .map((article) => byId.get(article.id))
+      .filter((entry): entry is ResearchEntry => Boolean(entry));
+    if (entries.length === 0) continue;
+    paths.push({ params: { concept: concept.nameNorm }, props: { name: concept.name, entries } });
+  }
+  return paths;
+}
+
+interface Props {
+  name: string;
+  entries: ResearchEntry[];
+}
+
+const { name, entries } = Astro.props;
+---
+
+<Base title={`#${name}`} description={`概念 ${name} 下的全部研究内容。`}>
+  <header class="page-head">
+    <Meta items={['Concept']} />
+    <h1>#{name}</h1>
+    <p class="lede">{entries.length} 条记录</p>
+  </header>
+
+  <ul class="list">
+    {
+      entries.map((entry) => (
+        <li class="item">
+          <span class="item-date meta">{formatDate(entry.data.pubDate)}</span>
+          <a class="item-title" href={`/blog/${entry.collection}/${entry.id}`}>
+            {entry.data.title}
+          </a>
+          <span class="item-type meta">{TYPE_LABELS[entry.collection as ResearchCollection].en}</span>
+        </li>
+      ))
+    }
+  </ul>
+
+  <p class="back-wrap"><a class="back meta" href="/graph">← 返回图谱</a></p>
+</Base>
+
+<style>
+  .page-head {
+    padding-top: var(--space-xl);
+    max-width: var(--measure);
+  }
+
+  h1 {
+    font-size: var(--text-3xl);
+    margin-top: var(--space-sm);
+    font-family: var(--font-mono);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+
+  .lede {
+    margin-top: var(--space-md);
+    color: var(--color-ink-soft);
+  }
+
+  .list {
+    margin-top: var(--space-xl);
+  }
+
+  .item {
+    display: grid;
+    grid-template-columns: 6.5rem 1fr auto;
+    align-items: baseline;
+    gap: var(--space-lg);
+    padding-block: var(--space-md);
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .item-title {
+    font-family: var(--font-serif);
+    font-size: var(--text-lg);
+    color: var(--color-ink);
+    text-decoration: none;
+    justify-self: start;
+    background-image: linear-gradient(var(--color-river), var(--color-river));
+    background-repeat: no-repeat;
+    background-size: 0% 1px;
+    background-position: 0 100%;
+    transition: background-size var(--duration-slow) var(--ease-out);
+  }
+
+  .item-title:hover {
+    background-size: 100% 1px;
+  }
+
+  .item-type {
+    color: var(--color-ink-faint);
+  }
+
+  .back-wrap {
+    margin-top: var(--space-2xl);
+  }
+
+  .back {
+    text-decoration: none;
+  }
+
+  .back:hover {
+    color: var(--color-river);
+    text-decoration: none;
+  }
+
+  @media (max-width: 40rem) {
+    .item {
+      grid-template-columns: 1fr;
+      gap: var(--space-2xs);
+    }
+  }
+</style>
