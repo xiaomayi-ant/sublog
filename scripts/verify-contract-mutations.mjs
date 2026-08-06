@@ -154,7 +154,7 @@ try {
       apply: async (distDir) => {
         const home = path.join(distDir, 'index.html');
         const html = await readFile(home, 'utf8');
-        await writeFile(home, html.replace('data-footer="about-more-contact"', 'data-footer="none"'));
+        await writeFile(home, html.replace('data-footer="signature"', 'data-footer="none"'));
       },
     },
     {

@@ -135,6 +135,10 @@ test('About and 404 are complete user-facing pages', async () => {
   assert.match(about, /Be water, my friend\./);
   assert.doesNotMatch(about, /Phase 5|待建|placeholder/i);
 
+  // 页脚三栏撤掉后，站上唯一的站外去处落在这里；外链要带 rel 与角标
+  assert.match(about, /href="https:\/\/github\.com\/xiaomayi-ant"[\s\S]{0,80}rel="noreferrer"/);
+  assert.match(about, /class="out"/);
+
   const notFound = await readRoute('/404');
   assert.match(notFound, /没有抵达这里/);
   assert.match(notFound, /href="\/"/);
@@ -306,34 +310,29 @@ test('the home is an identity statement followed by a bare writing list', async 
   // 身份句已从首屏移到页脚，首屏只剩气质与问题
   assert.doesNotMatch(home, /hero-identity/);
 
-  // 收尾：落款 + About / More / Contact 三栏 + 最底的工具行
+  // 收尾：一行落款 + 最底的工具行。About / More / Contact 三栏已撤 ——
+  // 六格里四格没有去处，一格与主导航重复，只有外部 GitHub 是独有的，已挪进 /about。
   const foot = home.match(/<footer class="site-foot[\s\S]*?<\/footer>/)?.[0];
   assert.ok(foot, 'home should render the footer');
-  assert.match(foot, /data-footer="about-more-contact"/);
+  assert.match(foot, /data-footer="signature"/);
   assert.match(foot, /class="foot-name"[^>]*>sumoer</);
   assert.match(foot, /class="foot-tagline"[^>]*>Vision: world peace</);
-  for (const head of ['About', 'More', 'Contact']) {
-    assert.match(foot, new RegExp(`class="foot-head"[^>]*>\\s*${head}`), `footer needs the ${head} column`);
-  }
   assert.match(foot, /href="\/rss\.xml"[^>]*>RSS</);
 
-  // 页脚只说一种话：栏头不再借 .meta 的等宽体 —— 衬线名字 + 等宽栏头 + 无衬线条目
-  // 是三款字体挤在同一块两百像素高的区域里，那正是它看起来乱的原因
+  // 三栏不许回来，占位条目更不许 —— 空占位摆久了读起来不是"还没好"，是"没人管"
+  assert.doesNotMatch(foot, /foot-nav|foot-col|foot-head|foot-pending/, 'the column block must stay gone');
+  for (const label of ['About this site', 'About this project', 'Analytics', 'Monitor', 'Send email']) {
+    assert.doesNotMatch(foot, new RegExp(label), `footer must not carry "${label}" again`);
+  }
+
+  // 页脚只说一种话：不借 .meta 的等宽体 —— 衬线名字 + 等宽小字 + 无衬线条目
+  // 是三款字体挤在同一块收尾区域里，那正是它曾经看起来乱的原因
   assert.doesNotMatch(foot, /class="[^"]*\bmeta\b/, 'the footer must not fall back to the mono meta voice');
 
-  // 三栏是内容宽度 + space-between，不是等分网格：等分会把末栏推离内容右边缘
+  // 落款与工具行之间只有一条发丝线，没有别的结构
   const footCss = await readFile(new URL('../src/components/SiteFooter.astro', import.meta.url), 'utf8');
-  assert.match(footCss, /\.foot-nav\s*{[^}]*justify-content:\s*space-between/);
-  assert.doesNotMatch(footCss, /\.foot-top\s*{[^}]*grid-template-columns/);
-
-  // 还没有去处的条目必须是不可点的文字 —— 死链接比"还没好"更糟
-  const pending = [...foot.matchAll(/class="foot-pending"[^>]*>([^<]+)</g)].map((m) => m[1]);
-  for (const label of pending) {
-    assert.doesNotMatch(foot, new RegExp(`<a[^>]*>\\s*${label}`), `"${label}" must not render as a link`);
-  }
-  // 外链要带 rel 与角标
-  assert.match(foot, /href="https:\/\/github\.com\/xiaomayi-ant"[^>]*rel="noreferrer"/);
-  assert.match(foot, /class="foot-out"/);
+  assert.match(footCss, /\.foot-utility\s*{[^}]*border-top:\s*1px solid var\(--color-line\)/);
+  assert.doesNotMatch(footCss, /\.foot-nav|\.foot-col|\.foot-pending/);
 
   // 首页钉成标准两屏 —— 曾经只是"在 831px 视口下恰好等于 2.00 页"的巧合：
   // 视口一变（700px → 2.4 屏，1000px → 1.6 屏）就散了。三条一起才钉得住。

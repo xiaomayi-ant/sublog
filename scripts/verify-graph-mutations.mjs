@@ -59,7 +59,7 @@ try {
       apply: async (distDir) => {
         const page = path.join(distDir, article);
         const html = await readFile(page, 'utf8');
-        await writeFile(page, html.replace('data-footer="minimal"', 'data-footer="about-more-contact"'));
+        await writeFile(page, html.replace('data-footer="minimal"', 'data-footer="signature"'));
       },
     },
     {
@@ -79,7 +79,7 @@ try {
         const html = await readFile(page, 'utf8');
         await writeFile(
           page,
-          html.replace('data-footer="about-more-contact"', 'data-footer="minimal"'),
+          html.replace('data-footer="signature"', 'data-footer="minimal"'),
         );
       },
     },

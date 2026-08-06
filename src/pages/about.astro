@@ -39,6 +39,14 @@ import Meta from '../components/Meta.astro';
     </section>
   </div>
 
+  <p class="elsewhere">
+    写下来的东西在这里，写出来的在 <a
+      href="https://github.com/xiaomayi-ant"
+      rel="noreferrer"
+      target="_blank">GitHub<span class="out" aria-hidden="true">↗</span></a
+    >。
+  </p>
+
   <figure class="epigraph">
     <blockquote>“Be water, my friend.”</blockquote>
     <figcaption class="meta">A reminder to stay adaptive without losing form.</figcaption>
@@ -130,6 +138,35 @@ import Meta from '../components/Meta.astro';
 
   .method-list .meta {
     color: var(--color-river);
+  }
+
+  /* 页脚三栏撤掉后，外部 GitHub profile 挪到这里 ——
+     它是站上唯一一个指向站外的固定去处，该跟着「我是谁」走，不该挂在收尾。 */
+  .elsewhere {
+    max-width: var(--measure);
+    margin-top: var(--space-2xl);
+    color: var(--color-ink-soft);
+    line-height: 1.9;
+  }
+
+  .elsewhere a {
+    color: var(--color-ink);
+    text-decoration: none;
+    background-image: linear-gradient(var(--color-river), var(--color-river));
+    background-repeat: no-repeat;
+    background-size: 0% 1px;
+    background-position: 0 100%;
+    transition: background-size var(--duration-slow) var(--ease-out);
+  }
+
+  .elsewhere a:hover {
+    background-size: 100% 1px;
+  }
+
+  .elsewhere .out {
+    margin-left: 0.2em;
+    font-size: 0.8em;
+    vertical-align: 0.15em;
   }
 
   .epigraph {

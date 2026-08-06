@@ -1,95 +1,21 @@
 ---
-// SiteFooter — 落款 + About / More / Contact 三栏 + 一条工具行。
+// SiteFooter — 索引页的落款：一行署名 + 一条工具行。
 //
-// 布局照 innei 的页脚：左边落款吃掉剩余宽度，三栏是「内容宽度 + space-between」
-// 撒在右半边，末栏与内容右边缘齐平；下面一条发丝线，压着最底的工具行。
-// 等分网格做不出这个效果 —— 栏宽被拉成一样，最后一栏右边会空出一大截。
+// 曾经是照 innei 抄来的 About / More / Contact 三栏。撤掉的理由不是审美：
+// 六格里四格是没有去处的占位（Analytics / Monitor / About this project / Send email），
+// 「About this site」与主导航的 About 重复，只有外部 GitHub 是独有去处，
+// 而那一个已经挪进 /about 正文。六格骨架换一个链接，撑不起页脚这个位置。
+// site-direction.md §5 本来写的也是两行落款，三栏从不在这个站的设计里。
 //
-// 还没有去处的条目一律渲染成不可点的淡色文字，不给 href。
-// 宁可看起来"还没好"，也不要一个点了没反应的死链接。
+// 留下的两样各有用处：署名是站点身份在每个索引页的固定出现点（文章页沉浸，
+// 用 SiteFooterMinimal），RSS 是这个站唯一的订阅入口。
 const year = new Date().getUTCFullYear();
-
-/** 填上就会变成可点的 mailto，留空则只显示淡色文字。 */
-const CONTACT_EMAIL = '';
-
-/** 项目仓库；建好后填上，About this project 即生效。 */
-const PROJECT_REPO = '';
-
-/** 访问统计面板（Umami / Plausible / GoatCounter 之类的公开看板）。 */
-const ANALYTICS_URL = '';
-
-/** 可用性监控的状态页（Uptime Kuma 之类）。 */
-const STATUS_URL = '';
-
-const GITHUB_URL = 'https://github.com/xiaomayi-ant';
-
-const isExternal = (href: string) => href.startsWith('http');
-
-const columns = [
-  {
-    title: 'About',
-    items: [
-      { label: 'About this site', href: '/about' },
-      { label: 'About this project', href: PROJECT_REPO },
-    ],
-  },
-  {
-    title: 'More',
-    items: [
-      { label: 'Analytics', href: ANALYTICS_URL },
-      { label: 'Monitor', href: STATUS_URL },
-    ],
-  },
-  {
-    title: 'Contact',
-    items: [
-      { label: 'Send email', href: CONTACT_EMAIL ? `mailto:${CONTACT_EMAIL}` : '' },
-      { label: 'GitHub', href: GITHUB_URL },
-    ],
-  },
-];
 ---
 
-<footer class="site-foot site-shell" data-footer="about-more-contact">
-  <div class="foot-top">
-    <div class="foot-mark">
-      <a class="foot-name" href="/">sumoer</a>
-      <p class="foot-tagline">Vision: world peace</p>
-    </div>
-
-    <div class="foot-nav">
-      {
-        columns.map((column) => (
-          <nav class="foot-col" aria-labelledby={`foot-${column.title.toLowerCase()}`}>
-            <p class="foot-head" id={`foot-${column.title.toLowerCase()}`}>
-              {column.title}
-            </p>
-            <ul>
-              {column.items.map((item) => (
-                <li>
-                  {item.href ? (
-                    <a
-                      href={item.href}
-                      rel={isExternal(item.href) ? 'noreferrer' : undefined}
-                      target={isExternal(item.href) ? '_blank' : undefined}
-                    >
-                      {item.label}
-                      {isExternal(item.href) && (
-                        <span class="foot-out" aria-hidden="true">
-                          ↗
-                        </span>
-                      )}
-                    </a>
-                  ) : (
-                    <span class="foot-pending">{item.label}</span>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </nav>
-        ))
-      }
-    </div>
+<footer class="site-foot site-shell" data-footer="signature">
+  <div class="foot-mark">
+    <a class="foot-name" href="/">sumoer</a>
+    <p class="foot-tagline">Vision: world peace</p>
   </div>
 
   <div class="foot-utility">
@@ -104,26 +30,7 @@ const columns = [
     padding-bottom: var(--space-lg);
   }
 
-  /* 落款吃掉剩余宽度，三栏组固定占右半边 —— 这一条决定了整块的重心 */
-  .foot-top {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: clamp(2rem, 6vw, 5rem);
-  }
-
-  /* 三栏各自收缩到自己的文字宽，再用 space-between 撒开：
-     "About this project" 比 "Monitor" 宽，栏距就该不等 —— 等宽栏会把末栏推离右边缘 */
-  .foot-nav {
-    display: flex;
-    flex: 0 1 clamp(20rem, 48%, 34rem);
-    justify-content: space-between;
-    gap: clamp(1.5rem, 4vw, 3rem);
-  }
-
   /* ── 落款 ── */
-  /* 名字的第一行要和三个栏头对齐。名字 20px、栏头 13px，行盒高度差
-     由这里的 line-height 抵掉，不靠给栏头加 padding 去凑。 */
   .foot-name {
     display: block;
     color: var(--color-ink);
@@ -145,60 +52,16 @@ const columns = [
     font-size: var(--text-sm);
   }
 
-  /* ── 栏头 ──
-     不再用 .meta 的等宽体。整个页脚只说一种话：栏头与条目同一族无衬线，
-     差别只在大小、字距和深浅。等宽体夹在衬线名字和无衬线条目之间是三种字体打架。
-
-     字号比 innei 小一档（11px / 13px，它是 14px / 15px）：页脚是收尾，
-     不该和正文抢；字号压下去之后字距要相应放宽，否则小字会糊成一团。 */
-  .foot-head {
-    margin-bottom: var(--space-sm);
-    color: var(--color-ink-faint);
-    font-family: var(--font-label);
-    font-size: 0.6875rem;
-    font-weight: 400;
-    letter-spacing: 0.22em;
-    line-height: 2.45; /* 11px × 2.45 ≈ 27px，与名字首行盒同高 */
-    text-transform: uppercase;
-  }
-
-  .foot-col li + li {
-    margin-top: 0.7rem;
-  }
-
-  .foot-col a,
-  .foot-pending {
-    color: var(--color-ink-soft);
-    font-size: 0.8125rem;
-    line-height: 1.45;
-    text-decoration: none;
-    transition: color var(--duration-fast) var(--ease-out);
-  }
-
-  /* 悬停只加深，不换色 —— 页脚是收尾，河蓝留给正文的链接 */
-  .foot-col a:hover {
-    color: var(--color-ink);
-    text-decoration: underline;
-  }
-
-  /* 还没有去处的条目：淡一档、不可点，也不带外链箭头 */
-  .foot-pending {
-    color: var(--color-ink-faint);
-  }
-
-  .foot-out {
-    margin-left: 0.2em;
-    font-size: 0.8em;
-    vertical-align: 0.15em;
-  }
-
-  /* ── 工具行：一条发丝线压在最底 ── */
+  /* ── 工具行：一条发丝线压在最底 ──
+     与 SiteFooterMinimal 的同名块保持同一套语言，两个页脚只差上面那行落款。
+     三栏还在时这里的上边距是 clamp(2.5rem, 6vw, 4rem)，那是为了压住一块两百像素高的
+     栏组；现在上面只有两行字，留那么多会把工具行推成孤零零的一条。 */
   .foot-utility {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
     gap: var(--space-md);
-    margin-top: clamp(2.5rem, 6vw, 4rem);
+    margin-top: var(--space-xl);
     padding-top: var(--space-md);
     border-top: 1px solid var(--color-line);
     color: var(--color-ink-faint);
@@ -214,18 +77,5 @@ const columns = [
   .foot-utility a:hover {
     color: var(--color-ink);
     text-decoration: underline;
-  }
-
-  @media (max-width: 48rem) {
-    .foot-top {
-      flex-direction: column;
-      gap: var(--space-xl);
-    }
-
-    .foot-nav {
-      flex: 1 1 auto;
-      justify-content: flex-start;
-      gap: clamp(2rem, 12vw, 5rem);
-    }
   }
 </style>

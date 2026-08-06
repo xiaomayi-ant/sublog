@@ -52,13 +52,13 @@ async function graphDataExists() {
   }
 }
 
-// 文章页是沉浸的：完整的三栏落款只属于索引页，文章页只留一条工具行
+// 文章页是沉浸的：署名落款只属于索引页，文章页只留最底那条工具行
 test('article pages end with the minimal footer, index pages keep the full signature', async () => {
   for (const route of ARTICLE_ROUTES) {
     const html = await readRoute(route);
     assert.doesNotMatch(
       html,
-      /data-footer="about-more-contact"/,
+      /data-footer="signature"/,
       `${route} must not carry the full footer`,
     );
     assert.match(html, /data-footer="minimal"/, `${route} should end with the minimal footer`);
@@ -67,7 +67,7 @@ test('article pages end with the minimal footer, index pages keep the full signa
 
   for (const route of INDEX_ROUTES) {
     const html = await readRoute(route);
-    assert.match(html, /data-footer="about-more-contact"/, `${route} must keep the full footer`);
+    assert.match(html, /data-footer="signature"/, `${route} must keep the full footer`);
     assert.doesNotMatch(html, /data-footer="minimal"/, `${route} must not degrade to minimal`);
   }
 });
