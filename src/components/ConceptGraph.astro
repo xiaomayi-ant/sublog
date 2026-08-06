@@ -21,7 +21,7 @@ const payload = JSON.stringify({ nodes, edges, focusId }).replace(/</g, '\\u003c
 
 <div class="concept-graph" style={`--graph-height: ${height}px`} data-concept-graph>
   <canvas class="concept-graph-canvas" role="img" aria-label={label}></canvas>
-  <script type="application/json" class="concept-graph-data" set:html={payload}></script>
+  <script is:inline type="application/json" class="concept-graph-data" set:html={payload}></script>
 </div>
 
 <style>
@@ -143,7 +143,7 @@ const payload = JSON.stringify({ nodes, edges, focusId }).replace(/</g, '\\u003c
     const canvas = container.querySelector<HTMLCanvasElement>('canvas');
     const dataTag = container.querySelector<HTMLScriptElement>('.concept-graph-data');
     if (!canvas || !dataTag) return;
-    // 嵌套函数声明吃不到上面的收窄，换个名字固定下来
+    // 嵌套函数声明吃不到上面的收窄，换个名字固定下来，下面一律用 target
     const target = canvas;
 
     let data: { nodes: NodeDatum[]; edges: EdgeDatum[]; focusId?: string };
@@ -176,8 +176,8 @@ const payload = JSON.stringify({ nodes, edges, focusId }).replace(/</g, '\\u003c
     function resize() {
       const rect = container.getBoundingClientRect();
       const dpr = window.devicePixelRatio || 1;
-      canvas.width = Math.max(1, Math.round(rect.width * dpr));
-      canvas.height = Math.max(1, Math.round(rect.height * dpr));
+      target.width = Math.max(1, Math.round(rect.width * dpr));
+      target.height = Math.max(1, Math.round(rect.height * dpr));
       view.width = rect.width;
       view.height = rect.height;
       // 整图适配容器：算出布局的包围盒，等比缩放到留边距后的大小
@@ -236,7 +236,7 @@ const payload = JSON.stringify({ nodes, edges, focusId }).replace(/</g, '\\u003c
     }
 
     function nodeAt(event: MouseEvent) {
-      const rect = canvas!.getBoundingClientRect();
+      const rect = target.getBoundingClientRect();
       const x = event.clientX - rect.left;
       const y = event.clientY - rect.top;
       let best: LayoutNode | null = null;
@@ -252,12 +252,12 @@ const payload = JSON.stringify({ nodes, edges, focusId }).replace(/</g, '\\u003c
       return best;
     }
 
-    canvas.addEventListener('click', (event) => {
+    target.addEventListener('click', (event) => {
       const node = nodeAt(event);
       if (node) window.location.href = node.href;
     });
-    canvas.addEventListener('mousemove', (event) => {
-      canvas!.style.cursor = nodeAt(event) ? 'pointer' : 'default';
+    target.addEventListener('mousemove', (event) => {
+      target.style.cursor = nodeAt(event) ? 'pointer' : 'default';
     });
 
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;

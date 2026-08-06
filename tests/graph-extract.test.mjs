@@ -1,5 +1,5 @@
 // graph-extract — 用本地 mock LLM 服务验证抽取脚本的端到端流程：
-// 扫描 → 正文 hash → 调用 → 入库 → 幂等重跑 → --force → 删除文章清理。
+// 扫描 → 正文 hash → 调用 → 入库 → 导出 JSON → 幂等重跑 → --force → 删除文章清理。
 // 全程不联网：LLM 端点是 node:http 起的本地服务，返回固定 JSON。
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
@@ -41,12 +41,14 @@ draft: true
 不该被抽取。
 `;
 
-// mock 的固定返回：带首尾空格的名字（考规范化）、非法 type、越界 salience
+// mock 的固定返回：带首尾空格的名字（考规范化）、非法 type、越界 salience、
+// 以及一个带斜杠的名字 —— 实体名来自 LLM，它必须不能把概念路由切成两段
 const MOCK_ENTITIES = {
   entities: [
     { name: 'LLM', type: 'technology', salience: 0.9 },
     { name: ' 状态管理 ', type: 'concept', salience: 0.7 },
     { name: '奇怪类型', type: 'other', salience: 5 },
+    { name: 'RAG/检索增强', type: 'concept', salience: 0.6 },
   ],
 };
 
@@ -74,6 +76,7 @@ test('extract-entities 端到端：增量、幂等、--force、删除清理', as
   const root = await mkdtemp(path.join(tmpdir(), 'water-graph-extract-'));
   const contentRoot = path.join(root, 'content');
   const dbPath = path.join(root, 'graph.db');
+  const jsonPath = path.join(root, 'graph.json'); // 导出路径默认是 db 的同目录同名
   await mkdir(path.join(contentRoot, 'harness'), { recursive: true });
   await mkdir(path.join(contentRoot, 'llm'), { recursive: true });
   await mkdir(path.join(contentRoot, 'notes'), { recursive: true });
@@ -103,10 +106,11 @@ test('extract-entities 端到端：增量、幂等、--force、删除清理', as
 
   const db = new Database(dbPath, { readonly: true });
   assert.equal(db.prepare('SELECT COUNT(*) AS n FROM articles').get().n, 2);
-  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM article_entities').get().n, 6);
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM article_entities').get().n, 8);
   const entities = db.prepare('SELECT name, name_norm, type FROM entities ORDER BY name_norm').all();
   assert.deepEqual(entities, [
     { name: 'LLM', name_norm: 'llm', type: 'technology' },
+    { name: 'RAG/检索增强', name_norm: 'rag/检索增强', type: 'concept' },
     { name: '奇怪类型', name_norm: '奇怪类型', type: 'concept' },
     { name: '状态管理', name_norm: '状态管理', type: 'concept' },
   ]);
@@ -119,22 +123,49 @@ test('extract-entities 端到端：增量、幂等、--force、删除清理', as
     .all();
   assert.deepEqual(saliences, [
     { n: 'llm', s: 0.9 },
+    { n: 'rag/检索增强', s: 0.6 },
     { n: '奇怪类型', s: 0.5 },
     { n: '状态管理', s: 0.7 },
   ]);
+
+  // 导出的 JSON 才是入库、被构建期读取的产物 —— 它必须自洽且路由安全
+  const readGraph = async () => JSON.parse(await readFile(jsonPath, 'utf8'));
+  const graph = await readGraph();
+  assert.deepEqual(
+    graph.articles.map((article) => article.id),
+    ['harness/alpha', 'llm/beta'],
+  );
+  assert.deepEqual(graph.entities, [
+    { name: 'LLM', slug: 'llm', type: 'technology' },
+    { name: 'RAG/检索增强', slug: 'rag-检索增强', type: 'concept' },
+    { name: '奇怪类型', slug: '奇怪类型', type: 'concept' },
+    { name: '状态管理', slug: '状态管理', type: 'concept' },
+  ]);
+  // 斜杠会把 /blog/concepts/<slug> 切成两段路径，任何 slug 都不许带它
+  for (const entity of graph.entities) {
+    assert.doesNotMatch(entity.slug, /[/\\.?#%]/, `slug ${entity.slug} 不是路由安全的`);
+  }
+  assert.equal(graph.links.length, 8);
+  const slugs = new Set(graph.entities.map((entity) => entity.slug));
+  const articleIds = new Set(graph.articles.map((article) => article.id));
+  for (const link of graph.links) {
+    assert.ok(slugs.has(link.slug), `link 指向不存在的实体 ${link.slug}`);
+    assert.ok(articleIds.has(link.articleId), `link 指向不存在的文章 ${link.articleId}`);
+  }
 
   // 幂等重跑：正文没变就不该再调 LLM，行数不变
   const second = await run();
   assert.deepEqual(second, { added: 0, skipped: 2, draft: 1, failed: 0, removed: 0 });
   assert.equal(state.requests, 3, '未变化的文章不能再产生请求');
-  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM article_entities').get().n, 6);
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM article_entities').get().n, 8);
+  assert.deepEqual(await readGraph(), graph, '全跳过的一轮不该改动导出产物');
 
   // --force：全部重抽，但不产生重复行
   const forced = await run({ force: true });
   assert.deepEqual(forced, { added: 2, skipped: 0, draft: 1, failed: 0, removed: 0 });
   assert.equal(state.requests, 5);
-  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM entities').get().n, 3);
-  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM article_entities').get().n, 6);
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM entities').get().n, 4);
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM article_entities').get().n, 8);
 
   // 正文改动 → 只重抽那一篇
   await writeFile(path.join(contentRoot, 'harness/alpha.md'), ARTICLE_ALPHA + '\n追加一段。\n');
@@ -146,8 +177,16 @@ test('extract-entities 端到端：增量、幂等、--force、删除清理', as
   const cleaned = await run();
   assert.deepEqual(cleaned, { added: 0, skipped: 1, draft: 1, failed: 0, removed: 1 });
   assert.deepEqual(db.prepare('SELECT id FROM articles').all(), [{ id: 'harness/alpha' }]);
-  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM article_entities').get().n, 3);
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM article_entities').get().n, 4);
   db.close();
+
+  // 清理必须传导到导出产物上，否则构建期还会照着旧 JSON 生成死链
+  const afterCleanup = await readGraph();
+  assert.deepEqual(
+    afterCleanup.articles.map((article) => article.id),
+    ['harness/alpha'],
+  );
+  assert.equal(afterCleanup.links.length, 4);
 });
 
 test('缺少 GRAPH_LLM_API_KEY 时直接拒绝运行', async () => {

@@ -1,7 +1,7 @@
 ---
 // /blog/concepts/[concept] — 该概念（LLM 抽取的实体）下的全部文章。
 // 版式照抄 tags/[tag]：标题 #概念名 + 同一套文章列表，保持全站一致性。
-// 没有 graph.db 时 getStaticPaths 返回空，这些路由干脆不存在。
+// 没有 graph.json 时 getStaticPaths 返回空，这些路由干脆不存在。
 import Base from '../../../layouts/Base.astro';
 import Meta from '../../../components/Meta.astro';
 import {
@@ -18,12 +18,12 @@ export async function getStaticPaths() {
   const byId = new Map(all.map((entry) => [`${entry.collection}/${entry.id}`, entry]));
   const paths = [];
   for (const concept of concepts) {
-    const articles = await getConceptArticles(concept.nameNorm);
+    const articles = await getConceptArticles(concept.slug);
     const entries = articles
       .map((article) => byId.get(article.id))
       .filter((entry): entry is ResearchEntry => Boolean(entry));
     if (entries.length === 0) continue;
-    paths.push({ params: { concept: concept.nameNorm }, props: { name: concept.name, entries } });
+    paths.push({ params: { concept: concept.slug }, props: { name: concept.name, entries } });
   }
   return paths;
 }

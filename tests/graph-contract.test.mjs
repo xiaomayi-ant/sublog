@@ -1,6 +1,9 @@
 // graph-contract — 文章页沉浸化 + 知识图谱的构建契约。
-// 页脚与路由断言不依赖 DB；图谱数据的断言按 data/graph.db 是否存在分两支，
-// 两种状态下都必须能构建、且表现一致（有 DB 出图谱区，没 DB 干净降级）。
+// 页脚与路由断言不依赖图谱数据；数据相关的断言按 data/graph.json 是否存在分两支，
+// 两种状态下都必须能构建、且表现一致（有产物出图谱区，没产物干净降级）。
+//
+// graph.json 是入库的，所以 CI 上跑的是「有数据」那一支 —— 降级那一支留给
+// 还没跑过抽取的新克隆，以及万一产物被清掉的情况。
 import assert from 'node:assert/strict';
 import { access, readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
@@ -40,9 +43,9 @@ async function pathExists(relative) {
   }
 }
 
-async function graphDbExists() {
+async function graphDataExists() {
   try {
-    await access(path.join(projectRoot, 'data', 'graph.db'));
+    await access(path.join(projectRoot, 'data', 'graph.json'));
     return true;
   } catch {
     return false;
@@ -77,30 +80,58 @@ test('the /graph route always builds, with or without graph data', async () => {
   assert.match(html, /<main id="content"/);
 });
 
-test('graph data renders when the db exists, degrades cleanly when it does not', async () => {
-  const hasDb = await graphDbExists();
+// /graph 是导航上的一项，不是只能靠概念页回链摸到的暗页
+test('the primary nav offers Graph alongside the other English entries', async () => {
+  for (const route of ['/', '/blog', '/graph']) {
+    const html = await readRoute(route);
+    const nav = html.match(/<nav aria-label="主导航"[^>]*>[\s\S]*?<\/nav>/)?.[0];
+    assert.ok(nav, `${route} should render the primary nav`);
+    assert.match(nav, />Graph</, `${route} nav should offer Graph`);
+    assert.match(nav, /href="\/graph"/, `${route} nav should link to /graph`);
+  }
+
+  const graph = await readRoute('/graph');
+  const nav = graph.match(/<nav aria-label="主导航"[^>]*>[\s\S]*?<\/nav>/)?.[0];
+  assert.match(
+    nav,
+    /<a href="\/graph"[^>]*aria-current="page"/,
+    '/graph should mark its own nav item current',
+  );
+});
+
+test('graph data renders when the artifact exists, degrades cleanly when it does not', async () => {
+  const hasData = await graphDataExists();
   const article = await readRoute('/blog/llm/llm-state-and-memory');
 
-  if (hasDb) {
-    // 有库：文章页带图谱收尾区，概念聚合路由至少有一个
-    assert.match(article, /data-article-relations/, 'article page should carry the relations block');
-    assert.ok(
-      await pathExists('blog/concepts'),
-      'expected at least one /blog/concepts/* route',
-    );
-    const concepts = await readdir(path.join(distRoot, 'blog/concepts'));
-    assert.ok(concepts.length > 0, 'expected at least one concept route');
-
-    // 图谱页内联了图数据，概念链接指向真实存在的路由
-    const graph = await readRoute('/graph');
-    assert.match(graph, /data-concept-graph/);
-    assert.match(graph, /data-graph-page/);
-  } else {
-    // 无库：整块不渲染，概念路由不生成，图谱页是空态但不报错
+  if (!hasData) {
+    // 无产物：整块不渲染，概念路由不生成，图谱页是空态但不报错
     assert.doesNotMatch(article, /data-article-relations/);
     assert.equal(await pathExists('blog/concepts'), false);
     const graph = await readRoute('/graph');
     assert.doesNotMatch(graph, /data-graph-page/);
     assert.match(graph, /graph:extract/, 'empty state should point at the extract command');
+    return;
+  }
+
+  // 有产物：文章页带图谱收尾区，概念聚合路由至少有一个
+  assert.match(article, /data-article-relations/, 'article page should carry the relations block');
+  assert.ok(await pathExists('blog/concepts'), 'expected at least one /blog/concepts/* route');
+  const concepts = await readdir(path.join(distRoot, 'blog/concepts'));
+  assert.ok(concepts.length > 0, 'expected at least one concept route');
+
+  // 图谱页内联了图数据
+  const graph = await readRoute('/graph');
+  assert.match(graph, /data-concept-graph/);
+  assert.match(graph, /data-graph-page/);
+  assert.doesNotMatch(graph, /graph:extract/, 'a populated graph must not show the empty state');
+
+  // 概念名来自 LLM，什么字符都可能混进来：每条概念链接都必须落到真实存在的产物上
+  const hrefs = new Set(
+    [...article.matchAll(/href="(\/blog\/concepts\/[^"]+)"/g)].map((match) => match[1]),
+  );
+  assert.ok(hrefs.size > 0, 'the relations block should link to concept pages');
+  for (const href of hrefs) {
+    const relative = path.join(decodeURIComponent(href).slice(1), 'index.html');
+    assert.ok(await pathExists(relative), `concept link ${href} points at a missing route`);
   }
 });

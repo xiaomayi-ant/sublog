@@ -1,14 +1,19 @@
 // 知识图谱实体抽取：扫描四个写作 collection 的 Markdown，
-// 用 OpenAI 兼容端点抽实体，增量写入 data/graph.db（SQLite）。
+// 用 OpenAI 兼容端点抽实体，增量写入 data/graph.db（SQLite），
+// 再把全量投影导出成 data/graph.json —— 后者才是入库、被构建期读取的产物。
+//
+// 两段式的原因：SQLite 适合增量（按正文 hash 跳过、按文章清理），但二进制不适合
+// 进 git；JSON 可 review 可 diff，构建期也就不需要 better-sqlite3 当运行时依赖。
+// 所以 .db 是本地缓存（gitignored），.json 是提交物。
 //
 // 全自动、可反复跑：正文 SHA-256 没变就跳过，--force 强制重跑；
-// 删掉的文章（含转成 draft 的）会从库里清掉。构建期只读这个库，
-// 库不存在时图谱降级为空 —— 所以本脚本不进 build 链，需要 LLM 凭证时单独跑。
+// 删掉的文章（含转成 draft 的）会从库里清掉。构建期只读 JSON，
+// 文件不存在时图谱降级为空 —— 所以本脚本不进 build 链，需要 LLM 凭证时单独跑。
 //
 // 用法：GRAPH_LLM_API_KEY=... npm run graph:extract [-- --force]
 // 端点：GRAPH_LLM_BASE_URL（默认 https://api.openai.com/v1）/ GRAPH_LLM_MODEL（默认 gpt-4o-mini）
 import { createHash } from 'node:crypto';
-import { mkdir, readdir, readFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import Database from 'better-sqlite3';
@@ -94,6 +99,54 @@ function parseFrontmatter(raw) {
 
 function normalizeName(name) {
   return name.trim().toLowerCase();
+}
+
+// 实体名来自 LLM，什么都可能出现（「RAG/检索增强」「Node.js」）。
+// nameNorm 只负责去重，进不了 URL；路由要另一把安全的钥匙：
+// 去掉会把路径切开或让静态产物写歪的字符，中文原样保留（tags 路由早就这么用了）。
+function slugifyName(nameNorm) {
+  const cleaned = nameNorm
+    .replace(/[\s/\\?#%.:<>"'|*]+/g, '-')
+    .replace(/-{2,}/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return cleaned || 'concept';
+}
+
+// 全量投影 → data/graph.json。按 name_norm 排序后再分配 slug，
+// 于是撞名时的 -2 后缀在同一份数据上每次都落到同一个实体，diff 不会无故翻动。
+function exportGraph(db) {
+  const articles = db
+    .prepare('SELECT id, collection, title FROM articles ORDER BY id')
+    .all();
+  const rows = db
+    .prepare('SELECT name, name_norm AS nameNorm, type FROM entities ORDER BY name_norm')
+    .all();
+
+  const slugByNorm = new Map();
+  const taken = new Set();
+  const entities = rows.map((row) => {
+    const base = slugifyName(row.nameNorm);
+    let slug = base;
+    for (let n = 2; taken.has(slug); n += 1) slug = `${base}-${n}`;
+    taken.add(slug);
+    slugByNorm.set(row.nameNorm, slug);
+    return { name: row.name, slug, type: row.type };
+  });
+
+  const links = db
+    .prepare(
+      `SELECT ae.article_id AS articleId, e.name_norm AS nameNorm, ae.salience
+       FROM article_entities ae JOIN entities e ON e.id = ae.entity_id
+       ORDER BY ae.article_id, e.name_norm`,
+    )
+    .all()
+    .map((row) => ({
+      articleId: row.articleId,
+      slug: slugByNorm.get(row.nameNorm),
+      salience: row.salience,
+    }));
+
+  return { articles, entities, links };
 }
 
 function buildPrompt(title, body, errorNote) {
@@ -213,10 +266,12 @@ function storeArticle(db, { id, collection, title, hash }, entities) {
 export async function runExtraction({
   contentRoot = path.join(projectRoot, 'src/content'),
   dbPath = path.join(projectRoot, 'data/graph.db'),
+  jsonPath,
   force = false,
   env = process.env,
   log = console.log,
 }) {
+  const exportPath = jsonPath ?? path.join(path.dirname(dbPath), 'graph.json');
   const llm = {
     baseUrl: env.GRAPH_LLM_BASE_URL ?? 'https://api.openai.com/v1',
     apiKey: env.GRAPH_LLM_API_KEY,
@@ -276,10 +331,18 @@ export async function runExtraction({
     `DELETE FROM entities WHERE id NOT IN (SELECT DISTINCT entity_id FROM article_entities)`,
   ).run();
 
+  // 每次跑完都重导一遍：即便这轮全跳过，清理也可能改了图，产物要跟库一致
+  const graph = exportGraph(db);
   db.close();
+  await writeFile(exportPath, `${JSON.stringify(graph, null, 2)}\n`);
+
   log(
     `完成：新增/更新 ${stats.added}，未变跳过 ${stats.skipped}，draft 跳过 ${stats.draft}，` +
       `失败 ${stats.failed}，移除 ${stats.removed}`,
+  );
+  log(
+    `已导出 ${path.relative(projectRoot, exportPath)}：` +
+      `${graph.articles.length} 篇文章 · ${graph.entities.length} 个概念 · ${graph.links.length} 条关联`,
   );
   return stats;
 }

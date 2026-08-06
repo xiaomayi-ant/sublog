@@ -1,0 +1,608 @@
+{
+  "articles": [
+    {
+      "id": "eval/aigc-image-triage",
+      "collection": "eval",
+      "title": "一次 AIGC 图片筛选流程的实验记录"
+    },
+    {
+      "id": "eval/evaluation-is-not-scoring",
+      "collection": "eval",
+      "title": "评估不是打分会"
+    },
+    {
+      "id": "harness/agent-action-boundaries",
+      "collection": "harness",
+      "title": "关于 Agent 行动边界的几个观察"
+    },
+    {
+      "id": "harness/local-first-tool-design",
+      "collection": "harness",
+      "title": "一个本地优先工具的设计记录"
+    },
+    {
+      "id": "llm/llm-state-and-memory",
+      "collection": "llm",
+      "title": "LLM 应用中的状态与记忆"
+    }
+  ],
+  "entities": [
+    {
+      "name": "Agent",
+      "slug": "agent",
+      "type": "concept"
+    },
+    {
+      "name": "AI 助手",
+      "slug": "ai-助手",
+      "type": "concept"
+    },
+    {
+      "name": "AIGC",
+      "slug": "aigc",
+      "type": "concept"
+    },
+    {
+      "name": "Anthropic",
+      "slug": "anthropic",
+      "type": "organization"
+    },
+    {
+      "name": "drafts/ 目录",
+      "slug": "drafts-目录",
+      "type": "concept"
+    },
+    {
+      "name": "frontmatter",
+      "slug": "frontmatter",
+      "type": "technology"
+    },
+    {
+      "name": "LLM",
+      "slug": "llm",
+      "type": "technology"
+    },
+    {
+      "name": "Markdown",
+      "slug": "markdown",
+      "type": "technology"
+    },
+    {
+      "name": "MCP",
+      "slug": "mcp",
+      "type": "technology"
+    },
+    {
+      "name": "SQL助手",
+      "slug": "sql助手",
+      "type": "technology"
+    },
+    {
+      "name": "上下文漂移",
+      "slug": "上下文漂移",
+      "type": "concept"
+    },
+    {
+      "name": "中文分词",
+      "slug": "中文分词",
+      "type": "technology"
+    },
+    {
+      "name": "中间产物",
+      "slug": "中间产物",
+      "type": "concept"
+    },
+    {
+      "name": "人工标注",
+      "slug": "人工标注",
+      "type": "concept"
+    },
+    {
+      "name": "人类回路",
+      "slug": "人类回路",
+      "type": "concept"
+    },
+    {
+      "name": "任务执行",
+      "slug": "任务执行",
+      "type": "concept"
+    },
+    {
+      "name": "任务进度",
+      "slug": "任务进度",
+      "type": "concept"
+    },
+    {
+      "name": "信任度",
+      "slug": "信任度",
+      "type": "concept"
+    },
+    {
+      "name": "倒排索引",
+      "slug": "倒排索引",
+      "type": "technology"
+    },
+    {
+      "name": "全文检索",
+      "slug": "全文检索",
+      "type": "technology"
+    },
+    {
+      "name": "冲突副本",
+      "slug": "冲突副本",
+      "type": "concept"
+    },
+    {
+      "name": "准确率",
+      "slug": "准确率",
+      "type": "concept"
+    },
+    {
+      "name": "分项否决",
+      "slug": "分项否决",
+      "type": "concept"
+    },
+    {
+      "name": "可逆性",
+      "slug": "可逆性",
+      "type": "concept"
+    },
+    {
+      "name": "同步",
+      "slug": "同步",
+      "type": "concept"
+    },
+    {
+      "name": "图片筛选",
+      "slug": "图片筛选",
+      "type": "concept"
+    },
+    {
+      "name": "多Agent协作",
+      "slug": "多agent协作",
+      "type": "concept"
+    },
+    {
+      "name": "多模态模型",
+      "slug": "多模态模型",
+      "type": "technology"
+    },
+    {
+      "name": "失败标准",
+      "slug": "失败标准",
+      "type": "concept"
+    },
+    {
+      "name": "客户端开发",
+      "slug": "客户端开发",
+      "type": "concept"
+    },
+    {
+      "name": "对话历史",
+      "slug": "对话历史",
+      "type": "concept"
+    },
+    {
+      "name": "工程决策",
+      "slug": "工程决策",
+      "type": "concept"
+    },
+    {
+      "name": "提示词策略",
+      "slug": "提示词策略",
+      "type": "concept"
+    },
+    {
+      "name": "摘要",
+      "slug": "摘要",
+      "type": "concept"
+    },
+    {
+      "name": "整体评分",
+      "slug": "整体评分",
+      "type": "concept"
+    },
+    {
+      "name": "本地优先",
+      "slug": "本地优先",
+      "type": "concept"
+    },
+    {
+      "name": "权限模型",
+      "slug": "权限模型",
+      "type": "concept"
+    },
+    {
+      "name": "检索",
+      "slug": "检索",
+      "type": "technology"
+    },
+    {
+      "name": "模型",
+      "slug": "模型",
+      "type": "technology"
+    },
+    {
+      "name": "状态管理",
+      "slug": "状态管理",
+      "type": "concept"
+    },
+    {
+      "name": "生命周期",
+      "slug": "生命周期",
+      "type": "concept"
+    },
+    {
+      "name": "用例",
+      "slug": "用例",
+      "type": "concept"
+    },
+    {
+      "name": "用户偏好",
+      "slug": "用户偏好",
+      "type": "concept"
+    },
+    {
+      "name": "确认机制",
+      "slug": "确认机制",
+      "type": "concept"
+    },
+    {
+      "name": "线上事故",
+      "slug": "线上事故",
+      "type": "concept"
+    },
+    {
+      "name": "缓存",
+      "slug": "缓存",
+      "type": "concept"
+    },
+    {
+      "name": "行动边界",
+      "slug": "行动边界",
+      "type": "concept"
+    },
+    {
+      "name": "规则推导",
+      "slug": "规则推导",
+      "type": "concept"
+    },
+    {
+      "name": "记忆",
+      "slug": "记忆",
+      "type": "concept"
+    },
+    {
+      "name": "评估",
+      "slug": "评估",
+      "type": "concept"
+    },
+    {
+      "name": "评估集",
+      "slug": "评估集",
+      "type": "concept"
+    },
+    {
+      "name": "语义正确",
+      "slug": "语义正确",
+      "type": "concept"
+    },
+    {
+      "name": "误放率",
+      "slug": "误放率",
+      "type": "concept"
+    },
+    {
+      "name": "误杀率",
+      "slug": "误杀率",
+      "type": "concept"
+    },
+    {
+      "name": "资产",
+      "slug": "资产",
+      "type": "concept"
+    },
+    {
+      "name": "边界条件",
+      "slug": "边界条件",
+      "type": "concept"
+    }
+  ],
+  "links": [
+    {
+      "articleId": "eval/aigc-image-triage",
+      "slug": "aigc",
+      "salience": 0.9
+    },
+    {
+      "articleId": "eval/aigc-image-triage",
+      "slug": "人工标注",
+      "salience": 0.7
+    },
+    {
+      "articleId": "eval/aigc-image-triage",
+      "slug": "准确率",
+      "salience": 0.5
+    },
+    {
+      "articleId": "eval/aigc-image-triage",
+      "slug": "分项否决",
+      "salience": 0.65
+    },
+    {
+      "articleId": "eval/aigc-image-triage",
+      "slug": "图片筛选",
+      "salience": 0.8
+    },
+    {
+      "articleId": "eval/aigc-image-triage",
+      "slug": "多模态模型",
+      "salience": 0.85
+    },
+    {
+      "articleId": "eval/aigc-image-triage",
+      "slug": "提示词策略",
+      "salience": 0.75
+    },
+    {
+      "articleId": "eval/aigc-image-triage",
+      "slug": "整体评分",
+      "salience": 0.6
+    },
+    {
+      "articleId": "eval/aigc-image-triage",
+      "slug": "评估集",
+      "salience": 0.4
+    },
+    {
+      "articleId": "eval/aigc-image-triage",
+      "slug": "误放率",
+      "salience": 0.55
+    },
+    {
+      "articleId": "eval/aigc-image-triage",
+      "slug": "误杀率",
+      "salience": 0.55
+    },
+    {
+      "articleId": "eval/evaluation-is-not-scoring",
+      "slug": "llm",
+      "salience": 0.9
+    },
+    {
+      "articleId": "eval/evaluation-is-not-scoring",
+      "slug": "sql助手",
+      "salience": 0.6
+    },
+    {
+      "articleId": "eval/evaluation-is-not-scoring",
+      "slug": "失败标准",
+      "salience": 0.7
+    },
+    {
+      "articleId": "eval/evaluation-is-not-scoring",
+      "slug": "用例",
+      "salience": 0.75
+    },
+    {
+      "articleId": "eval/evaluation-is-not-scoring",
+      "slug": "线上事故",
+      "salience": 0.45
+    },
+    {
+      "articleId": "eval/evaluation-is-not-scoring",
+      "slug": "评估",
+      "salience": 0.85
+    },
+    {
+      "articleId": "eval/evaluation-is-not-scoring",
+      "slug": "评估集",
+      "salience": 0.8
+    },
+    {
+      "articleId": "eval/evaluation-is-not-scoring",
+      "slug": "语义正确",
+      "salience": 0.55
+    },
+    {
+      "articleId": "eval/evaluation-is-not-scoring",
+      "slug": "资产",
+      "salience": 0.4
+    },
+    {
+      "articleId": "eval/evaluation-is-not-scoring",
+      "slug": "边界条件",
+      "salience": 0.5
+    },
+    {
+      "articleId": "harness/agent-action-boundaries",
+      "slug": "agent",
+      "salience": 0.95
+    },
+    {
+      "articleId": "harness/agent-action-boundaries",
+      "slug": "anthropic",
+      "salience": 0.3
+    },
+    {
+      "articleId": "harness/agent-action-boundaries",
+      "slug": "mcp",
+      "salience": 0.35
+    },
+    {
+      "articleId": "harness/agent-action-boundaries",
+      "slug": "上下文漂移",
+      "salience": 0.5
+    },
+    {
+      "articleId": "harness/agent-action-boundaries",
+      "slug": "人类回路",
+      "salience": 0.7
+    },
+    {
+      "articleId": "harness/agent-action-boundaries",
+      "slug": "任务执行",
+      "salience": 0.8
+    },
+    {
+      "articleId": "harness/agent-action-boundaries",
+      "slug": "信任度",
+      "salience": 0.4
+    },
+    {
+      "articleId": "harness/agent-action-boundaries",
+      "slug": "可逆性",
+      "salience": 0.85
+    },
+    {
+      "articleId": "harness/agent-action-boundaries",
+      "slug": "多agent协作",
+      "salience": 0.55
+    },
+    {
+      "articleId": "harness/agent-action-boundaries",
+      "slug": "权限模型",
+      "salience": 0.6
+    },
+    {
+      "articleId": "harness/agent-action-boundaries",
+      "slug": "确认机制",
+      "salience": 0.75
+    },
+    {
+      "articleId": "harness/agent-action-boundaries",
+      "slug": "行动边界",
+      "salience": 0.9
+    },
+    {
+      "articleId": "harness/local-first-tool-design",
+      "slug": "ai-助手",
+      "salience": 0.9
+    },
+    {
+      "articleId": "harness/local-first-tool-design",
+      "slug": "drafts-目录",
+      "salience": 0.6
+    },
+    {
+      "articleId": "harness/local-first-tool-design",
+      "slug": "frontmatter",
+      "salience": 0.8
+    },
+    {
+      "articleId": "harness/local-first-tool-design",
+      "slug": "markdown",
+      "salience": 0.9
+    },
+    {
+      "articleId": "harness/local-first-tool-design",
+      "slug": "中文分词",
+      "salience": 0.6
+    },
+    {
+      "articleId": "harness/local-first-tool-design",
+      "slug": "倒排索引",
+      "salience": 0.85
+    },
+    {
+      "articleId": "harness/local-first-tool-design",
+      "slug": "全文检索",
+      "salience": 0.7
+    },
+    {
+      "articleId": "harness/local-first-tool-design",
+      "slug": "冲突副本",
+      "salience": 0.7
+    },
+    {
+      "articleId": "harness/local-first-tool-design",
+      "slug": "同步",
+      "salience": 0.75
+    },
+    {
+      "articleId": "harness/local-first-tool-design",
+      "slug": "本地优先",
+      "salience": 0.95
+    },
+    {
+      "articleId": "harness/local-first-tool-design",
+      "slug": "缓存",
+      "salience": 0.5
+    },
+    {
+      "articleId": "harness/local-first-tool-design",
+      "slug": "行动边界",
+      "salience": 0.65
+    },
+    {
+      "articleId": "llm/llm-state-and-memory",
+      "slug": "llm",
+      "salience": 0.95
+    },
+    {
+      "articleId": "llm/llm-state-and-memory",
+      "slug": "中间产物",
+      "salience": 0.4
+    },
+    {
+      "articleId": "llm/llm-state-and-memory",
+      "slug": "任务进度",
+      "salience": 0.5
+    },
+    {
+      "articleId": "llm/llm-state-and-memory",
+      "slug": "客户端开发",
+      "salience": 0.35
+    },
+    {
+      "articleId": "llm/llm-state-and-memory",
+      "slug": "对话历史",
+      "salience": 0.7
+    },
+    {
+      "articleId": "llm/llm-state-and-memory",
+      "slug": "工程决策",
+      "salience": 0.5
+    },
+    {
+      "articleId": "llm/llm-state-and-memory",
+      "slug": "摘要",
+      "salience": 0.45
+    },
+    {
+      "articleId": "llm/llm-state-and-memory",
+      "slug": "检索",
+      "salience": 0.65
+    },
+    {
+      "articleId": "llm/llm-state-and-memory",
+      "slug": "模型",
+      "salience": 0.6
+    },
+    {
+      "articleId": "llm/llm-state-and-memory",
+      "slug": "状态管理",
+      "salience": 0.9
+    },
+    {
+      "articleId": "llm/llm-state-and-memory",
+      "slug": "生命周期",
+      "salience": 0.55
+    },
+    {
+      "articleId": "llm/llm-state-and-memory",
+      "slug": "用户偏好",
+      "salience": 0.6
+    },
+    {
+      "articleId": "llm/llm-state-and-memory",
+      "slug": "规则推导",
+      "salience": 0.3
+    },
+    {
+      "articleId": "llm/llm-state-and-memory",
+      "slug": "记忆",
+      "salience": 0.85
+    }
+  ]
+}
