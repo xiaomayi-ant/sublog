@@ -91,6 +91,17 @@ try {
       },
     },
     {
+      // 画布丢了 tabindex = 三种交互全是指针驱动的，键盘用户没有任何入口
+      name: 'graph-canvas-not-focusable',
+      apply: async (distDir) => {
+        const page = path.join(distDir, 'graph/index.html');
+        const html = await readFile(page, 'utf8');
+        const mutated = html.replace(/(<canvas[^>]*?)\stabindex="0"/, '$1');
+        if (mutated === html) throw new Error('canvas mutation did not apply — 选择器过期了');
+        await writeFile(page, mutated);
+      },
+    },
+    {
       // 导航里没有 Graph = /graph 退回成只能靠回链摸到的暗页
       name: 'graph-missing-from-nav',
       apply: async (distDir) => {

@@ -99,6 +99,30 @@ test('the primary nav offers Graph alongside the other English entries', async (
   );
 });
 
+// 图谱是浮在暖白底上的，不是装在盒子里的：力导向图形状不规则，
+// 方框只会把周围的留白切成四条死角。
+test('the concept graph carries no frame and speaks the warm palette', async () => {
+  const source = await readFile(
+    new URL('../src/components/ConceptGraph.astro', import.meta.url),
+    'utf8',
+  );
+  const block = source.match(/\.concept-graph\s*{[^}]*}/)?.[0];
+  assert.ok(block, 'the component should style .concept-graph');
+  assert.doesNotMatch(block, /border/, 'the graph container must not draw a frame');
+
+  // 颜色从 tokens 现取，不在组件里另抄十六进制；且这张图说的是暖色
+  for (const token of ['--color-ember', '--color-glint', '--color-ink']) {
+    assert.match(source, new RegExp(token), `the graph should read ${token} from tokens`);
+  }
+  assert.doesNotMatch(source, /--color-river/, 'the graph no longer uses the river blue');
+  assert.doesNotMatch(source, /#1651be/i, 'no hard-coded river hex may survive');
+
+  // 画布可聚焦 —— 三种交互全靠指针，键盘用户得有一条别的路进去
+  const graph = await readRoute('/graph');
+  assert.match(graph, /<canvas[^>]*tabindex="0"/, 'the canvas must be keyboard reachable');
+  assert.match(graph, /<canvas[^>]*aria-label="[^"]+"/, 'the canvas needs an accessible name');
+});
+
 test('graph data renders when the artifact exists, degrades cleanly when it does not', async () => {
   const hasData = await graphDataExists();
   const article = await readRoute('/blog/llm/llm-state-and-memory');

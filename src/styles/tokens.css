@@ -36,6 +36,9 @@
   --color-ink-faint: rgba(76, 54, 48, 0.46);
   --color-line: rgba(76, 54, 48, 0.16);
   --color-river-soft: rgba(22, 81, 190, 0.1);
+  /* 图谱里标签节点用的暖赭淡档：和 ember 同一个色相，只压不透明度，
+     所以它读作"更轻的同一种暖"，而不是另一种颜色 */
+  --color-ember-soft: rgba(168, 99, 44, 0.55);
 
   /* 字体栈：不引入外链字体，构建离线可过；中文标题宋体感，正文中文无衬线，英文 metadata 用 mono */
   --font-serif: "Noto Serif SC", "Songti SC", "STSong", "SimSun", serif;

@@ -1,8 +1,13 @@
 ---
-// ConceptGraph — 手写 canvas 力导向图：文章（墨）与实体（河蓝）、标签（淡墨）。
+// ConceptGraph — 手写 canvas 力导向图：文章（赭墨）、实体（暖赭）、标签（暖赭淡档）。
 // 不引 d3/sigma：节点规模只有几十到几百，O(n²) 排斥力每帧也算得起。
-// 数据以 application/json 内联进页面，点击节点跳对应页；
-// prefers-reduced-motion 时一次性算完布局只画一帧，不动。
+// 数据以 application/json 内联进页面。
+//
+// 三层交互叠在一起：
+//   鱼眼   —— 常驻的显示变换，指针周围撑开、外围压缩，整张图始终完整可见。
+//   高亮   —— 点节点选中它与一跳邻居，其余淡出。
+//   拉扯   —— 按住拖动，邻居被弹簧牵着跟一部分，松手精确弹回原位。
+// 前者是纯函数变换，后两者是事件驱动的状态，本来就在两层，互不干扰。
 import type { GraphEdge, GraphNode } from '../lib/graph';
 
 interface Props {
@@ -20,15 +25,19 @@ const payload = JSON.stringify({ nodes, edges, focusId }).replace(/</g, '\\u003c
 ---
 
 <div class="concept-graph" style={`--graph-height: ${height}px`} data-concept-graph>
-  <canvas class="concept-graph-canvas" role="img" aria-label={label}></canvas>
+  <canvas
+    class="concept-graph-canvas"
+    role="img"
+    tabindex="0"
+    aria-label={label}></canvas>
   <script is:inline type="application/json" class="concept-graph-data" set:html={payload}></script>
 </div>
 
 <style>
+  /* 没有外框。图本来就浮在页面的暖白底上，画一个方框等于给它加了个不存在的边界；
+     力导向图的形状是不规则的，方框只会把周围的留白切成四条死角。 */
   .concept-graph {
     height: var(--graph-height);
-    border: 1px solid var(--color-line);
-    border-radius: 4px;
     overflow: hidden;
   }
 
@@ -37,13 +46,19 @@ const payload = JSON.stringify({ nodes, edges, focusId }).replace(/</g, '\\u003c
     width: 100%;
     height: 100%;
     cursor: default;
+    touch-action: none;
+  }
+
+  .concept-graph-canvas:focus-visible {
+    outline: 2px solid var(--color-ember);
+    outline-offset: -2px;
   }
 </style>
 
 <script>
-  // 力导向布局 + 绘制：每个 data-concept-graph 容器一张图。
   // 布局用黄金角螺旋起摆（不用随机数，同一批数据每次摆出来一样），
-  // 之后跑固定轮数的 排斥 + 弹簧 + 向心 迭代。
+  // 之后跑固定轮数的 排斥 + 弹簧 + 向心 迭代，收敛后作为每个节点的 home 位置。
+  // 所有交互产生的位移都是相对 home 的偏移，且保证能精确回到 0。
   interface NodeDatum {
     id: string;
     label: string;
@@ -55,6 +70,8 @@ const payload = JSON.stringify({ nodes, edges, focusId }).replace(/</g, '\\u003c
     target: string;
   }
   interface LayoutNode extends NodeDatum {
+    hx: number;
+    hy: number;
     x: number;
     y: number;
     vx: number;
@@ -62,23 +79,29 @@ const payload = JSON.stringify({ nodes, edges, focusId }).replace(/</g, '\\u003c
     pinned: boolean;
   }
 
-  const COLORS: Record<NodeDatum['kind'], string> = {
-    article: '#4c3630', // --color-ink
-    entity: '#1651be', // --color-river
-    tag: 'rgba(76, 54, 48, 0.46)', // --color-ink-faint
-  };
-  const EDGE_COLOR = 'rgba(76, 54, 48, 0.16)'; // --color-line
-  const LABEL_COLOR = 'rgba(76, 54, 48, 0.72)'; // --color-ink-soft
+  // ── 鱼眼的三个参数，调出来的，别凭感觉改 ──
+  // FOLLOW 是镜心每帧向指针靠拢的比例。1 表示镜心钉在指针上 —— 指针一甩畸变就跟着甩，
+  // 那正是它原来不好用的原因。0.16 的时间常数约 90ms，镜心是"滑"过去的。
+  const LENS_FOLLOW = 0.16;
+  // 畸变强度。0.4 很轻 —— 镜心处放大约 1.4 倍，只把挤在一起的标签推开到能读，
+  // 不做那种一眼就看出是鱼眼的夸张变形。0 时退化为恒等变换。
+  // 跟随快而畸变轻是配套的：镜面越温和，跟得快才不会显得甩。
+  const LENS_POWER = 0.4;
+  const LENS_RADIUS = 0.33; // 镜面半径，占容器短边的比例
 
-  function layout(nodes: LayoutNode[], edges: EdgeDatum[], ticks: number) {
+  const TICKS = 420;
+  const HIT_RADIUS = 16;
+  const DRAG_THRESHOLD = 4; // 按下后移动超过这个距离才算拖拽，否则算点击
+
+  function layout(nodes: LayoutNode[], edges: EdgeDatum[]) {
     const byId = new Map(nodes.map((node) => [node.id, node]));
     const links = edges
       .map((edge) => ({ a: byId.get(edge.source), b: byId.get(edge.target) }))
       .filter((link): link is { a: LayoutNode; b: LayoutNode } => Boolean(link.a && link.b));
 
-    for (let tick = 0; tick < ticks; tick += 1) {
+    for (let tick = 0; tick < TICKS; tick += 1) {
       // 冷却：越到后面步长越小，布局慢慢安定下来
-      const alpha = 1 - tick / ticks;
+      const alpha = 1 - tick / TICKS;
 
       // 两两排斥（Coulomb 近似，带最短距离截断防炸开）
       for (let i = 0; i < nodes.length; i += 1) {
@@ -93,13 +116,11 @@ const payload = JSON.stringify({ nodes, edges, focusId }).replace(/</g, '\\u003c
             dy = 0.5;
             dist = 1;
           }
-          const force = (1400 * alpha) / (dist * dist);
-          const fx = (dx / dist) * force;
-          const fy = (dy / dist) * force;
-          a.vx += fx;
-          a.vy += fy;
-          b.vx -= fx;
-          b.vy -= fy;
+          const force = (1600 * alpha) / (dist * dist);
+          a.vx += (dx / dist) * force;
+          a.vy += (dy / dist) * force;
+          b.vx -= (dx / dist) * force;
+          b.vy -= (dy / dist) * force;
         }
       }
 
@@ -108,22 +129,17 @@ const payload = JSON.stringify({ nodes, edges, focusId }).replace(/</g, '\\u003c
         const dx = b.x - a.x;
         const dy = b.y - a.y;
         const dist = Math.max(1, Math.hypot(dx, dy));
-        const force = (dist - 90) * 0.02 * alpha;
-        const fx = (dx / dist) * force;
-        const fy = (dy / dist) * force;
-        a.vx += fx;
-        a.vy += fy;
-        b.vx -= fx;
-        b.vy -= fy;
+        const force = (dist - 92) * 0.022 * alpha;
+        a.vx += (dx / dist) * force;
+        a.vy += (dy / dist) * force;
+        b.vx -= (dx / dist) * force;
+        b.vy -= (dy / dist) * force;
       }
 
       // 向心力：把整图拢在原点附近
       for (const node of nodes) {
         node.vx -= node.x * 0.015 * alpha;
         node.vy -= node.y * 0.015 * alpha;
-      }
-
-      for (const node of nodes) {
         if (node.pinned) {
           node.x = 0;
           node.y = 0;
@@ -137,6 +153,14 @@ const payload = JSON.stringify({ nodes, edges, focusId }).replace(/</g, '\\u003c
         node.y += node.vy;
       }
     }
+
+    // 收敛后的位置就是 home；之后 x/y 只表示"当前"，随交互偏离又回来
+    for (const node of nodes) {
+      node.hx = node.x;
+      node.hy = node.y;
+      node.vx = 0;
+      node.vy = 0;
+    }
   }
 
   function mount(container: HTMLElement) {
@@ -145,6 +169,8 @@ const payload = JSON.stringify({ nodes, edges, focusId }).replace(/</g, '\\u003c
     if (!canvas || !dataTag) return;
     // 嵌套函数声明吃不到上面的收窄，换个名字固定下来，下面一律用 target
     const target = canvas;
+    const ctx = target.getContext('2d');
+    if (!ctx) return;
 
     let data: { nodes: NodeDatum[]; edges: EdgeDatum[]; focusId?: string };
     try {
@@ -160,6 +186,8 @@ const payload = JSON.stringify({ nodes, edges, focusId }).replace(/</g, '\\u003c
       const radius = 12 * Math.sqrt(index + 1);
       return {
         ...node,
+        hx: 0,
+        hy: 0,
         x: radius * Math.cos(angle),
         y: radius * Math.sin(angle),
         vx: 0,
@@ -167,11 +195,45 @@ const payload = JSON.stringify({ nodes, edges, focusId }).replace(/</g, '\\u003c
         pinned: node.id === data.focusId,
       };
     });
+    layout(nodes, data.edges);
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    // 一跳邻居：高亮与拉扯共用同一张表
+    const index = new Map(nodes.map((node, i) => [node.id, i]));
+    const nbr = nodes.map(() => new Set<number>());
+    for (const edge of data.edges) {
+      const s = index.get(edge.source);
+      const t = index.get(edge.target);
+      if (s === undefined || t === undefined) continue;
+      nbr[s].add(t);
+      nbr[t].add(s);
+    }
 
-    let view = { width: 0, height: 0, scale: 1, cx: 0, cy: 0 };
+    // 颜色从 tokens 现取，不在这里另抄一份十六进制
+    let colors = { ink: '', inkFaint: '', line: '', ember: '', emberSoft: '', glint: '' };
+    function readColors() {
+      const cs = getComputedStyle(document.documentElement);
+      const get = (name: string) => cs.getPropertyValue(name).trim();
+      colors = {
+        ink: get('--color-ink'),
+        inkFaint: get('--color-ink-faint'),
+        line: get('--color-line'),
+        ember: get('--color-ember'),
+        emberSoft: get('--color-ember-soft'),
+        glint: get('--color-glint'),
+      };
+    }
+    readColors();
+
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+    let focus = -1;
+    let drag = -1;
+    let pending: { node: number; x: number; y: number } | null = null;
+    let pointer: { x: number; y: number } | null = null;
+    let lensAt: { x: number; y: number } | null = null;
+    let strength = 0;
+    let raf = 0;
+    const view = { width: 0, height: 0, scale: 1, cx: 0, cy: 0 };
 
     function resize() {
       const rect = container.getBoundingClientRect();
@@ -181,9 +243,9 @@ const payload = JSON.stringify({ nodes, edges, focusId }).replace(/</g, '\\u003c
       view.width = rect.width;
       view.height = rect.height;
       // 整图适配容器：算出布局的包围盒，等比缩放到留边距后的大小
-      const pad = 28;
-      const xs = nodes.map((node) => node.x);
-      const ys = nodes.map((node) => node.y);
+      const pad = 34;
+      const xs = nodes.map((node) => node.hx);
+      const ys = nodes.map((node) => node.hy);
       const spanX = Math.max(1, Math.max(...xs) - Math.min(...xs));
       const spanY = Math.max(1, Math.max(...ys) - Math.min(...ys));
       view.scale = Math.min(
@@ -202,89 +264,322 @@ const payload = JSON.stringify({ nodes, edges, focusId }).replace(/</g, '\\u003c
       };
     }
 
-    function draw() {
-      const dpr = window.devicePixelRatio || 1;
-      ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx!.clearRect(0, 0, view.width, view.height);
-
-      ctx!.strokeStyle = EDGE_COLOR;
-      ctx!.lineWidth = 1;
-      const byId = new Map(nodes.map((node) => [node.id, node]));
-      for (const edge of data.edges) {
-        const a = byId.get(edge.source);
-        const b = byId.get(edge.target);
-        if (!a || !b) continue;
-        const pa = toScreen(a.x, a.y);
-        const pb = toScreen(b.x, b.y);
-        ctx!.beginPath();
-        ctx!.moveTo(pa.x, pa.y);
-        ctx!.lineTo(pb.x, pb.y);
-        ctx!.stroke();
-      }
-
-      ctx!.font = '11px -apple-system, "PingFang SC", sans-serif';
-      for (const node of nodes) {
-        const point = toScreen(node.x, node.y);
-        const radius = node.pinned ? 6 : node.kind === 'article' ? 5 : 4;
-        ctx!.fillStyle = COLORS[node.kind];
-        ctx!.beginPath();
-        ctx!.arc(point.x, point.y, radius, 0, Math.PI * 2);
-        ctx!.fill();
-        ctx!.fillStyle = LABEL_COLOR;
-        ctx!.fillText(node.label, point.x + radius + 3, point.y + 4);
-      }
+    function toModel(x: number, y: number) {
+      return {
+        x: (x - view.width / 2) / view.scale + view.cx,
+        y: (y - view.height / 2) / view.scale + view.cy,
+      };
     }
 
-    function nodeAt(event: MouseEvent) {
-      const rect = target.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
-      let best: LayoutNode | null = null;
-      let bestDist = 14; // 命中半径：点附近的容差
-      for (const node of nodes) {
-        const point = toScreen(node.x, node.y);
-        const dist = Math.hypot(point.x - x, point.y - y);
+    const lensSpan = () => Math.min(view.width, view.height) * LENS_RADIUS;
+
+    // Sarkar–Brown 的 G 函数：m(a) = ((d+1)a) / (d·a + 1)。
+    // m(0)=0、m(1)=1 —— 镜心与镜缘都是不动点，所以镜外的结构一点没变；
+    // d = POWER × strength，strength 归零时 d=0、m=a，退化成恒等变换。
+    function lens(px: number, py: number) {
+      const d = LENS_POWER * strength;
+      if (d <= 0.001 || !lensAt) return { x: px, y: py, z: 1 };
+      const span = lensSpan();
+      const dx = px - lensAt.x;
+      const dy = py - lensAt.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist === 0 || dist >= span) return { x: px, y: py, z: 1 };
+      const a = dist / span;
+      const m = ((d + 1) * a) / (d * a + 1);
+      const k = m / a;
+      return {
+        x: lensAt.x + dx * k,
+        y: lensAt.y + dy * k,
+        z: Math.min(2.8, (d + 1) / ((d * a + 1) * (d * a + 1))),
+      };
+    }
+
+    // 上面那个函数的逆：a = m / (d + 1 − m·d)。
+    // 拖拽必须走它 —— 指针给的是变形后的坐标，不反变换回去，被拖的点会从手底下滑走。
+    function unlens(px: number, py: number) {
+      const d = LENS_POWER * strength;
+      if (d <= 0.001 || !lensAt) return { x: px, y: py };
+      const span = lensSpan();
+      const dx = px - lensAt.x;
+      const dy = py - lensAt.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist === 0 || dist >= span) return { x: px, y: py };
+      const m = dist / span;
+      const a = m / (d + 1 - m * d);
+      if (!(a > 0) || a >= 1) return { x: px, y: py };
+      const k = a / m;
+      return { x: lensAt.x + dx * k, y: lensAt.y + dy * k };
+    }
+
+    const nodeScreen = (node: LayoutNode) => toScreen(node.x, node.y);
+
+    function nodeAt(x: number, y: number) {
+      let best = -1;
+      let bestDist = HIT_RADIUS;
+      for (let i = 0; i < nodes.length; i += 1) {
+        const p = lens(nodeScreen(nodes[i]).x, nodeScreen(nodes[i]).y);
+        const dist = Math.hypot(p.x - x, p.y - y);
         if (dist < bestDist) {
-          best = node;
+          best = i;
           bestDist = dist;
         }
       }
       return best;
     }
 
-    target.addEventListener('click', (event) => {
-      const node = nodeAt(event);
-      if (node) window.location.href = node.href;
-    });
-    target.addEventListener('mousemove', (event) => {
-      target.style.cursor = nodeAt(event) ? 'pointer' : 'default';
+    function localPoint(event: PointerEvent) {
+      const rect = target.getBoundingClientRect();
+      return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+    }
+
+    // 每个节点这一帧该在哪：拉扯时被拖的点跟指针，邻居跟四成，其余归位
+    function want(i: number) {
+      const node = nodes[i];
+      if (node.pinned) return { x: node.hx, y: node.hy };
+      if (drag >= 0 && pointer) {
+        const undistorted = unlens(pointer.x, pointer.y);
+        const goal = toModel(undistorted.x, undistorted.y);
+        if (i === drag) return goal;
+        if (nbr[drag].has(i)) {
+          // 邻居只跟四成 —— 跟满就成了整块平移，看不出是谁牵着谁
+          const lead = { x: goal.x - nodes[drag].hx, y: goal.y - nodes[drag].hy };
+          return { x: node.hx + lead.x * 0.42, y: node.hy + lead.y * 0.42 };
+        }
+      }
+      return { x: node.hx, y: node.hy };
+    }
+
+    function loop() {
+      if (raf) return;
+      const step = () => {
+        raf = 0;
+        let busy = false;
+
+        // 镜心跟随：每帧只走 LENS_FOLLOW 的比例，指针停下后它还会继续滑一小段
+        const wantStrength = pointer && !reduced.matches ? 1 : 0;
+        if (pointer && !lensAt) lensAt = { x: pointer.x, y: pointer.y };
+        if (lensAt) {
+          if (pointer) {
+            lensAt.x += (pointer.x - lensAt.x) * LENS_FOLLOW;
+            lensAt.y += (pointer.y - lensAt.y) * LENS_FOLLOW;
+            if (Math.hypot(pointer.x - lensAt.x, pointer.y - lensAt.y) > 0.4) busy = true;
+          }
+          const delta = wantStrength - strength;
+          if (Math.abs(delta) > 0.004) {
+            strength += delta * 0.12;
+            busy = true;
+          } else {
+            strength = wantStrength;
+            if (!pointer) lensAt = null;
+          }
+        }
+
+        for (let i = 0; i < nodes.length; i += 1) {
+          const node = nodes[i];
+          const goal = want(i);
+          if (reduced.matches) {
+            node.x = goal.x;
+            node.y = goal.y;
+            node.vx = 0;
+            node.vy = 0;
+            continue;
+          }
+          node.vx = (node.vx + (goal.x - node.x) * 0.22) * 0.76;
+          node.vy = (node.vy + (goal.y - node.y) * 0.22) * 0.76;
+          node.x += node.vx;
+          node.y += node.vy;
+          // 吸附必须逐点判断。用循环共享的标志当闸门会让位移停在阈值附近而不是精确归位，
+          // "回到原来的结构"就成了近似。
+          if (
+            Math.hypot(goal.x - node.x, goal.y - node.y) <= 0.08 &&
+            Math.hypot(node.vx, node.vy) <= 0.08
+          ) {
+            node.x = goal.x;
+            node.y = goal.y;
+            node.vx = 0;
+            node.vy = 0;
+          } else {
+            busy = true;
+          }
+        }
+
+        draw();
+        if (busy || drag >= 0) raf = requestAnimationFrame(step);
+      };
+      raf = requestAnimationFrame(step);
+    }
+
+    // 焦点集合：焦点自己 + 一跳邻居。高亮与拉扯共用同一个状态。
+    function focusSet() {
+      const active = drag >= 0 ? drag : focus;
+      if (active < 0) return null;
+      const set = new Set(nbr[active]);
+      set.add(active);
+      return { active, set };
+    }
+
+    function draw() {
+      const dpr = window.devicePixelRatio || 1;
+      ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx!.clearRect(0, 0, view.width, view.height);
+
+      const fs = focusSet();
+      const points = nodes.map((node) => {
+        const p = nodeScreen(node);
+        return lens(p.x, p.y);
+      });
+
+      ctx!.lineWidth = 1;
+      for (const edge of data.edges) {
+        const s = index.get(edge.source);
+        const t = index.get(edge.target);
+        if (s === undefined || t === undefined) continue;
+        const on = fs ? fs.set.has(s) && fs.set.has(t) : false;
+        if (fs && !on) {
+          ctx!.globalAlpha = 0.15;
+          ctx!.strokeStyle = colors.line;
+        } else if (fs) {
+          ctx!.globalAlpha = 1;
+          ctx!.strokeStyle = colors.ember;
+        } else {
+          ctx!.globalAlpha = 1;
+          ctx!.strokeStyle = colors.line;
+        }
+        ctx!.beginPath();
+        ctx!.moveTo(points[s].x, points[s].y);
+        ctx!.lineTo(points[t].x, points[t].y);
+        ctx!.stroke();
+      }
+      ctx!.globalAlpha = 1;
+
+      for (let i = 0; i < nodes.length; i += 1) {
+        const node = nodes[i];
+        const point = points[i];
+        const dim = fs ? !fs.set.has(i) : false;
+        const isFocus = fs ? fs.active === i : false;
+        const base = node.pinned ? 6 : node.kind === 'article' ? 5 : node.kind === 'entity' ? 4 : 3.5;
+
+        ctx!.globalAlpha = dim ? 0.13 : 1;
+        ctx!.fillStyle = isFocus
+          ? colors.glint
+          : node.kind === 'entity'
+            ? colors.ember
+            : node.kind === 'tag'
+              ? colors.emberSoft
+              : colors.ink;
+        const radius = (isFocus ? base + 2.5 : base) * Math.pow(point.z, 0.55);
+        ctx!.beginPath();
+        ctx!.arc(point.x, point.y, radius, 0, Math.PI * 2);
+        ctx!.fill();
+
+        // 浮光金只有 1.58:1，单靠它撑不住"选中"，加一圈墨环
+        if (isFocus) {
+          ctx!.strokeStyle = colors.ink;
+          ctx!.lineWidth = 1.5;
+          ctx!.stroke();
+        }
+
+        const size = Math.round(11 * Math.min(1.55, Math.pow(point.z, 0.4)));
+        ctx!.font = `${size}px -apple-system, "PingFang SC", sans-serif`;
+        ctx!.fillStyle = isFocus ? colors.ink : colors.inkFaint;
+        ctx!.globalAlpha = dim ? 0.1 : 1;
+        ctx!.fillText(node.label, point.x + radius + 3, point.y + 4);
+      }
+      ctx!.globalAlpha = 1;
+    }
+
+    function go(i: number) {
+      if (i >= 0 && nodes[i].href) window.location.href = nodes[i].href;
+    }
+
+    target.addEventListener('pointermove', (event) => {
+      pointer = localPoint(event);
+      // 按下后移动超过阈值才判定为拖拽 —— 这是"选中"与"拖拽"唯一真正冲突的地方
+      if (pending && Math.hypot(pointer.x - pending.x, pointer.y - pending.y) > DRAG_THRESHOLD) {
+        drag = pending.node;
+        pending = null;
+      }
+      if (drag < 0) target.style.cursor = nodeAt(pointer.x, pointer.y) >= 0 ? 'pointer' : 'default';
+      loop();
     });
 
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reduced) {
-      // 一次性算完，只画一帧 —— 动效减弱的读者看到的是已经安定下来的图
-      layout(nodes, data.edges, 300);
-      resize();
-      draw();
-    } else {
-      // 分帧跑完同样的 300 轮，读者能看到图收拢的过程
-      let tick = 0;
-      const step = () => {
-        layout(nodes, data.edges, 6);
-        resize();
-        draw();
-        tick += 6;
-        if (tick < 300) requestAnimationFrame(step);
-      };
-      resize();
-      requestAnimationFrame(step);
-    }
+    target.addEventListener('pointerleave', () => {
+      if (drag >= 0) return; // 拖拽中移出画布不算离开，交给 window 的 pointerup
+      pointer = null;
+      loop();
+    });
+
+    target.addEventListener('pointerdown', (event) => {
+      pointer = localPoint(event);
+      const hit = nodeAt(pointer.x, pointer.y);
+      if (hit < 0) {
+        focus = -1;
+        loop();
+        return;
+      }
+      pending = { node: hit, x: pointer.x, y: pointer.y };
+      target.setPointerCapture?.(event.pointerId);
+    });
+
+    window.addEventListener('pointerup', () => {
+      if (pending) {
+        // 没动过 = 点击。第一次点选中并高亮邻域，再点同一个才跳转 ——
+        // 单击直接跳走的话，"看看它连着谁"就没有手势可用了。
+        const hit = pending.node;
+        pending = null;
+        if (focus === hit) {
+          go(hit);
+          return;
+        }
+        focus = hit;
+      }
+      if (drag >= 0) drag = -1; // 动过 = 拖拽，松手回弹
+      if (pointer && (pointer.x < 0 || pointer.y < 0 || pointer.x > view.width || pointer.y > view.height)) {
+        // 拖到画布外再松手时 pointerleave 不一定补得上，镜头会卡在最后的位置
+        pointer = null;
+      }
+      loop();
+    });
+
+    // 键盘可达：Tab 聚焦画布后用方向键轮换，Enter 打开，Esc 取消
+    target.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        focus = -1;
+        loop();
+        return;
+      }
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        go(focus);
+        return;
+      }
+      if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+        event.preventDefault();
+        focus = (focus + 1) % nodes.length;
+        loop();
+        return;
+      }
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        focus = (focus - 1 + nodes.length) % nodes.length;
+        loop();
+      }
+    });
 
     // 容器宽度变化（窗口缩放）时重算适配，布局本身不重跑
     new ResizeObserver(() => {
       resize();
       draw();
     }).observe(container);
+
+    // tokens 变了（主题切换）就重取颜色重画
+    new MutationObserver(() => {
+      readColors();
+      draw();
+    }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+    resize();
+    draw();
   }
 
   document.querySelectorAll<HTMLElement>('[data-concept-graph]').forEach(mount);

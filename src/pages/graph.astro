@@ -27,7 +27,9 @@ const empty = stats.articles === 0;
     !empty && (
       <div class="graph-wrap" data-graph-page>
         <ConceptGraph nodes={nodes} edges={edges} height={560} label="全站知识图谱" />
-        <p class="hint meta">点击节点：文章 → 文章页，概念 → 概念聚合页</p>
+        <p class="hint meta">
+          移动指针放大局部 · 点节点看它连着谁 · 再点一次打开 · 按住可以拖，松手回弹
+        </p>
       </div>
     )
   }
