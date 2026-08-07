@@ -23,14 +23,23 @@ function runContract() {
   });
 }
 
+// 标记必须唯一命中。命中多个就直接报错，不许"取第一个" ——
+// 否则变异会静静地打到另一个产物上，河流那边毫发无损，
+// 结果表现为一条莫名存活的变异，而真正的原因是选择器过期了。
 async function findAsset(extension, marker) {
   const files = (await readdir(assetsRoot)).filter((file) => file.endsWith(extension));
+  const hits = [];
   for (const file of files) {
     const target = path.join(assetsRoot, file);
     const source = await readFile(target, 'utf8');
-    if (source.includes(marker)) return { target, source };
+    if (source.includes(marker)) hits.push({ target, source });
   }
-  throw new Error(`Unable to find ${extension} asset containing ${marker}.`);
+  if (hits.length === 0) throw new Error(`Unable to find ${extension} asset containing ${marker}.`);
+  if (hits.length > 1) {
+    const names = hits.map((hit) => path.basename(hit.target)).join(', ');
+    throw new Error(`Ambiguous marker ${marker}: matched ${hits.length} ${extension} assets (${names}).`);
+  }
+  return hits[0];
 }
 
 function runMathTest() {
@@ -70,7 +79,9 @@ if (controlCode !== 0) {
 }
 
 const cssAsset = await findAsset('.css', '.river-stage');
-const jsAsset = await findAsset('.js', 'requestAnimationFrame');
+// 认河流渲染器自己的工厂函数，不认 requestAnimationFrame ——
+// 后者现在图谱脚本里也有，按它找会捞到错的产物。
+const jsAsset = await findAsset('.js', 'createRiverRenderer');
 const mutations = [
   [
     'static-river-model',

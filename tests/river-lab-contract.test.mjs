@@ -14,6 +14,21 @@ async function readAssets(extension) {
   return (await Promise.all(files.map((file) => readFile(path.join(assetsRoot, file), 'utf8')))).join('\n');
 }
 
+// 河流自己那一份产物。断言动画时不能拿全部 JS 拼起来找 ——
+// 站上现在不止一个脚本用 requestAnimationFrame（图谱也用），
+// 拼起来的话河流的动画被整个删掉，断言依然能在别人的代码里找到那个词。
+async function readRiverAsset() {
+  const assetsRoot = path.join(distRoot, '_astro');
+  const files = (await readdir(assetsRoot)).filter((file) => file.endsWith('.js'));
+  const hits = [];
+  for (const file of files) {
+    const source = await readFile(path.join(assetsRoot, file), 'utf8');
+    if (source.includes('createRiverRenderer')) hits.push(source);
+  }
+  assert.equal(hits.length, 1, 'expected exactly one built asset to own the river renderer');
+  return hits[0];
+}
+
 test('the river lab publishes a self-contained parametric river scene', async () => {
   const html = await readFile(path.join(distRoot, 'lab/river/index.html'), 'utf8');
 
@@ -69,10 +84,15 @@ test('the scene is one white, sticky, multi-viewport composition', async () => {
 });
 
 test('the built lab animates with browser frames and respects reduced motion', async () => {
-  const javascript = await readAssets('.js');
+  // 帧循环、动效降级、DPR 都是渲染器自己的职责，断言必须落在它那一份产物上。
+  // 拿全部 JS 拼起来找是不够的：站上不止一个脚本用这些 API（图谱也用），
+  // 河流的动画整个删掉，断言依然能在别人的代码里命中。
+  const river = await readRiverAsset();
+  assert.match(river, /requestAnimationFrame/);
+  assert.match(river, /prefers-reduced-motion/);
+  assert.match(river, /devicePixelRatio/);
 
-  assert.match(javascript, /requestAnimationFrame/);
-  assert.match(javascript, /prefers-reduced-motion/);
-  assert.match(javascript, /devicePixelRatio/);
+  // 进度接线属于 lab 页面而不是渲染器，这条仍看全站产物
+  const javascript = await readAssets('.js');
   assert.match(javascript, /river-progress/);
 });
