@@ -1,18 +1,35 @@
 ---
-// /about — 全站最该简单的一页：一句话说清这里是什么，三段说清在关注什么、
-// 有什么、去哪找，收在那句引言上。
+// /about — 这一页的职责只有一个：让刚到的人在半分钟内判断这里值不值得继续待。
+// 不是简历，不是宣言，也不是站点说明书。
 //
-// 之前这一页有五个视觉区块（大标题 / 一条斜的河纹装饰线 / 等权重两栏 / 外链行 / 引言），
-// 三处问题：01-02-03 在假装那三条原则有顺序（它们没有）；那条河纹不承载任何信息，
-// 而 site-direction 明确要求河流是分隔或连接版块的结构线、不是装饰背景；
-// 两栏不等长，右栏早早收尾，底下拖出一片死白。
+// 判断每一块该不该留，只问一句：删掉它，读者会少知道什么？
+//   标题与那两句 —— 删了就不知道这是什么站。留，且是主角。
+//   这里有什么   —— 删了不知道怎么逛。留，它承担导航。
+//   最近在写     —— 读者在这一页真正会问的是"这个站还活着吗"，
+//                   而这件事 Blog 页看不出来，只有这里会被问到。
+//   去哪找我     —— 删了就没有出口。留，但不占一个小节，做成收尾的一行。
+// 「一种工作方式」那三条已经删掉：正确但普适，任何人都能写，删了读者不少知道任何东西。
 //
-// 现在是「正文窄栏 + 右侧一张图」。正文限在 --measure 是为了可读性（中文一行
-// 超过三十几个字就容易串行），但窄栏靠左会让右边整片空读作"没做完" ——
-// 所以右边给一件真正的事做：那张图和它下面的引言是一组，图就是那句话的视觉转译。
+// 「最近在写」是自动取的，永不过期。没有把知识图谱的概念标签搬过来 ——
+// 那是 /graph 的职责，重复一遍只是把同一批数据讲第二次；而且抽取结果还带着噪声，
+// 不该出现在身份页上。
 import Base from '../layouts/Base.astro';
 import Meta from '../components/Meta.astro';
 import { ossImage } from '../lib/oss';
+import { TYPE_LABELS, formatDate, getAllResearch } from '../lib/content';
+
+const [latest] = await getAllResearch();
+
+const shelves = [
+  { name: '文章', note: '试着形成观点', href: '/blog' },
+  { name: '笔记', note: '保留过程', href: '/blog' },
+  { name: '实验', note: '用实现去校验直觉', href: '/lab/river' },
+];
+
+const lenses = [
+  { name: '图谱', note: '把它们按概念连起来', href: '/graph' },
+  { name: '相册', note: '把它们按月收成册', href: '/albums' },
+];
 ---
 
 <Base title="About" description="关于 Sumoer，以及这个站在记录什么。">
@@ -20,48 +37,61 @@ import { ossImage } from '../lib/oss';
     <article class="about">
       <header>
         <Meta items={['About', 'Sumoer']} />
-        <h1>About</h1>
-        <p class="lead">
-          这里是 Sumoer 的个人研究与构建空间。记录尚未定型的想法，也展示已经可以被使用的东西。
-        </p>
+        <h1>这里是 Sumoer 的<br />个人研究与构建空间</h1>
+        <p class="sub">记录尚未定型的想法，也展示已经可以被使用的东西。</p>
       </header>
 
-      <section class="block" aria-labelledby="focus">
-        <h2 id="focus">正在关注</h2>
-        <p>
-          智能系统如何获得可靠的行动边界，工具如何保留人的判断，以及时间如何改变产品与知识的形态。
-        </p>
-      </section>
+      {
+        latest && (
+          <section class="block recent" aria-labelledby="recent">
+            <h2 id="recent">最近在写</h2>
+            <p>
+              <a href={`/blog/${latest.collection}/${latest.id}`}>{latest.data.title}</a>
+              <span class="when meta">
+                {formatDate(latest.data.pubDate)} · {TYPE_LABELS[latest.collection].zh}
+              </span>
+            </p>
+          </section>
+        )
+      }
 
       <section class="block" aria-labelledby="shape">
         <h2 id="shape">这里有什么</h2>
-        <p>
-          内容分成文章、笔记和实验：文章试着形成观点，笔记保留过程，实验用实现去校验直觉。
-          同一批文章还有另外两种读法 —— <a href="/graph">图谱</a>把它们按概念连起来，
-          <a href="/albums">相册</a>把它们按月收成册。
-        </p>
+        <dl class="shelf">
+          {
+            shelves.map((item) => (
+              <>
+                <dt>
+                  <a href={item.href}>{item.name}</a>
+                </dt>
+                <dd>{item.note}</dd>
+              </>
+            ))
+          }
+        </dl>
+        <p class="shelf-note">同一批文章还有另外两种读法 ——</p>
+        <dl class="shelf">
+          {
+            lenses.map((item) => (
+              <>
+                <dt>
+                  <a href={item.href}>{item.name}</a>
+                </dt>
+                <dd>{item.note}</dd>
+              </>
+            ))
+          }
+        </dl>
       </section>
 
-      <section class="block" aria-labelledby="method">
-        <h2 id="method">一种工作方式</h2>
-        {/* 三条并列的原则，不是流程 —— 所以不编号。之前的 01/02/03 是假的序列。 */}
-        <ul class="method">
-          <li>先观察真实问题，再决定抽象。</li>
-          <li>把边界写清楚，再让系统行动。</li>
-          <li>留下可以复用的工具与文字。</li>
-        </ul>
-      </section>
-
-      <section class="block" aria-labelledby="elsewhere">
-        <h2 id="elsewhere">去哪找我</h2>
-        <p>
-          写下来的东西在这里，写出来的在 <a
-            href="https://github.com/xiaomayi-ant"
-            rel="noreferrer"
-            target="_blank">GitHub<span class="out" aria-hidden="true">↗</span></a
-          >。
-        </p>
-      </section>
+      {/* 出口。不占一个小节，也不做成按钮 —— 站点是克制的，按钮会打架。
+          略重于正文的一行，读完自然撞上。 */}
+      <p class="exit">
+        <a href="https://github.com/xiaomayi-ant" rel="noreferrer" target="_blank">
+          到我的 GitHub 看看<span class="out" aria-hidden="true">↗</span>
+        </a>
+        <span class="exit-note meta">写下来的东西在这里，写出来的在那边。</span>
+      </p>
     </article>
 
     {/* 图与引言是一组：石头是"形"，静水是"适应"，正是下面那句话说的事。
@@ -84,7 +114,8 @@ import { ossImage } from '../lib/oss';
 </Base>
 
 <style>
-  /* 正文限在 --measure，图占右侧剩余宽度但不无限长大 */
+  /* 正文限在 --measure（中文一行超过三十几个字，眼睛回行容易串行），
+     图占右侧剩余宽度但不无限长大 */
   .about-grid {
     display: grid;
     grid-template-columns: minmax(0, var(--measure)) minmax(0, 22rem);
@@ -94,20 +125,24 @@ import { ossImage } from '../lib/oss';
     padding-top: var(--space-xl);
   }
 
+  /* 主标题是这一页真正的信息。原来的 H1 是「About」——
+     那是个归档标签，不是内容，让它退到上面那行眉标里去。 */
   h1 {
-    font-family: var(--font-display);
     margin-top: var(--space-sm);
-    font-size: var(--text-3xl);
+    font-family: var(--font-serif);
+    font-size: var(--text-2xl);
+    font-weight: 500;
+    line-height: 1.5;
+    text-wrap: balance;
   }
 
-  .lead {
-    margin-top: var(--space-lg);
-    font-family: var(--font-serif);
+  .sub {
+    margin-top: var(--space-md);
+    color: var(--color-ink-soft);
     font-size: var(--text-lg);
     line-height: 1.9;
   }
 
-  /* 分段只靠一条发丝线 —— 和全站其他地方分段的手法一致 */
   .block {
     margin-top: var(--space-xl);
     padding-top: var(--space-lg);
@@ -120,30 +155,55 @@ import { ossImage } from '../lib/oss';
     color: var(--color-ink);
   }
 
-  .block p {
+  /* 最近在写：自动取最新一篇，回答"这个站还活着吗" */
+  .recent p {
     margin-top: var(--space-sm);
-    color: var(--color-ink-soft);
-    line-height: 1.9;
+    font-family: var(--font-serif);
+    font-size: var(--text-lg);
+    line-height: 1.7;
   }
 
-  .method {
-    margin-top: var(--space-sm);
-    display: grid;
-    gap: var(--space-xs);
-    color: var(--color-ink-soft);
-    line-height: 1.9;
-  }
-
-  /* 悬挂的短横：说明这三条是并列的，而不是有先后 */
-  .method li {
-    padding-left: 1.1em;
-    text-indent: -1.1em;
-  }
-
-  .method li::before {
-    content: '—';
-    margin-right: 0.5em;
+  .when {
+    display: block;
+    margin-top: var(--space-2xs);
     color: var(--color-ink-faint);
+  }
+
+  /* 名称 + 说明的两列。散文把枚举的结构藏起来了，列表让它可扫、也让链接更像能点。 */
+  .shelf {
+    display: grid;
+    grid-template-columns: 4.5rem 1fr;
+    gap: var(--space-sm) var(--space-md);
+    margin-top: var(--space-md);
+    line-height: 1.8;
+  }
+
+  .shelf dt {
+    font-family: var(--font-serif);
+    color: var(--color-ink);
+  }
+
+  .shelf dd {
+    margin: 0;
+    color: var(--color-ink-soft);
+  }
+
+  .shelf-note {
+    margin-top: var(--space-lg);
+    color: var(--color-ink-faint);
+  }
+
+  .exit {
+    margin-top: var(--space-2xl);
+    font-family: var(--font-serif);
+    font-size: var(--text-lg);
+  }
+
+  .exit-note {
+    display: block;
+    margin-top: var(--space-2xs);
+    color: var(--color-ink-faint);
+    font-family: var(--font-sans);
   }
 
   .about a {
@@ -194,7 +254,6 @@ import { ossImage } from '../lib/oss';
     color: var(--color-ink-faint);
   }
 
-  /* 窄屏收成单栏：先读完文字，图与引言一起收尾 */
   @media (max-width: 60rem) {
     .about-grid {
       grid-template-columns: 1fr;
