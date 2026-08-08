@@ -464,12 +464,21 @@ test('the river owns the colour and type only pairs with it', async () => {
   assert.doesNotMatch(css, /rgba\(23,62,70/);
 });
 
-// 落款是全站的：Blog / About / Github 之前结尾是硬断的
-test('every page ends with the same signature', async () => {
-  for (const route of ['/', '/blog', '/about', '/projects', '/404']) {
+// 落款只属于首页。它是站点身份的一次性出现 —— 每一页都重复一遍反而稀释它。
+// 其余页面一律只留最底那条工具行（RSS + ©），页面结尾仍然是收住的，不是硬断的。
+test('the signature belongs to the home page alone', async () => {
+  const home = await readRoute('/');
+  assert.match(home, /<footer class="site-foot/, 'home should end with the signature');
+  assert.match(home, /class="foot-name"[^>]*>sumoer</, 'home should carry the name');
+  assert.match(home, /class="foot-tagline"[^>]*>Vision: world peace</);
+
+  for (const route of ['/blog', '/about', '/projects', '/404', '/graph', '/albums']) {
     const html = await readRoute(route);
-    assert.match(html, /<footer class="site-foot/, `${route} should end with the signature`);
-    assert.match(html, /class="foot-name"[^>]*>sumoer</, `${route} should carry the name`);
+    assert.doesNotMatch(html, /class="foot-name"/, `${route} must not repeat the signature`);
+    assert.doesNotMatch(html, /Vision: world peace/, `${route} must not repeat the tagline`);
+    // 但结尾仍要收住 —— 只是收在工具行上
+    assert.match(html, /data-footer="minimal"/, `${route} should still end with the utility row`);
+    assert.match(html, /href="\/rss\.xml"[^>]*>RSS</, `${route} keeps the RSS link`);
   }
 });
 

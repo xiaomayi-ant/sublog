@@ -13,7 +13,9 @@ interface Props {
   ogType?: 'website' | 'article';
   noIndex?: boolean;
   // 索引页用完整落款（默认）；文章页传 minimal，只留一条工具行收尾
-  footer?: 'full' | 'minimal';
+  // 落款（sumoer / Vision: world peace）只属于首页 —— 它是站点身份的一次性出现，
+  // 每一页都重复一遍反而稀释它。其余页面一律只留最底那条工具行。
+  footer?: 'signature' | 'minimal';
 }
 
 const {
@@ -22,7 +24,7 @@ const {
   image = '/og-default.svg',
   ogType = 'website',
   noIndex = false,
-  footer = 'full',
+  footer = 'minimal',
 } = Astro.props;
 
 const site = Astro.site ?? new URL('https://water.localhost');
@@ -60,6 +62,6 @@ const socialImage = new URL(image, site);
     <main id="content" class="site-shell">
       <slot />
     </main>
-    {footer === 'minimal' ? <SiteFooterMinimal /> : <SiteFooter />}
+    {footer === 'signature' ? <SiteFooter /> : <SiteFooterMinimal />}
   </body>
 </html>

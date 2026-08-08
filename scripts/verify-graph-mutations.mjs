@@ -72,15 +72,25 @@ try {
       },
     },
     {
-      // 索引页被降级成精简页脚 = 站点签名丢了
-      name: 'index-page-loses-signature',
+      // 首页丢了落款 = 站点签名唯一的出现点没了
+      name: 'home-loses-signature',
+      apply: async (distDir) => {
+        const page = path.join(distDir, 'index.html');
+        const html = await readFile(page, 'utf8');
+        const mutated = html.replace('data-footer="signature"', 'data-footer="minimal"');
+        if (mutated === html) throw new Error('signature mutation did not apply — 选择器过期了');
+        await writeFile(page, mutated);
+      },
+    },
+    {
+      // 落款跑回了别的页面 = 一次性的身份被摊薄成每页重复
+      name: 'signature-leaks-to-other-pages',
       apply: async (distDir) => {
         const page = path.join(distDir, 'blog/index.html');
         const html = await readFile(page, 'utf8');
-        await writeFile(
-          page,
-          html.replace('data-footer="signature"', 'data-footer="minimal"'),
-        );
+        const mutated = html.replace('data-footer="minimal"', 'data-footer="signature"');
+        if (mutated === html) throw new Error('leak mutation did not apply — 选择器过期了');
+        await writeFile(page, mutated);
       },
     },
     {

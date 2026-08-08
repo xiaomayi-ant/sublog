@@ -27,9 +27,6 @@ const empty = stats.articles === 0;
     !empty && (
       <div class="graph-wrap" data-graph-page>
         <ConceptGraph nodes={nodes} edges={edges} height={560} label="全站知识图谱" />
-        <p class="hint meta">
-          移动指针放大局部 · 点节点看它连着谁 · 再点一次打开 · 按住可以拖，松手回弹
-        </p>
       </div>
     )
   }
@@ -55,8 +52,4 @@ const empty = stats.articles === 0;
     margin-top: var(--space-xl);
   }
 
-  .hint {
-    margin-top: var(--space-sm);
-    color: var(--color-ink-faint);
-  }
 </style>

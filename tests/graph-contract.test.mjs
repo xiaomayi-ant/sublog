@@ -22,7 +22,8 @@ const ARTICLE_ROUTES = [
   '/blog/llm/llm-state-and-memory',
 ];
 
-const INDEX_ROUTES = ['/', '/blog', '/about', '/projects', '/404'];
+// 落款只在首页；其余页面（含文章页）一律只留最底那条工具行。
+const NON_HOME_ROUTES = ['/blog', '/about', '/projects', '/404'];
 
 async function readRoute(route) {
   const relativePath =
@@ -52,23 +53,17 @@ async function graphDataExists() {
   }
 }
 
-// 文章页是沉浸的：署名落款只属于索引页，文章页只留最底那条工具行
-test('article pages end with the minimal footer, index pages keep the full signature', async () => {
-  for (const route of ARTICLE_ROUTES) {
+// 署名落款只属于首页；其余每一页都收在最底那条工具行上
+test('only the home page carries the signature footer', async () => {
+  const home = await readRoute('/');
+  assert.match(home, /data-footer="signature"/, 'home should carry the signature footer');
+  assert.doesNotMatch(home, /data-footer="minimal"/, 'home must not degrade to minimal');
+
+  for (const route of [...ARTICLE_ROUTES, ...NON_HOME_ROUTES]) {
     const html = await readRoute(route);
-    assert.doesNotMatch(
-      html,
-      /data-footer="signature"/,
-      `${route} must not carry the full footer`,
-    );
+    assert.doesNotMatch(html, /data-footer="signature"/, `${route} must not carry the signature`);
     assert.match(html, /data-footer="minimal"/, `${route} should end with the minimal footer`);
     assert.match(html, /href="\/rss\.xml"[^>]*>RSS</, `${route} minimal footer keeps the RSS link`);
-  }
-
-  for (const route of INDEX_ROUTES) {
-    const html = await readRoute(route);
-    assert.match(html, /data-footer="signature"/, `${route} must keep the full footer`);
-    assert.doesNotMatch(html, /data-footer="minimal"/, `${route} must not degrade to minimal`);
   }
 });
 
