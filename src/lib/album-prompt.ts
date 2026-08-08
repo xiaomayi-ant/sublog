@@ -94,3 +94,34 @@ export function albumPrompt(album: keyof typeof MOTIFS): string {
   const { zh, en, motif } = MOTIFS[album];
   return [BASE, motif, LAYOUT, titleClause(zh, en), FORBIDDEN].join(' ');
 }
+
+/**
+ * 站内其他地方要配图时走这里，共用同一段 BASE 和禁止项 ——
+ * 这样新加的图和相册封面是一家人，而不是另一种风格闯进来。
+ * 一致性靠代码保证，不靠下次还记得。
+ *
+ * 与封面的两点不同：画幅按位置给，且**一个字都不烤** ——
+ * 配图旁边就是真排版的正文，图里再出现文字只会打架。
+ */
+export function sitePrompt(motif: string, ratio: string): string {
+  return [
+    BASE.replace('Album cover, 4:5 vertical,', `${ratio},`),
+    motif,
+    'No text, no lettering, no characters, no numbers, no watermark anywhere in the image.',
+    FORBIDDEN,
+  ].join(' ');
+}
+
+/**
+ * /about 的配图。意象来自这一页自己的结尾那句
+ * 「Be water, my friend. A reminder to stay adaptive without losing form.」——
+ * 被水磨圆的石头是"形"，静水是"适应"，所以它是那句话的视觉转译，不是装饰。
+ */
+export function aboutPrompt(): string {
+  return sitePrompt(
+    'Subject: one smooth river-worn grey stone resting beside a shallow ceramic dish of still water on paper; ' +
+      'the water surface perfectly calm, holding a single soft reflection; ' +
+      'a thin cobalt line scribed on the paper passing beneath both.',
+    'Editorial still life, 3:4 vertical',
+  );
+}

@@ -5,70 +5,92 @@
 // 之前这一页有五个视觉区块（大标题 / 一条斜的河纹装饰线 / 等权重两栏 / 外链行 / 引言），
 // 三处问题：01-02-03 在假装那三条原则有顺序（它们没有）；那条河纹不承载任何信息，
 // 而 site-direction 明确要求河流是分隔或连接版块的结构线、不是装饰背景；
-// 两栏不等长，右栏早早收尾，底下拖出一片死白 —— 是空，不是留白。
-// 现在收成单栏、窄行宽，自上而下读完，中间只有发丝线分段。
+// 两栏不等长，右栏早早收尾，底下拖出一片死白。
+//
+// 现在是「正文窄栏 + 右侧一张图」。正文限在 --measure 是为了可读性（中文一行
+// 超过三十几个字就容易串行），但窄栏靠左会让右边整片空读作"没做完" ——
+// 所以右边给一件真正的事做：那张图和它下面的引言是一组，图就是那句话的视觉转译。
 import Base from '../layouts/Base.astro';
 import Meta from '../components/Meta.astro';
+import { ossImage } from '../lib/oss';
 ---
 
 <Base title="About" description="关于 Sumoer，以及这个站在记录什么。">
-  <article class="about">
-    <header class="head">
-      <Meta items={['About', 'Sumoer']} />
-      <h1>About</h1>
-      <p class="lead">
-        这里是 Sumoer 的个人研究与构建空间。记录尚未定型的想法，也展示已经可以被使用的东西。
-      </p>
-    </header>
+  <div class="about-grid">
+    <article class="about">
+      <header>
+        <Meta items={['About', 'Sumoer']} />
+        <h1>About</h1>
+        <p class="lead">
+          这里是 Sumoer 的个人研究与构建空间。记录尚未定型的想法，也展示已经可以被使用的东西。
+        </p>
+      </header>
 
-    <section class="block" aria-labelledby="focus">
-      <h2 id="focus">正在关注</h2>
-      <p>
-        智能系统如何获得可靠的行动边界，工具如何保留人的判断，以及时间如何改变产品与知识的形态。
-      </p>
-    </section>
+      <section class="block" aria-labelledby="focus">
+        <h2 id="focus">正在关注</h2>
+        <p>
+          智能系统如何获得可靠的行动边界，工具如何保留人的判断，以及时间如何改变产品与知识的形态。
+        </p>
+      </section>
 
-    <section class="block" aria-labelledby="shape">
-      <h2 id="shape">这里有什么</h2>
-      <p>
-        内容分成文章、笔记和实验：文章试着形成观点，笔记保留过程，实验用实现去校验直觉。
-        同一批文章还有另外两种读法 —— <a href="/graph">图谱</a>把它们按概念连起来，
-        <a href="/albums">相册</a>把它们按月收成册。
-      </p>
-    </section>
+      <section class="block" aria-labelledby="shape">
+        <h2 id="shape">这里有什么</h2>
+        <p>
+          内容分成文章、笔记和实验：文章试着形成观点，笔记保留过程，实验用实现去校验直觉。
+          同一批文章还有另外两种读法 —— <a href="/graph">图谱</a>把它们按概念连起来，
+          <a href="/albums">相册</a>把它们按月收成册。
+        </p>
+      </section>
 
-    <section class="block" aria-labelledby="method">
-      <h2 id="method">一种工作方式</h2>
-      {/* 三条并列的原则，不是流程 —— 所以不编号。之前的 01/02/03 是假的序列。 */}
-      <ul class="method">
-        <li>先观察真实问题，再决定抽象。</li>
-        <li>把边界写清楚，再让系统行动。</li>
-        <li>留下可以复用的工具与文字。</li>
-      </ul>
-    </section>
+      <section class="block" aria-labelledby="method">
+        <h2 id="method">一种工作方式</h2>
+        {/* 三条并列的原则，不是流程 —— 所以不编号。之前的 01/02/03 是假的序列。 */}
+        <ul class="method">
+          <li>先观察真实问题，再决定抽象。</li>
+          <li>把边界写清楚，再让系统行动。</li>
+          <li>留下可以复用的工具与文字。</li>
+        </ul>
+      </section>
 
-    <section class="block" aria-labelledby="elsewhere">
-      <h2 id="elsewhere">去哪找我</h2>
-      <p>
-        写下来的东西在这里，写出来的在 <a
-          href="https://github.com/xiaomayi-ant"
-          rel="noreferrer"
-          target="_blank">GitHub<span class="out" aria-hidden="true">↗</span></a
-        >。
-      </p>
-    </section>
+      <section class="block" aria-labelledby="elsewhere">
+        <h2 id="elsewhere">去哪找我</h2>
+        <p>
+          写下来的东西在这里，写出来的在 <a
+            href="https://github.com/xiaomayi-ant"
+            rel="noreferrer"
+            target="_blank">GitHub<span class="out" aria-hidden="true">↗</span></a
+          >。
+        </p>
+      </section>
+    </article>
 
-    <p class="epigraph">
-      “Be water, my friend.”
-      <span class="epigraph-note meta">A reminder to stay adaptive without losing form.</span>
-    </p>
-  </article>
+    {/* 图与引言是一组：石头是"形"，静水是"适应"，正是下面那句话说的事。
+        图存在 OSS 上，构建产物不因为它变大。 */}
+    <figure class="figure">
+      <img
+        src={ossImage('site/about.jpg', 'full')}
+        alt="一块被水磨圆的灰色河石，旁边是一只盛着静水的浅陶碟，纸面上一条细蓝线从两者下方穿过"
+        width="1600"
+        height="2133"
+        loading="lazy"
+        decoding="async"
+      />
+      <figcaption>
+        “Be water, my friend.”
+        <span class="note meta">A reminder to stay adaptive without losing form.</span>
+      </figcaption>
+    </figure>
+  </div>
 </Base>
 
 <style>
-  /* 单栏、窄行宽。一页从上读到下，不需要读者决定先看左还是先看右。 */
-  .about {
-    max-width: var(--measure);
+  /* 正文限在 --measure，图占右侧剩余宽度但不无限长大 */
+  .about-grid {
+    display: grid;
+    grid-template-columns: minmax(0, var(--measure)) minmax(0, 22rem);
+    justify-content: space-between;
+    gap: clamp(2rem, 6vw, 5rem);
+    align-items: start;
     padding-top: var(--space-xl);
   }
 
@@ -144,19 +166,43 @@ import Meta from '../components/Meta.astro';
     vertical-align: 0.15em;
   }
 
-  /* 收尾的引言：去掉了那道黄色左边框 —— 它是全站独一份的样式。
-     现在只靠字体和位置把它和正文分开。 */
-  .epigraph {
-    margin-top: var(--space-2xl);
+  /* 图不加边框圆角：它的纸底和页面的纸底是同一种白，画个框反而把它从页面上剪下来 */
+  .figure {
+    margin: 0;
+  }
+
+  .figure img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 3 / 4;
+    object-fit: cover;
+    background: var(--color-line);
+  }
+
+  .figure figcaption {
+    margin-top: var(--space-md);
     font-family: var(--font-serif);
-    font-size: var(--text-xl);
-    line-height: 1.7;
+    font-size: var(--text-lg);
+    line-height: 1.6;
     color: var(--color-ink);
   }
 
-  .epigraph-note {
+  .note {
     display: block;
-    margin-top: var(--space-sm);
+    margin-top: var(--space-xs);
     color: var(--color-ink-faint);
+  }
+
+  /* 窄屏收成单栏：先读完文字，图与引言一起收尾 */
+  @media (max-width: 60rem) {
+    .about-grid {
+      grid-template-columns: 1fr;
+      gap: var(--space-2xl);
+    }
+
+    .figure {
+      max-width: 22rem;
+    }
   }
 </style>

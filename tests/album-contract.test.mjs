@@ -4,7 +4,7 @@
 // URL 拼错、指向私有前缀、忘了带压缩参数 —— 三种都能顺利构建、顺利部署，
 // 只有读者会看到一片灰。所以这里断言的重点不是"页面在不在"，是"URL 对不对"。
 import assert from 'node:assert/strict';
-import { access, readFile } from 'node:fs/promises';
+import { access, readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import test from 'node:test';
 
@@ -46,13 +46,25 @@ test('导航提供 Albums', async () => {
   }
 });
 
+// 扫全站，不是只扫相册页 —— 任何页面都可能用到 OSS 上的图（/about 就用了），
+// 而这条链路的错法全都是构建期无声的：拼错、指向私有前缀、忘带压缩参数。
+async function allHtmlFiles(dir = distRoot) {
+  const out = [];
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) out.push(...(await allHtmlFiles(full)));
+    else if (entry.name.endsWith('.html')) out.push(full);
+  }
+  return out;
+}
+
 test('每一个站外图片 URL 都落在公开前缀下，且带着压缩参数', async () => {
-  const pages = ['/albums'];
-  if (await pathExists('albums/harness')) pages.push('/albums/harness');
+  const files = await allHtmlFiles();
 
   let seen = 0;
-  for (const route of pages) {
-    const html = await readRoute(route);
+  for (const file of files) {
+    const route = path.relative(distRoot, file);
+    const html = await readFile(file, 'utf8');
     for (const url of ossUrls(html)) {
       seen += 1;
       // bucket policy 只对 public/ 开了匿名读；拼到 private/ 线上就是一片 403
@@ -67,7 +79,7 @@ test('每一个站外图片 URL 都落在公开前缀下，且带着压缩参数
       );
     }
   }
-  assert.ok(seen > 0, '至少应当有一个站外图片 URL —— 一个都没有说明相册没渲染出来');
+  assert.ok(seen > 0, '至少应当有一个站外图片 URL —— 一个都没有说明图片没渲染出来');
 });
 
 test('已出期的相册有详情页，并摊开它的来源', async () => {
