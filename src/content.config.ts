@@ -52,5 +52,36 @@ const projects = defineCollection({
   }),
 });
 
+// 相册：四个写作方向各一本，按月出期。
+//
+// 这里只存元数据，图片本身在 OSS 上 —— 仓库和构建产物都不因为图片变大。
+// 每一期都保留生成用的 prompt 和模型名：图像生成不可复现，同一条 prompt 跑两次
+// 结果不同，所以「这一期封面是怎么来的」只能靠存档回答，存不下来就等于没有版本可言。
+// 这一条与 culture-fragment-poster-engine 的「来源追踪」要求是同一件事。
+const albums = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/albums' }),
+  schema: z.object({
+    // 对应写作 collection 的名字：harness / llm / eval / notes
+    album: z.enum(['harness', 'llm', 'eval', 'notes']),
+    issues: z
+      .array(
+        z.object({
+          month: z.string().regex(/^\d{4}-\d{2}$/, '期号用 YYYY-MM'),
+          // OSS key，相对 aigc/images/（公开读的派生图前缀）
+          cover: z.string(),
+          // 原图 key，相对 aigc/originals/（私有）。留着是为了以后能重出档位。
+          original: z.string().optional(),
+          // 生成这张封面用的完整 prompt 与模型，缺一不可 —— 见上面的理由
+          prompt: z.string(),
+          model: z.string(),
+          generatedAt: z.coerce.date(),
+          // 这一期收录了哪些文章，形如 harness/agent-action-boundaries
+          entries: z.array(z.string()).default([]),
+        }),
+      )
+      .default([]),
+  }),
+});
+
 // 目录名 eval 与 JS 保留字冲突，变量叫 evals，对外的 collection 名仍是 eval。
-export const collections = { harness, llm, eval: evals, notes, projects };
+export const collections = { harness, llm, eval: evals, notes, projects, albums };
