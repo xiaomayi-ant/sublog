@@ -1,0 +1,246 @@
+---
+// /albums/[album] — 一本相册的全部期号，按时间倒序。
+//
+// 每一期除了封面，还摊开它的来源：收录了哪些文章、用哪个模型、哪条 prompt 生成的。
+// 图像生成不可复现，同一条 prompt 跑两次结果不同 —— 不把这些摆出来，
+// "版本"就只是一个日期，说明不了这张封面是怎么来的。
+import Base from '../../layouts/Base.astro';
+import Meta from '../../components/Meta.astro';
+import { getCollection } from 'astro:content';
+import {
+  TYPE_LABELS,
+  formatDate,
+  getAllResearch,
+  type ResearchCollection,
+  type ResearchEntry,
+} from '../../lib/content';
+import { ossImage } from '../../lib/oss';
+
+export async function getStaticPaths() {
+  const [albums, all] = await Promise.all([getCollection('albums'), getAllResearch()]);
+  const byId = new Map(all.map((entry) => [`${entry.collection}/${entry.id}`, entry]));
+
+  return albums
+    .filter((entry) => entry.data.issues.length > 0)
+    .map((entry) => {
+      const issues = [...entry.data.issues]
+        .sort((a, b) => b.month.localeCompare(a.month))
+        .map((issue) => ({
+          ...issue,
+          articles: issue.entries
+            .map((id) => byId.get(id))
+            .filter((article): article is ResearchEntry => Boolean(article)),
+        }));
+      return {
+        params: { album: entry.data.album },
+        props: { album: entry.data.album, issues, body: entry.body ?? '' },
+      };
+    });
+}
+
+interface Props {
+  album: ResearchCollection;
+  issues: {
+    month: string;
+    cover: string;
+    original?: string;
+    prompt: string;
+    model: string;
+    generatedAt: Date;
+    articles: ResearchEntry[];
+  }[];
+  body: string;
+}
+
+const { album, issues, body } = Astro.props;
+const label = TYPE_LABELS[album];
+---
+
+<Base
+  title={`${label.zh}相册`}
+  description={`${label.zh}方向的相册，按月出期。`}
+  image={ossImage(issues[0].cover, 'og')}
+>
+  <header class="page-head">
+    <Meta items={['Album', label.en]} />
+    <h1>{label.zh}</h1>
+    {body.trim() && <p class="lede">{body.trim().split('\n\n')[0]}</p>}
+  </header>
+
+  <div class="issues">
+    {
+      issues.map((issue) => (
+        <article class="issue">
+          <img
+            class="cover"
+            src={ossImage(issue.cover, 'full')}
+            alt={`${label.zh}相册 ${issue.month} 期的封面`}
+            width="1600"
+            height="2000"
+            loading="lazy"
+            decoding="async"
+          />
+
+          <div class="issue-body">
+            <p class="issue-month">{issue.month}</p>
+
+            {issue.articles.length > 0 && (
+              <ul class="entry-list">
+                {issue.articles.map((article) => (
+                  <li class="entry">
+                    <span class="entry-date meta">{formatDate(article.data.pubDate)}</span>
+                    <a class="entry-title" href={`/blog/${article.collection}/${article.id}`}>
+                      {article.data.title}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {/* 来源追踪：这张封面是怎么来的。生成不可复现，只能靠存档回答。 */}
+            <details class="trace">
+              <summary class="meta">封面来源</summary>
+              <p class="trace-meta meta">
+                {issue.model} · {formatDate(issue.generatedAt)}
+              </p>
+              <pre class="trace-prompt">{issue.prompt}</pre>
+            </details>
+          </div>
+        </article>
+      ))
+    }
+  </div>
+
+  <p class="back-wrap"><a class="back meta" href="/albums">← 返回相册</a></p>
+</Base>
+
+<style>
+  .page-head {
+    padding-top: var(--space-xl);
+    max-width: var(--measure);
+  }
+
+  h1 {
+    font-size: var(--text-3xl);
+    margin-top: var(--space-sm);
+  }
+
+  .lede {
+    margin-top: var(--space-md);
+    color: var(--color-ink-soft);
+  }
+
+  .issues {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3xl);
+    margin-top: var(--space-2xl);
+  }
+
+  /* 封面在左、说明在右；封面本身就是一张有边界的图，不加框 */
+  .issue {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--space-xl);
+    align-items: start;
+  }
+
+  .cover {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+    background: var(--color-line);
+  }
+
+  .issue-month {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    letter-spacing: 0.12em;
+    color: var(--color-ink-faint);
+  }
+
+  .entry-list {
+    margin-top: var(--space-lg);
+  }
+
+  .entry {
+    display: grid;
+    grid-template-columns: 6.5rem 1fr;
+    align-items: baseline;
+    gap: var(--space-md);
+    padding-block: var(--space-sm);
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .entry-title {
+    font-family: var(--font-serif);
+    color: var(--color-ink);
+    text-decoration: none;
+    justify-self: start;
+    background-image: linear-gradient(var(--color-ember), var(--color-ember));
+    background-repeat: no-repeat;
+    background-size: 0% 1px;
+    background-position: 0 100%;
+    transition: background-size var(--duration-slow) var(--ease-out);
+  }
+
+  .entry-title:hover {
+    background-size: 100% 1px;
+  }
+
+  .trace {
+    margin-top: var(--space-xl);
+  }
+
+  .trace summary {
+    color: var(--color-ink-faint);
+    cursor: pointer;
+  }
+
+  .trace summary:hover {
+    color: var(--color-ink);
+  }
+
+  .trace-meta {
+    margin-top: var(--space-sm);
+    color: var(--color-ink-faint);
+  }
+
+  .trace-prompt {
+    margin-top: var(--space-sm);
+    padding: var(--space-md);
+    overflow-x: auto;
+    border-left: 2px solid var(--color-line);
+    color: var(--color-ink-soft);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    line-height: 1.7;
+    white-space: pre-wrap;
+  }
+
+  .back-wrap {
+    margin-top: var(--space-2xl);
+  }
+
+  .back {
+    text-decoration: none;
+  }
+
+  .back:hover {
+    color: var(--color-ember);
+  }
+
+  @media (max-width: 46rem) {
+    .issue {
+      grid-template-columns: 1fr;
+      gap: var(--space-lg);
+    }
+
+    .entry {
+      grid-template-columns: 1fr;
+      gap: var(--space-2xs);
+    }
+  }
+</style>

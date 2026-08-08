@@ -1,0 +1,146 @@
+---
+// /albums — 四本相册的入口。每本显示最新一期的封面。
+// 还没出过期的相册不渲染封面位，只留一行说明 —— 空占位摆久了读作"没人管"。
+import Base from '../../layouts/Base.astro';
+import Meta from '../../components/Meta.astro';
+import { getCollection } from 'astro:content';
+import { TYPE_LABELS, type ResearchCollection } from '../../lib/content';
+import { ossImage } from '../../lib/oss';
+
+const entries = await getCollection('albums');
+const albums = entries.map((entry) => {
+  // 期号倒序，最新的一期在前
+  const issues = [...entry.data.issues].sort((a, b) => b.month.localeCompare(a.month));
+  return { album: entry.data.album, issues, latest: issues[0] };
+});
+
+// 已出的进网格，未出的收成底下一行。
+// 让未出的也占一个格位会很别扭：它比封面卡矮一大截，网格立刻散掉；
+// 而且它本来就不是一本相册，是"还没出"这件事，不该拿同等格位去说。
+const published = albums.filter((entry) => entry.latest);
+const pending = albums.filter((entry) => !entry.latest);
+---
+
+<Base title="相册" description="四个写作方向各一本相册，按月出期。">
+  <header class="page-head">
+    <Meta items={['Albums']} />
+    <h1>相册</h1>
+    <p class="lede">
+      {
+        published.length === 0
+          ? '还没有出过期。'
+          : `四个方向各一本，按月出期。已出 ${published.length} 本。`
+      }
+    </p>
+  </header>
+
+  {
+    published.length > 0 && (
+      <ul class="grid">
+        {published.map(({ album, issues, latest }) => (
+          <li>
+            <a class="card-link" href={`/albums/${album}`}>
+              <img
+                class="cover"
+                src={ossImage(latest.cover, 'thumb')}
+                alt={`${TYPE_LABELS[album as ResearchCollection].zh}相册 ${latest.month} 期的封面`}
+                width="640"
+                height="800"
+                loading="lazy"
+                decoding="async"
+              />
+              <p class="card-name">
+                {TYPE_LABELS[album as ResearchCollection].zh}
+                <span class="card-en meta">{TYPE_LABELS[album as ResearchCollection].en}</span>
+              </p>
+              <p class="card-meta meta">
+                {latest.month} · 共 {issues.length} 期
+              </p>
+            </a>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+
+  {
+    pending.length > 0 && (
+      <p class="pending meta">
+        尚未出期：
+        {pending
+          .map(({ album }) => TYPE_LABELS[album as ResearchCollection].zh)
+          .join('、')}
+      </p>
+    )
+  }
+</Base>
+
+<style>
+  .page-head {
+    padding-top: var(--space-xl);
+    max-width: var(--measure);
+  }
+
+  h1 {
+    font-size: var(--text-3xl);
+    margin-top: var(--space-sm);
+  }
+
+  .lede {
+    margin-top: var(--space-md);
+    color: var(--color-ink-soft);
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+    gap: var(--space-xl) var(--space-lg);
+    margin-top: var(--space-2xl);
+  }
+
+  .card-link {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  /* 封面自己就是一张有边界的图，不再加边框或圆角 —— 图的纸底和页面的纸底是同一种白 */
+  .cover {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+    background: var(--color-line);
+    transition: opacity var(--duration-fast) var(--ease-out);
+  }
+
+  .card-link:hover .cover {
+    opacity: 0.88;
+  }
+
+  .card-name {
+    margin-top: var(--space-md);
+    font-family: var(--font-serif);
+    font-size: var(--text-lg);
+    color: var(--color-ink);
+  }
+
+  .card-en {
+    margin-left: var(--space-xs);
+    color: var(--color-ink-faint);
+  }
+
+  .card-meta {
+    margin-top: var(--space-2xs);
+    color: var(--color-ink-faint);
+  }
+
+  /* 未出期的收在这一行，不占格位 */
+  .pending {
+    margin-top: var(--space-2xl);
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--color-line);
+    color: var(--color-ink-faint);
+  }
+</style>

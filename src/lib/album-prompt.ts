@@ -23,11 +23,14 @@ const LAYOUT = [
   'the upper-left quadrant stays empty paper and carries the title.',
 ].join(' ');
 
-/** 禁止项。图像模型很吃这一段，缺了就容易滑回旅游海报和廉价拼贴。 */
+/**
+ * 禁止项。图像模型很吃这一段，缺了就容易滑回旅游海报和廉价拼贴。
+ * 但整条 prompt 有 1200 字符的上限（skill 的规定，超了模型会开始丢前面的约束），
+ * 所以这里只留最容易滑过去的那几项，不做穷举。
+ */
 const FORBIDDEN = [
-  'Avoid: dark background, collage, gradients, gold foil, neon, glow, 3D render look,',
-  'decorative patterns, full-surface ornament, centered title stack, stock-photo people,',
-  'lens flare, heavy vignette, saturated colour fields.',
+  'Avoid: dark background, collage, gradients, gold foil, glow, 3D render look,',
+  'full-surface ornament, centered title stack, stock-photo people, saturated colour fields.',
 ].join(' ');
 
 /**
