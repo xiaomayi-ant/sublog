@@ -129,15 +129,30 @@ test('every public HTML page exposes canonical and social metadata', async () =>
   }
 });
 
+// About 锁的是职责，不是措辞。文案会一直改 —— 把某一句话钉进契约，
+// 结果是每改一次文案就红一次，然后大家开始改契约去迁就页面，契约就废了。
+// 这一页真正要守住的是四件事：标题不是"About"这个归档标签、
+// 有一条自动更新的近况、有通往两种读法的入口、有一个站外出口。
 test('About and 404 are complete user-facing pages', async () => {
   const about = await readRoute('/about');
-  assert.match(about, /个人研究与构建空间/);
-  assert.match(about, /Be water, my friend\./);
   assert.doesNotMatch(about, /Phase 5|待建|placeholder/i);
 
-  // 页脚三栏撤掉后，站上唯一的站外去处落在这里；外链要带 rel 与角标
+  // 标题必须是内容，不能退回归档标签 —— 那样这一页开口就在自报文件名
+  const h1 = about.match(/<h1[^>]*>([\s\S]*?)<\/h1>/)?.[1]?.replace(/<[^>]+>/g, '').trim();
+  assert.ok(h1 && h1.length > 4, 'About 应当有一句真正的标题');
+  assert.notEqual(h1, 'About', 'H1 不能是「About」这个归档标签');
+
+  // 近况自动取自最新文章：它回答"这个站还活着吗"，而这件事只有这一页会被问到。
+  // 断言它链到真实文章，而不是断言标题内容 —— 后者每发一篇就会变。
+  assert.match(about, /href="\/blog\/[a-z]+\/[a-z0-9-]+"/, 'About 应当链到真实文章');
+  assert.match(about, /href="\/blog"/, 'About 应当有回到 Blog 的出口');
+
+  // 两种读法的入口 —— About 承担导航，这是它存在的主要理由之一
+  assert.match(about, /href="\/graph"/, 'About 应当能去图谱');
+  assert.match(about, /href="\/albums"/, 'About 应当能去相册');
+
+  // 站上唯一的站外去处落在这里；外链要带 rel
   assert.match(about, /href="https:\/\/github\.com\/xiaomayi-ant"[\s\S]{0,80}rel="noreferrer"/);
-  assert.match(about, /class="out"/);
 
   const notFound = await readRoute('/404');
   assert.match(notFound, /没有抵达这里/);
