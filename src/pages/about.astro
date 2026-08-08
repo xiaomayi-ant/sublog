@@ -123,7 +123,6 @@ const badgeGroups = [
     grid-template-columns: minmax(0, var(--measure)) minmax(0, 22rem);
     justify-content: space-between;
     gap: clamp(2rem, 6vw, 5rem);
-    align-items: start;
     padding-top: var(--space-xl);
   }
 
@@ -235,13 +234,22 @@ const badgeGroups = [
     color: var(--color-ink);
   }
 
+  /* 出口靠"推到底"来对齐，不靠固定间距去凑：它的位置本来由图的高度决定，
+     和左栏落在哪儿毫无关系，对齐纯属碰运气。让右栏拉伸到与左栏同高，
+     再把出口推到底，它就和左栏最后一行（读法）收在同一条线上。 */
   .side {
-    display: grid;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
     gap: var(--space-2xl);
   }
 
+  /* 出口顶上也压一条发丝线 —— 左栏用它分段，右栏跟着用同一种手段，
+     两栏才读成一套版式，而不是一栏有结构、一栏在飘。 */
   .exit {
     margin: 0;
+    padding-top: var(--space-lg);
+    border-top: 1px solid var(--color-line);
     font-family: var(--font-serif);
     font-size: var(--text-lg);
   }
@@ -303,8 +311,16 @@ const badgeGroups = [
       gap: var(--space-2xl);
     }
 
+    .side {
+      display: block;
+    }
+
     .figure {
       max-width: 22rem;
+    }
+
+    .exit {
+      margin-top: var(--space-xl);
     }
   }
 </style>
