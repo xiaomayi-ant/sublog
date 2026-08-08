@@ -85,30 +85,35 @@ const badgeGroups = [
         }
       </section>
 
-      {/* 出口。不占一个小节，也不做成按钮 —— 站点是克制的，按钮会打架。 */}
+    </article>
+
+    <aside class="side">
+      {/* 图与引言是一组：石头是"形"，静水是"适应"，正是下面那句话说的事。
+          图存在 OSS 上，构建产物不因为它变大。 */}
+      <figure class="figure">
+        <img
+          src={ossImage('site/about.jpg', 'full')}
+          alt="一块被水磨圆的灰色河石，旁边是一只盛着静水的浅陶碟，纸面上一条细蓝线从两者下方穿过"
+          width="1600"
+          height="2133"
+          loading="lazy"
+          decoding="async"
+        />
+        <figcaption>
+          “Be water, my friend.”
+          <span class="note">A reminder to stay adaptive without losing form.</span>
+        </figcaption>
+      </figure>
+
+      {/* 出口放在图下面，与左栏的徽章那几行齐平：右栏原本到图注就结束了，
+          底下空一大块；把唯一的站外去处放进来，两栏的长度也就接上了。
+          不做成按钮 —— 站点是克制的，按钮会打架。 */}
       <p class="exit">
         <a href="https://github.com/xiaomayi-ant" rel="noreferrer" target="_blank">
           到我的 GitHub 看看<span class="arrow" aria-hidden="true">↗</span>
         </a>
       </p>
-    </article>
-
-    {/* 图与引言是一组：石头是"形"，静水是"适应"，正是下面那句话说的事。
-        图存在 OSS 上，构建产物不因为它变大。 */}
-    <figure class="figure">
-      <img
-        src={ossImage('site/about.jpg', 'full')}
-        alt="一块被水磨圆的灰色河石，旁边是一只盛着静水的浅陶碟，纸面上一条细蓝线从两者下方穿过"
-        width="1600"
-        height="2133"
-        loading="lazy"
-        decoding="async"
-      />
-      <figcaption>
-        “Be water, my friend.”
-        <span class="note">A reminder to stay adaptive without losing form.</span>
-      </figcaption>
-    </figure>
+    </aside>
   </div>
 </Base>
 
@@ -230,21 +235,25 @@ const badgeGroups = [
     color: var(--color-ink);
   }
 
-  /* 页脚自己带 clamp(4rem, 10vw, 7rem) 的上边距，这里再给 2xl 就把出口
-     悬在两段空白中间了。收到 xl，让它贴着上一节收尾。 */
+  .side {
+    display: grid;
+    gap: var(--space-2xl);
+  }
+
   .exit {
-    margin-top: var(--space-xl);
+    margin: 0;
     font-family: var(--font-serif);
     font-size: var(--text-lg);
   }
 
-  /* 链接统一：正文里的链接走浮光下划线；徽章自己有边线，不参与 */
-  .about a {
+  /* 链接统一：正文里的链接走浮光下划线；徽章自己有边线，不参与。
+     挂在整个网格上，因为出口现在在右栏。 */
+  .about-grid a {
     color: var(--color-ink);
     text-decoration: none;
   }
 
-  .about a:not(.badge) {
+  .about-grid a:not(.badge) {
     background-image: linear-gradient(var(--color-river), var(--color-river));
     background-repeat: no-repeat;
     background-size: 0% 1px;
@@ -252,7 +261,7 @@ const badgeGroups = [
     transition: background-size var(--duration-slow) var(--ease-out);
   }
 
-  .about a:not(.badge):hover {
+  .about-grid a:not(.badge):hover {
     background-size: 100% 1px;
   }
 
