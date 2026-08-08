@@ -14,7 +14,10 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # 构建与测试约 2 分钟，末尾的 verify 最多等 15 分钟，留出余量。
+    # 这个值必须大于 verify 的窗口，否则 job 会先被杀掉，
+    # 表现成和"线上没切换"一模一样的红色，但原因完全不同。
+    timeout-minutes: 25
     # 只需要建 Release。不需要、也拿不到任何生产机凭据。
     permissions:
       contents: write
@@ -100,9 +103,13 @@ jobs:
           SITE_URL: ${{ secrets.SITE_URL }}
         run: |
           set -eu
-          # 轮询间隔 2 分钟，给 6 分钟窗口 —— 够容下一次被 API 限流静默跳过的周期
+          # 窗口 15 分钟，不是 6 分钟。实测「发布 → 线上切换」的耗时方差很大：
+          # 1.5 / 2 / 3 / 8.6 分钟都出现过 —— 阿里云到 GitHub 这条路大约 30KB/s，
+          # 400KB 的产物单次要十几秒，且经常整次失败，靠 2 分钟一轮的重试熬过去。
+          # 6 分钟正好卡在方差中间，会把成功的部署报成红色；假红比不报警更糟，
+          # 因为它会让人开始无视这个信号。
           live=''
-          for attempt in $(seq 1 36); do
+          for attempt in $(seq 1 90); do
             live=$(curl -sf --max-time 10 "$SITE_URL/release.json" | jq -r '.releaseId // empty' || true)
             if [ "$live" = "$RELEASE" ]; then
               echo "线上已切换到 $RELEASE（第 $attempt 次探测，约 $((attempt * 10)) 秒）"
@@ -110,6 +117,6 @@ jobs:
             fi
             sleep 10
           done
-          echo "::error::线上 6 分钟内没有切换到 $RELEASE（当前 ${live:-无法读取}）"
+          echo "::error::线上 15 分钟内没有切换到 $RELEASE（当前 ${live:-无法读取}）"
           echo "排查顺序：/srv/water/deploy.log → systemctl status water-pull.service → /srv/water/DEPLOY_DISABLED 是否存在"
           exit 1
