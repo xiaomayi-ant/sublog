@@ -96,14 +96,34 @@ test('the fluid glyph asks for no WebGL extension', async () => {
   assert.doesNotMatch(source, /dFdx|dFdy/);
 });
 
-test('the fluid glyph reuses the site water palette instead of inventing colours', async () => {
-  const source = await glyphAsset();
+test('the fluid glyph takes its colours from the river, not a copy of them', async () => {
+  // 字形吃的是 riverRenderer 导出的 WASH_LADDER 本身，不是另抄一份色值。
+  // 河改色，这边跟着走 —— 不会再出现"两条色阶各漂各的"那种事
+  // （河与 tokens.css 就因为靠注释同步而漂过，见 docs/river-math.md 第 5.4 节）。
+  //
+  // 验收方式：404 的脚本必须 import 河渲染器那个 chunk，而色阶的字面值
+  // 只能出现在那个 chunk 里、不能被复制进 404 自己的产物。
+  const assetsRoot = path.join(distRoot, '_astro');
+  const files = await readdir(assetsRoot);
 
-  // 颜色从设计 token 读，不在着色器里写死 —— 否则又多一处会自己漂的色板，
-  // 河那边已经因为这个吃过一次亏（见 docs/river-math.md 第 5.4 节）。
-  for (const token of ['--water-100', '--water-300', '--water-500']) {
-    assert.match(source, new RegExp(token), `期望字形从 ${token} 取色`);
+  const ladderSource = await readFile(path.join(projectRoot, 'src/lib/riverRenderer.mjs'), 'utf8');
+  const ladder = [...ladderSource.matchAll(/rgb:\s*Object\.freeze\(\[(\d+),\s*(\d+),\s*(\d+)\]\)/g)]
+    .slice(0, 3)
+    .map(([, r, g, b]) => `${r},${g},${b}`);
+  assert.equal(ladder.length, 3, '没能从 riverRenderer 解析出色阶前三档');
+
+  const owners = [];
+  for (const file of files.filter((name) => name.endsWith('.js'))) {
+    const source = await readFile(path.join(assetsRoot, file), 'utf8');
+    if (ladder.every((triplet) => source.includes(triplet))) owners.push(file);
   }
+  assert.equal(owners.length, 1, `色阶字面值应当只存在一份，实际出现在 ${owners.length} 个产物里`);
+  assert.match(owners[0], /riverRenderer/, '色阶应当归河渲染器那个 chunk 所有');
+
+  const glyphFile = files.find((name) => name.startsWith('404.astro'));
+  assert.ok(glyphFile, '找不到 404 的脚本产物');
+  const glyphSource = await readFile(path.join(assetsRoot, glyphFile), 'utf8');
+  assert.match(glyphSource, /riverRenderer/, '404 的脚本应当引用河渲染器那个 chunk');
 });
 
 test('the glyph mask clips the fluid to the letterforms', async () => {

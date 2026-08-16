@@ -112,16 +112,20 @@ function compile(gl, type, source) {
   return shader;
 }
 
-function hexToUnit(hex) {
-  const value = hex.trim().replace('#', '');
-  return [0, 2, 4].map((offset) => parseInt(value.slice(offset, offset + 2), 16) / 255);
+/** 0–255 的三元组转成着色器要的 0–1。色阶直接吃 riverRenderer 的 WASH_LADDER 格式。 */
+function toUnit(rgb) {
+  return [rgb[0] / 255, rgb[1] / 255, rgb[2] / 255];
 }
 
 /**
  * @param {{
  *   canvas: HTMLCanvasElement,
  *   source: HTMLElement,
- *   palette: { shallow: string, mid: string, deep: string },
+ *   palette: {
+ *     shallow: readonly number[],
+ *     mid: readonly number[],
+ *     deep: readonly number[],
+ *   },
  *   sheen?: number,
  * }} configuration
  * @returns {{ destroy(): void, ok: boolean } | null}
@@ -209,9 +213,9 @@ export function createFluidGlyph(configuration) {
     gl.uniform2f(uniforms.u_resolution, buffer.width, buffer.height);
     gl.uniform1f(uniforms.u_time, time);
     gl.uniform1f(uniforms.u_sheen, sheen);
-    gl.uniform3fv(uniforms.u_shallow, hexToUnit(palette.shallow));
-    gl.uniform3fv(uniforms.u_mid, hexToUnit(palette.mid));
-    gl.uniform3fv(uniforms.u_deep, hexToUnit(palette.deep));
+    gl.uniform3fv(uniforms.u_shallow, toUnit(palette.shallow));
+    gl.uniform3fv(uniforms.u_mid, toUnit(palette.mid));
+    gl.uniform3fv(uniforms.u_deep, toUnit(palette.deep));
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
 
