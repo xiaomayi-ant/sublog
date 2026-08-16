@@ -1,0 +1,330 @@
+---
+// 实验页：标题「Be water, my friend.」的字色与 water 的材质。noindex。
+// 每一行都是完整的句子 —— 单看一个词判断不了整句的色彩平衡。
+import Base from '../../layouts/Base.astro';
+
+const WATER_TREATMENTS = [
+  {
+    id: 'bevel',
+    name: 'A · 现状：三层斜面 + 流体',
+    note: '左上硬边白高光 + 右下硬边暗边 = 浮雕。字里已有流体，斜面是第二套材质。',
+  },
+  {
+    id: 'contour',
+    name: 'B · 只留一道极细轮廓',
+    note: '流体给材质，轮廓只负责把字从白纸上分出来。没有方向性打光。',
+  },
+  {
+    id: 'lift',
+    name: 'C · 轮廓 + 极淡的下方投影',
+    note: '让字轻轻浮起，但不发亮、不打斜面。',
+  },
+  {
+    id: 'bare',
+    name: 'D · 什么都不加，纯流体',
+    note: '最干净。风险是浅色处字形边界会散。',
+  },
+];
+
+const REVEAL_COLORS = [
+  { id: 'mist', name: '雾赭 #c3b6b1', from: '#c3b6b1', note: '当前默认。同色相最淡一档，糊团很轻。' },
+  { id: 'ink', name: '原始深墨 #4c3630', from: '#4c3630', note: '最初的样子 —— 糊团最重，也是你说"效果其实很好"的那一个。' },
+  { id: 'water', name: '水色 --water-500', from: '#4ab8ca', note: '字从水色的雾里浮出来，落定成墨。和站点主题同源。' },
+  { id: 'deep', name: '深水 --water-700', from: '#26788f', note: '比水色重，糊团更实，但仍是冷色。' },
+  { id: 'ember', name: '暖赭 --color-ember', from: '#a8632c', note: '站点唯一的暖强调色。糊团带暖，落定收回墨。' },
+  { id: 'sun', name: '阳黄 --color-sun', from: '#f5c85b', note: '最轻最亮，糊团几乎只是一层光。' },
+];
+
+const INK_OPTIONS = [
+  { id: 'ink', name: '1 · 现状 --color-ink #4c3630', note: '赭墨。Lab 色相 41°，距水的互补方向 5°。11.18:1。' },
+  { id: 'soft', name: '2 · 统一到 0.86 alpha', note: '现在只有「my friend.」是这一档，Be 和逗号是满值。统一之后整句更匀。' },
+  { id: 'warm', name: '3 · 更暖更浅 #6b5048', note: '同色相往上提一档，减重但保住暖意。' },
+  { id: 'cold', name: '4 · 冷墨 --water-900 #13303a', note: 'tokens.css 明确否决过：彩度压下去之后暖意消失，只剩"更黑"。放这里做对照。' },
+];
+---
+
+<Base title="标题实验" description="标题的字色与 water 的材质。" noIndex>
+  <article class="title-lab">
+    <header>
+      <p class="kicker">LAB · TITLE</p>
+      <h1>「Be water, my friend.」的色彩与材质</h1>
+      <p class="lede">
+        两个轴各自独立：左边选 <strong>water 的材质</strong>，右边选<strong>其余字的墨色</strong>。
+        每一行都是完整的句子 —— 单看一个词判断不了整句的平衡。
+      </p>
+    </header>
+
+    <section class="axis">
+      <h2>water 的材质</h2>
+      {
+        WATER_TREATMENTS.map((treatment) => (
+          <div class="row">
+            <p class="tag">{treatment.name}</p>
+            <p class="note">{treatment.note}</p>
+            <p class="sentence" data-water={treatment.id} data-ink="ink">
+              Be <span class="w" data-text="water">water<canvas></canvas></span>, my friend.
+            </p>
+          </div>
+        ))
+      }
+    </section>
+
+    <section class="axis">
+      <h2>浮现时那团模糊的颜色</h2>
+      <p class="note axis-note">
+        真正制造"变化感"的是 blur 把字糊成一团、再收拢成字形的过程 ——
+        单独的逐字淡入几乎读不出来。所以模糊是这个动效的主体。
+        下面每一行只改<strong>起点色</strong>，模糊量与时长完全相同。
+        点任意一行可重播。
+      </p>
+      {
+        REVEAL_COLORS.map((colour) => (
+          <div class="row reveal-row" data-reveal={colour.id} style={`--intro-reveal-from: ${colour.from}`}>
+            <p class="tag">{colour.name}</p>
+            <p class="note">{colour.note}</p>
+            <p class="sentence reveal-sentence" data-water="bevel" data-ink="ink">
+              <span class="l" style="--letter-delay: 0ms">m</span><span
+                class="l"
+                style="--letter-delay: 120ms">y</span>&nbsp;<span
+                class="l"
+                style="--letter-delay: 260ms">f</span><span class="l" style="--letter-delay: 380ms">r</span><span
+                class="l"
+                style="--letter-delay: 500ms">i</span><span class="l" style="--letter-delay: 620ms">e</span><span
+                class="l"
+                style="--letter-delay: 740ms">n</span><span class="l" style="--letter-delay: 860ms">d</span><span
+                class="l"
+                style="--letter-delay: 980ms">.</span>
+            </p>
+          </div>
+        ))
+      }
+    </section>
+
+    <section class="axis">
+      <h2>其余字的墨色</h2>
+      {
+        INK_OPTIONS.map((option) => (
+          <div class="row">
+            <p class="tag">{option.name}</p>
+            <p class="note">{option.note}</p>
+            <p class="sentence" data-water="contour" data-ink={option.id}>
+              Be <span class="w" data-text="water">water<canvas></canvas></span>, my friend.
+            </p>
+          </div>
+        ))
+      }
+    </section>
+  </article>
+</Base>
+
+<script>
+  import { createFluidGlyph } from '../../lib/fluidGlyph.mjs';
+  import { WASH_LADDER } from '../../lib/riverRenderer.mjs';
+
+  // 浮现对照：点一行重播那一行
+  for (const row of document.querySelectorAll<HTMLElement>('.reveal-row')) {
+    const replay = () => {
+      const sentence = row.querySelector<HTMLElement>('.reveal-sentence');
+      if (!sentence) return;
+      sentence.removeAttribute('data-playing');
+      void sentence.offsetWidth;
+      sentence.setAttribute('data-playing', '');
+    };
+    row.addEventListener('click', replay);
+    replay();
+  }
+  // 全部重播一轮，便于并排比较
+  setTimeout(() => {
+    for (const row of document.querySelectorAll<HTMLElement>('.reveal-row')) {
+      const sentence = row.querySelector<HTMLElement>('.reveal-sentence');
+      if (!sentence) continue;
+      sentence.removeAttribute('data-playing');
+      void sentence.offsetWidth;
+      sentence.setAttribute('data-playing', '');
+    }
+  }, 1200);
+
+  for (const word of document.querySelectorAll<HTMLElement>('.sentence .w')) {
+    const canvas = word.querySelector('canvas');
+    if (!canvas) continue;
+    const handle = createFluidGlyph({
+      canvas,
+      source: word,
+      palette: {
+        shallow: WASH_LADDER[0].rgb,
+        mid: WASH_LADDER[1].rgb,
+        deep: WASH_LADDER[2].rgb,
+      },
+      sheen: 0.7,
+    });
+    if (handle?.ok) word.dataset.fluid = 'on';
+  }
+</script>
+
+<style>
+  .title-lab {
+    padding-block: var(--space-2xl) var(--space-3xl);
+  }
+
+  .kicker {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    letter-spacing: 0.08em;
+    color: var(--color-ink-faint);
+  }
+
+  h1 {
+    margin-top: var(--space-sm);
+    font-size: var(--text-2xl);
+  }
+
+  .lede {
+    max-width: var(--measure);
+    margin-top: var(--space-md);
+    color: var(--color-ink-soft);
+  }
+
+  .axis {
+    margin-top: var(--space-2xl);
+  }
+
+  .axis h2 {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-ink-faint);
+    padding-bottom: var(--space-xs);
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .row {
+    padding-block: var(--space-lg);
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .tag {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--color-ink-soft);
+  }
+
+  .note {
+    max-width: var(--measure);
+    margin-top: 0.15rem;
+    font-size: var(--text-xs);
+    color: var(--color-ink-faint);
+  }
+
+  .sentence {
+    margin-top: var(--space-md);
+    font-family: "Iowan Old Style", Baskerville, "Times New Roman", serif;
+    font-size: clamp(2.6rem, 5vw, 4rem);
+    font-weight: 500;
+    font-style: italic;
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+  }
+
+  .w {
+    position: relative;
+    display: inline-block;
+  }
+
+  .w canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  .w[data-fluid='on'] {
+    color: transparent;
+  }
+
+  /* ── water 的四种材质 ─────────────────────────────── */
+
+  /* A 现状：左上硬边白高光 + 右下硬边暗边，即浮雕 */
+  [data-water='bevel'] .w {
+    text-shadow:
+      -0.015em -0.016em 0 rgba(255, 255, 255, 0.95),
+      0.016em 0.004em 0.01em rgba(94, 214, 224, 0.6),
+      0 0.06em 0.55em rgba(58, 150, 176, 0.3);
+  }
+
+  /* B 只留轮廓：四向等距、无方向性，读作"边"而不是"打光" */
+  [data-water='contour'] .w {
+    text-shadow:
+      0 0 0.02em rgba(58, 150, 176, 0.42),
+      0 0 0.06em rgba(58, 150, 176, 0.22);
+  }
+
+  /* C 轮廓 + 极淡投影 */
+  [data-water='lift'] .w {
+    text-shadow:
+      0 0 0.02em rgba(58, 150, 176, 0.42),
+      0 0.035em 0.28em rgba(58, 150, 176, 0.18);
+  }
+
+  /* D 什么都不加 */
+  [data-water='bare'] .w {
+    text-shadow: none;
+  }
+
+  /* ── 浮现时那团模糊的颜色 ─────────────────────────── */
+  .axis-note {
+    margin-top: var(--space-sm);
+  }
+
+  .reveal-row {
+    cursor: pointer;
+  }
+
+  .reveal-sentence .l {
+    display: inline-block;
+  }
+
+  .reveal-sentence[data-playing] .l {
+    animation: lab-letter-in 300ms var(--ease-out) var(--letter-delay) both;
+  }
+
+  /* 和 ArtRiverHero 里那条同构：起点色走自定义属性，模糊量与时长不动 */
+  @keyframes lab-letter-in {
+    from {
+      opacity: 0;
+      color: var(--intro-reveal-from, var(--color-ink-mist));
+      filter: blur(3px);
+      transform: translate3d(0, 0.18em, 0);
+    }
+
+    /* 与 ArtRiverHero 同构：颜色在最糊的一段保持住 */
+    58% {
+      color: var(--intro-reveal-from, var(--color-ink-mist));
+    }
+
+    to {
+      opacity: 1;
+      color: var(--color-ink);
+      filter: blur(0);
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  /* ── 其余字的墨色 ─────────────────────────────────── */
+  [data-ink='ink'] {
+    color: var(--color-ink);
+  }
+
+  [data-ink='soft'] {
+    color: rgba(76, 54, 48, 0.86);
+  }
+
+  [data-ink='warm'] {
+    color: #6b5048;
+  }
+
+  [data-ink='cold'] {
+    color: var(--water-900);
+  }
+</style>

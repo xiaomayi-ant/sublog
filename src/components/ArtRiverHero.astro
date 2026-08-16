@@ -190,6 +190,10 @@ import HomeRiver from './HomeRiver.astro';
   .intro-line--friend {
     color: rgba(76, 54, 48, 0.86);
     font-weight: 500;
+    /* 浮现的起点与落点。落点跟这一行的实际字色一致，起点是那团模糊的颜色 ——
+       换掉它就换掉了整个入场的性格，几何和时长都不必动。 */
+    --intro-reveal-from: var(--color-ink-mist);
+    --intro-reveal-to: rgba(76, 54, 48, 0.86);
   }
 
   .intro-letter {
@@ -330,21 +334,31 @@ import HomeRiver from './HomeRiver.astro';
     }
   }
 
+  /* 逐字浮现。
+     真正制造"变化感"的不是位移也不是淡入，是 blur 把字糊成一团、再收拢成字形
+     的那个过程 —— 单独的逐字淡入几乎读不出来。所以模糊量是这个动效的主体，
+     不是副作用。
+
+     但那团模糊的颜色不该写死。起点色和落点色都走自定义属性，任何容器都能
+     覆盖它们；不覆盖时退回赭墨那一档。详见 docs/intro-reveal.md。 */
   @keyframes intro-letter-in {
     from {
       opacity: 0;
-      /* 起手不能是深墨。3px 模糊会把赭墨糊成一团深色，而 opacity 恰好走到中途，
-         于是读作"一块黑影在散开"而不是"一个字在浮现"。
-         从同色相的一档很浅起，落定时才收回 --color-ink —— 改的是起点的颜色，
-         不是模糊量，字形浮现的手感保持不变。 */
-      color: var(--color-ink-mist);
-      filter: blur(3px);
+      color: var(--intro-reveal-from, var(--color-ink-mist));
+      filter: blur(var(--intro-reveal-blur, 3px));
       transform: translate3d(0, 0.18em, 0);
+    }
+
+    /* 颜色要在最糊的那一段保持住。
+       和模糊同步收敛的话，到 190ms 时颜色已经基本变回落点色 —— 糊团的颜色
+       根本来不及被看见，那"任意颜色"就是个空参数。实测过才发现这一点。 */
+    58% {
+      color: var(--intro-reveal-from, var(--color-ink-mist));
     }
 
     to {
       opacity: 1;
-      color: var(--color-ink);
+      color: var(--intro-reveal-to, var(--color-ink));
       filter: blur(0);
       transform: translate3d(0, 0, 0);
     }
