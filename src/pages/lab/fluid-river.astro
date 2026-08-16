@@ -53,6 +53,23 @@ import Base from '../../layouts/Base.astro';
         <small>条纹整体的不透明度倍率。</small>
       </label>
       <label class="knob">
+        <span>深端浓度 <output id="out-depth">1.00</output></span>
+        <input type="range" name="fluidDepth" min="0" max="1" step="0.02" value="1" />
+        <small>
+          流体最深那一档的浓度。1 = 现状（深斑约到 #ade4f3）；
+          往左深斑变淡，0 时几乎消失。河体本身很淡，
+          一块明显更深的斑会跳出来读作“污渍”而不是“深处”。
+        </small>
+      </label>
+      <label class="knob">
+        <span>密度均匀度 <output id="out-even">0.00</output></span>
+        <input type="range" name="fluidEvenness" min="0" max="0.9" step="0.02" value="0" />
+        <small>
+          把密度往中间压。0 = 现状（深色聚成离散的斑）；往右斑逐渐化开。
+          这才是“斑”的成因 —— 和改造前那条河比最深处几乎一样深，变的是分布。
+        </small>
+      </label>
+      <label class="knob">
         <span>弯道岸浪 <output id="out-bank">0.00</output></span>
         <input type="range" name="bankWave" min="0" max="0.6" step="0.01" value="0" />
         <small>
@@ -100,6 +117,8 @@ import Base from '../../layouts/Base.astro';
       const fiberDensity = Number(data.get('fiberDensity'));
       const fiberOpacity = Number(data.get('fiberOpacity'));
       const bankWave = Number(data.get('bankWave'));
+      const fluidDepth = Number(data.get('fluidDepth'));
+      const fluidEvenness = Number(data.get('fluidEvenness'));
 
       handle?.destroy();
       handle = createRiverRenderer({
@@ -113,6 +132,8 @@ import Base from '../../layouts/Base.astro';
         fiberDensity,
         fiberOpacity,
         bankWave,
+        fluidDepth,
+        fluidEvenness,
       });
 
       const show = (id: string, value: number) => {
@@ -124,6 +145,8 @@ import Base from '../../layouts/Base.astro';
       show('#out-density', fiberDensity);
       show('#out-fiberopacity', fiberOpacity);
       show('#out-bank', bankWave);
+      show('#out-depth', fluidDepth);
+      show('#out-even', fluidEvenness);
       if (tag) {
         tag.textContent =
           `融合 · 深浅 ${washOpacity.toFixed(2)} · 纹理 ${fluidStrength.toFixed(2)} · ` +

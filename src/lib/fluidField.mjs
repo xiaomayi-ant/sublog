@@ -51,6 +51,7 @@ uniform float u_sheen;
 uniform float u_floor;
 uniform float u_span;
 uniform float u_scale;
+uniform float u_flatten;
 
 float hash(vec2 p) {
   p = fract(p * vec2(123.34, 456.21));
@@ -89,6 +90,8 @@ void main() {
   float broad = fbm(q * 0.92 + vec2(u_time * 0.029, -u_time * 0.022));
   float detail = fbm(q * 2.00 + vec2(-u_time * 0.058, u_time * 0.041) + broad * 0.9);
   float density = smoothstep(0.28, 0.84, broad * 0.66 + detail * 0.34);
+  // flatten: pull density toward its middle, softening clumps
+  density = mix(density, 0.5, u_flatten);
 
   // pigment: subtractive, more colour means more pigment
   vec3 pigment = mix(mix(u_shallow, u_mid, 0.22), u_mid, smoothstep(0.0, 0.52, density));
@@ -123,13 +126,14 @@ const toUnit = (rgb) => [rgb[0] / 255, rgb[1] / 255, rgb[2] / 255];
  *   floor?: number,
  *   span?: number,
  *   scale?: number,
+ *   flatten?: number,
  * }} options
  * @returns {{ canvas: HTMLCanvasElement, resize(w: number, h: number): void,
  *             render(time: number): void, destroy(): void } | null}
  *   拿不到 WebGL 时返回 null —— 调用方据此走自己的降级路径，而不是收到一个异常。
  */
 export function createFluidField(options) {
-  const { palette, sheen = 1, floor = 0.52, span = 0.48, scale = 2.6 } = options;
+  const { palette, sheen = 1, floor = 0.52, span = 0.48, scale = 2.6, flatten = 0 } = options;
   const canvas = document.createElement('canvas');
   const gl = canvas.getContext('webgl', { alpha: true, antialias: false, premultipliedAlpha: false });
   if (!gl) return null;
@@ -158,7 +162,10 @@ export function createFluidField(options) {
   gl.clearColor(0, 0, 0, 0);
 
   const uniforms = Object.fromEntries(
-    ['u_resolution', 'u_time', 'u_shallow', 'u_mid', 'u_deep', 'u_sheen', 'u_floor', 'u_span', 'u_scale'].map(
+    [
+      'u_resolution', 'u_time', 'u_shallow', 'u_mid', 'u_deep',
+      'u_sheen', 'u_floor', 'u_span', 'u_scale', 'u_flatten',
+    ].map(
       (name) => [name, gl.getUniformLocation(program, name)],
     ),
   );
@@ -178,6 +185,7 @@ export function createFluidField(options) {
       gl.uniform1f(uniforms.u_floor, floor);
       gl.uniform1f(uniforms.u_span, span);
       gl.uniform1f(uniforms.u_scale, scale);
+      gl.uniform1f(uniforms.u_flatten, flatten);
       gl.uniform3fv(uniforms.u_shallow, toUnit(palette.shallow));
       gl.uniform3fv(uniforms.u_mid, toUnit(palette.mid));
       gl.uniform3fv(uniforms.u_deep, toUnit(palette.deep));

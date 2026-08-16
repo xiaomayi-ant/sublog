@@ -134,6 +134,8 @@ function laneFlow(lane) {
  *   fiberDensity?: number,
  *   fiberOpacity?: number,
  *   bankWave?: number,
+ *   fluidDepth?: number,
+ *   fluidEvenness?: number,
  * }} configuration
  */
 export function createRiverRenderer(configuration) {
@@ -157,6 +159,16 @@ export function createRiverRenderer(configuration) {
     fiberOpacity = 1,
     // 弯道外岸涌浪的幅度（相对河宽）。0 = 关闭。河不大，值该取小。
     bankWave = 0,
+    // 流体深端的浓度。1 = 深端取 WASH_LADDER[2]（#4ed4e4，最深的斑会到
+    // 约 #ade4f3）；0 = 深端也只到 WASH_LADDER[1]，深斑几乎消失。
+    // 河体本身很淡，一块明显更深的斑会跳出来读作"污渍"而不是"深处"。
+    fluidDepth = 1,
+    // 密度场的均匀度。0 = 现状；往上调把密度往中间压，深色不再聚成离散的斑。
+    //
+    // 这才是"斑"的成因：和改造前那条河比，最深处几乎一样深（#b2e3ef vs
+    // #ade3f2），变的是分布 —— 流体把深色聚成团，原来是平摊的。所以要压的
+    // 是密度场的对比度，不是深端的颜色。
+    fluidEvenness = 0,
   } = configuration;
   if (!(canvas instanceof HTMLCanvasElement)) {
     throw new TypeError('createRiverRenderer requires an HTMLCanvasElement.');
@@ -174,13 +186,17 @@ export function createRiverRenderer(configuration) {
           palette: {
             shallow: WASH_LADDER[0].rgb,
             mid: WASH_LADDER[1].rgb,
-            deep: WASH_LADDER[2].rgb,
+            // 深端在色阶的第 2、3 档之间插值，由 fluidDepth 控制浓到什么程度
+            deep: WASH_LADDER[1].rgb.map((channel, index) =>
+              Math.round(channel + (WASH_LADDER[2].rgb[index] - channel) * clamp(fluidDepth, 0, 1)),
+            ),
           },
           // 叠在原色之上，所以这里要接近不透明 —— 透明的地方等于没叠。
           // 纹理的强弱交给 FLUID_TEXTURE_STRENGTH 统一控制。
           floor: 0.92,
           span: 0.08,
           sheen: 0.55,
+          flatten: clamp(fluidEvenness, 0, 1),
           // 河比字形宽得多，同样的噪声尺度会显得太碎
           scale: 5.2,
         })
