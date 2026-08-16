@@ -48,21 +48,37 @@ export const RIVER_PRESETS = Object.freeze({
 export const HOME_RIVER_PRESET = RIVER_PRESETS.watercolor;
 
 /**
- * 浅水 → 深水的色阶。**唯一真相在 `src/styles/tokens.css`**，这里是它的副本。
+ * 水彩层的色阶，浅水 → 深水。
  *
- * 副本而不是运行时读 CSS 变量：渲染在首帧就要出结果，不该依赖样式表已解析；
- * 两份不同步的风险改由契约测试 tests/river-palette.test.mjs 兜住 —— 它逐档
- * 比对这里与 tokens.css，对不上就红。
+ * 它与 `tokens.css` 的 `--water-*` **不是同一组值**。这一点以前被一句注释说反了
+ * ——那句话声称"前三档对应 --water-100/300/500，最深一档是 --color-river"，
+ * 实际最深一档差了 (44,71,38)，前三档也各差几到二十几。两者是同一条色相轴上的
+ * 两套取值，用途不同：
  *
- * 历史：这两边曾经长期不一致（最深一档 renderer 是 #4298e4，tokens 声称
- * #1651be，差 (44,71,38)），因为同步全靠一句注释。注释拦不住漂移。
+ *   tokens.css 的 --water-*   要承载文字，每档背着论证过的对比度
+ *   这里的 WASH_LADDER        只做图形，在 alpha 0.03~0.09 下叠出来
+ *
+ * 试过把这里对齐到 tokens 那一组：河从青绿转向蓝，28.6% 的像素变化、平均色差
+ * 12.32，观感偏离太多，退回。契约测试因此改为守"同一色相轴"而不是逐值相等，
+ * 见 tests/river-palette.test.mjs。
  */
-export const WATER_LADDER = Object.freeze([
-  Object.freeze({ token: '--water-100', rgb: Object.freeze([200, 241, 238]) }),
-  Object.freeze({ token: '--water-300', rgb: Object.freeze([132, 220, 217]) }),
-  Object.freeze({ token: '--water-500', rgb: Object.freeze([74, 184, 202]) }),
-  Object.freeze({ token: '--water-700', rgb: Object.freeze([38, 120, 143]) }),
-  Object.freeze({ token: '--color-river', rgb: Object.freeze([22, 81, 190]) }),
+export const WASH_LADDER = Object.freeze([
+  Object.freeze({ near: '--water-100', rgb: Object.freeze([222, 252, 250]) }),
+  Object.freeze({ near: '--water-300', rgb: Object.freeze([140, 240, 236]) }),
+  Object.freeze({ near: '--water-500', rgb: Object.freeze([78, 212, 228]) }),
+  Object.freeze({ near: '--water-500', rgb: Object.freeze([74, 186, 234]) }),
+  Object.freeze({ near: '--color-river', rgb: Object.freeze([66, 152, 228]) }),
+]);
+
+/**
+ * 核心那一道斜向渐变的色标。单独列出是因为它有一档 (96,182,250) 不在上面的
+ * 色阶里 —— 以前散在 drawWash 内部写死，谁也没提过，只能自己漂。
+ */
+const CORE_GRADIENT = Object.freeze([
+  Object.freeze({ at: 0, rgb: Object.freeze([222, 252, 250]) }),
+  Object.freeze({ at: 0.42, rgb: Object.freeze([78, 212, 228]) }),
+  Object.freeze({ at: 0.72, rgb: Object.freeze([96, 182, 250]) }),
+  Object.freeze({ at: 1, rgb: Object.freeze([66, 152, 228]) }),
 ]);
 
 /** 河心的顺流速度（px/s）。两岸趋近于零，见 laneFlow()。 */
@@ -216,7 +232,7 @@ export function createRiverRenderer(configuration) {
   function drawWash(time) {
     if (!context) return;
     const layerCount = Math.round(state.layers);
-    const colors = WATER_LADDER.map((step) => step.rgb);
+    const colors = WASH_LADDER.map((step) => step.rgb);
 
     for (let layer = layerCount - 1; layer >= 0; layer -= 1) {
       const depth = layer / Math.max(1, layerCount - 1);
@@ -233,12 +249,9 @@ export function createRiverRenderer(configuration) {
 
     if (traceRibbon(0.72, time, 103) && ribbonContext) {
       const core = ribbonContext.createLinearGradient(0, 0, canvasWidth, canvasHeight);
-      // 核心那一道也走同一条色阶，否则它会自己漂 —— 原来这四个色标是另写的一组
-      const stop = (index) => `rgb(${colors[index].join(', ')})`;
-      core.addColorStop(0, stop(0));
-      core.addColorStop(0.42, stop(2));
-      core.addColorStop(0.72, stop(3));
-      core.addColorStop(1, stop(4));
+      for (const { at, rgb } of CORE_GRADIENT) {
+        core.addColorStop(at, `rgb(${rgb.join(', ')})`);
+      }
       compositeRibbon(core, 0.05 + state.cobalt * 0.038);
     }
   }
