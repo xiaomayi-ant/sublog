@@ -1,0 +1,129 @@
+---
+// 实验页：能否在保持河道形态不变的前提下，把流体场融进去。
+// noindex，和 /lab/river 同性质 —— 这里放的是还没定论的东西。
+import Base from '../../layouts/Base.astro';
+---
+
+<Base title="流体河实验" description="河道形态不变，内里换成流体场。" noIndex>
+  <article class="fluid-lab">
+    <header>
+      <p class="kicker">LAB · FLUID RIVER</p>
+      <h1>河道不动，内里换成流体</h1>
+      <p class="lede">
+        上下两条河用的是<strong>同一套几何</strong>：同一条中心线、同一组河宽、
+        同一批缎带半径与图层不透明度。唯一的差别在 <code>compositeRibbon</code> ——
+        上面往蒙版里灌纯色，下面灌流体纹理。
+      </p>
+    </header>
+
+    <section class="pane" data-variant="current">
+      <p class="tag">现状 · 每层灌纯色</p>
+      <div class="stage"><canvas id="river-plain"></canvas></div>
+    </section>
+
+    <section class="pane" data-variant="fluid">
+      <p class="tag">融合 · 每层灌流体场</p>
+      <div class="stage"><canvas id="river-fluid"></canvas></div>
+    </section>
+
+    <p class="readout" id="readout">测量中…</p>
+  </article>
+</Base>
+
+<script>
+  import { createRiverRenderer, HOME_RIVER_PRESET } from '../../lib/riverRenderer.mjs';
+
+  const plain = document.querySelector<HTMLCanvasElement>('#river-plain');
+  const fluid = document.querySelector<HTMLCanvasElement>('#river-fluid');
+  const readout = document.querySelector<HTMLElement>('#readout');
+
+  if (plain && fluid) {
+    createRiverRenderer({ canvas: plain, initialState: HOME_RIVER_PRESET, yOffset: -0.08 });
+    createRiverRenderer({
+      canvas: fluid,
+      initialState: HOME_RIVER_PRESET,
+      yOffset: -0.08,
+      fluidInterior: true,
+    });
+
+    // 两条河都在跑的情况下的整体帧率，作为"融合后还剩多少余量"的粗略读数
+    setTimeout(async () => {
+      const gaps: number[] = [];
+      await new Promise<void>((done) => {
+        let count = 0;
+        let last = performance.now();
+        requestAnimationFrame(function tick(now) {
+          gaps.push(now - last);
+          last = now;
+          if (++count >= 60) return done();
+          requestAnimationFrame(tick);
+        });
+      });
+      const average = gaps.reduce((a, b) => a + b, 0) / gaps.length;
+      if (readout) {
+        readout.textContent =
+          `两条河同时渲染：${(1000 / average).toFixed(1)} fps · ` +
+          `画布 ${plain.width}×${plain.height} · dpr ${devicePixelRatio}`;
+      }
+    }, 1500);
+  }
+</script>
+
+<style>
+  .fluid-lab {
+    padding-block: var(--space-2xl) var(--space-3xl);
+  }
+
+  .kicker {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    letter-spacing: 0.08em;
+    color: var(--color-ink-faint);
+  }
+
+  h1 {
+    margin-top: var(--space-sm);
+    font-size: var(--text-3xl);
+  }
+
+  .lede {
+    max-width: var(--measure);
+    margin-top: var(--space-md);
+    color: var(--color-ink-soft);
+  }
+
+  .pane {
+    margin-top: var(--space-xl);
+  }
+
+  .tag {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    letter-spacing: 0.06em;
+    color: var(--color-ink-faint);
+    margin-bottom: var(--space-xs);
+  }
+
+  /* 满幅出血，和首屏的河同一个取景，否则形态没法比 */
+  .stage {
+    position: relative;
+    width: 100vw;
+    height: 46vh;
+    margin-inline: calc(50% - 50vw);
+    overflow: hidden;
+  }
+
+  .stage canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .readout {
+    margin-top: var(--space-xl);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--color-ink-faint);
+  }
+</style>

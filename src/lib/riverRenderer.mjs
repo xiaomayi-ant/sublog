@@ -1,3 +1,4 @@
+import { createFluidField } from './fluidField.mjs';
 import {
   buildRibbonGeometry,
   clamp,
@@ -81,6 +82,12 @@ const CORE_GRADIENT = Object.freeze([
   Object.freeze({ at: 1, rgb: Object.freeze([66, 152, 228]) }),
 ]);
 
+/**
+ * 流体纹理压过缎带原色的比例（实验用）。
+ * 0 = 完全是现在的河；1 = 完全被流体取代（实测会丢掉色阶结构，见 compositeRibbon）。
+ */
+const FLUID_TEXTURE_STRENGTH = 0.5;
+
 /** 河心的顺流速度（px/s）。两岸趋近于零，见 laneFlow()。 */
 const CENTRE_FLOW_PIXELS_PER_SECOND = 62;
 
@@ -100,6 +107,7 @@ function laneFlow(lane) {
  *   getProgress?: () => number,
  *   observeElement?: Element,
  *   yOffset?: number,
+ *   fluidInterior?: boolean,
  * }} configuration
  */
 export function createRiverRenderer(configuration) {
@@ -117,6 +125,26 @@ export function createRiverRenderer(configuration) {
   const context = canvas.getContext('2d');
   const ribbonBuffer = document.createElement('canvas');
   const ribbonContext = ribbonBuffer.getContext('2d');
+  // 实验中的流体内里。默认关闭，关闭时这个渲染器与改动前逐像素相同
+  // （视觉基线守着这一点）。开启时几何一行不动，只是每层缎带灌的从纯色
+  // 换成流体纹理 —— 见 compositeRibbon。
+  const fluidField =
+    configuration.fluidInterior === true
+      ? createFluidField({
+          palette: {
+            shallow: WASH_LADDER[0].rgb,
+            mid: WASH_LADDER[1].rgb,
+            deep: WASH_LADDER[2].rgb,
+          },
+          // 叠在原色之上，所以这里要接近不透明 —— 透明的地方等于没叠。
+          // 纹理的强弱交给 FLUID_TEXTURE_STRENGTH 统一控制。
+          floor: 0.92,
+          span: 0.08,
+          sheen: 0.55,
+          // 河比字形宽得多，同样的噪声尺度会显得太碎
+          scale: 5.2,
+        })
+      : null;
   const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
   const state = { ...HOME_RIVER_PRESET, ...initialState };
   let canvasWidth = 0;
@@ -216,11 +244,34 @@ export function createRiverRenderer(configuration) {
     return true;
   }
 
+  /**
+   * 把 traceRibbon 留下的白色蒙版灌上内容，再叠到主画布。
+   *
+   * `fillStyle` 是纯色或渐变；`fluidField` 存在时改灌流体纹理 —— 同一个
+   * source-in，只是源从颜色换成一块画布。河道几何、图层数、半径与 alpha
+   * 全部不变，变的只是每层填的是什么。
+   */
   function compositeRibbon(fillStyle, alpha) {
     if (!context || !ribbonContext) return;
     ribbonContext.globalCompositeOperation = 'source-in';
     ribbonContext.fillStyle = fillStyle;
     ribbonContext.fillRect(0, 0, ribbonBuffer.width, ribbonBuffer.height);
+
+    if (fluidField) {
+      // 在这一层自己的颜色之上叠流体，而不是取代它。
+      //
+      // 试过直接用流体填充八层：形态完全对得上，但整条河淡掉一大截且发绿 ——
+      // 因为八层共用同一张流体，而流体的平均色是浅的，原本由深层贡献的
+      // #4ed4e4 / #4298e4 全丢了。颜色结构是这条河的骨架，不能让纹理顶掉。
+      //
+      // source-atop 保证只画在缎带内部（蒙版之外一笔不落），globalAlpha 决定
+      // 纹理压过原色多少。
+      ribbonContext.globalCompositeOperation = 'source-atop';
+      ribbonContext.globalAlpha = FLUID_TEXTURE_STRENGTH;
+      ribbonContext.drawImage(fluidField.canvas, 0, 0, ribbonBuffer.width, ribbonBuffer.height);
+      ribbonContext.globalAlpha = 1;
+    }
+
     ribbonContext.globalCompositeOperation = 'source-over';
 
     context.save();
@@ -367,6 +418,8 @@ export function createRiverRenderer(configuration) {
     // 几何只在这一帧内可复用：options 随 time 和 scrollProgress 变，
     // 忘了清就等于把河冻在第一帧。
     geometryCache.clear();
+    // 流体场每帧只画一次，八层缎带共用同一张 —— 层与层的差别来自半径和 alpha
+    fluidField?.render(time);
     context.clearRect(0, 0, canvasWidth, canvasHeight);
     context.save();
     drawWash(time);
@@ -399,6 +452,7 @@ export function createRiverRenderer(configuration) {
     canvas.height = Math.round(canvasHeight * pixelRatio);
     ribbonBuffer.width = Math.ceil(canvasWidth);
     ribbonBuffer.height = Math.ceil(canvasHeight);
+    fluidField?.resize(ribbonBuffer.width, ribbonBuffer.height);
     context?.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
     render(0, true);
   }
@@ -442,6 +496,7 @@ export function createRiverRenderer(configuration) {
       window.removeEventListener('resize', resize);
       window.removeEventListener('scroll', drawStaticProgress);
       reducedMotionQuery.removeEventListener('change', syncMotion);
+      fluidField?.destroy();
     },
   };
 }

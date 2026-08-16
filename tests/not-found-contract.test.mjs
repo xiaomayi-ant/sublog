@@ -30,20 +30,29 @@ async function notFoundHtml() {
 }
 
 /**
- * 流体字形自己那一份产物。用着色器里的 uniform 名认领 —— 站上还有别的脚本
- * 用 IntersectionObserver / requestAnimationFrame，按那些找会命中错的产物。
+ * 打包后责任分在两份产物里，各按自己独有的标记认领：
+ *
+ *   字形侧    做遮罩，标记是 destination-in
+ *   流体场侧  跑着色器，标记是 uniform 名 u_shallow。它与 riverRenderer 同在一个
+ *             chunk —— 河也用同一个流体场，这正是"一份实现两处用"的证据。
+ *
+ * 不按 IntersectionObserver / requestAnimationFrame 这类通用 API 找：
+ * 站上不止一个脚本用它们，会命中错的产物。
  */
-async function glyphAsset() {
+async function assetOwning(marker, what) {
   const assetsRoot = path.join(distRoot, '_astro');
   const files = (await readdir(assetsRoot)).filter((file) => file.endsWith('.js'));
   const hits = [];
   for (const file of files) {
     const source = await readFile(path.join(assetsRoot, file), 'utf8');
-    if (source.includes('u_shallow')) hits.push(source);
+    if (source.includes(marker)) hits.push({ file, source });
   }
-  assert.equal(hits.length, 1, 'expected exactly one built asset to own the fluid glyph shader');
+  assert.equal(hits.length, 1, `expected exactly one built asset to own ${what}`);
   return hits[0];
 }
+
+const glyphAsset = async () => (await assetOwning('destination-in', 'the glyph mask')).source;
+const fieldAsset = async () => (await assetOwning('u_shallow', 'the fluid shader')).source;
 
 test('the 404 page keeps its static number as the ground truth', async () => {
   const html = await notFoundHtml();
@@ -74,21 +83,22 @@ test('the 404 page hides the static number only after the fluid takes over', asy
 });
 
 test('the fluid glyph degrades instead of throwing', async () => {
-  const source = await glyphAsset();
+  const glyph = await glyphAsset();
+  const field = await fieldAsset();
 
-  // 编译/链接失败要被捕获并降级，而不是抛到页面上
-  assert.match(source, /\[fluidGlyph\]/, '失败时应带前缀告警，便于定位');
-  assert.match(source, /catch/);
-  // 动效降级、离屏停渲、尺寸跟随
-  assert.match(source, /prefers-reduced-motion/);
-  assert.match(source, /IntersectionObserver/);
-  assert.match(source, /ResizeObserver/);
+  // 编译/链接失败要在流体场那一侧被捕获并降级，而不是抛到页面上
+  assert.match(field, /\[fluidField\]/, '失败时应带前缀告警，便于定位');
+  assert.match(field, /catch/);
   // 销毁时归还 GPU 上下文
-  assert.match(source, /WEBGL_lose_context/);
+  assert.match(field, /WEBGL_lose_context/);
+  // 动效降级、离屏停渲、尺寸跟随属于字形侧
+  assert.match(glyph, /prefers-reduced-motion/);
+  assert.match(glyph, /IntersectionObserver/);
+  assert.match(glyph, /ResizeObserver/);
 });
 
 test('the fluid glyph asks for no WebGL extension', async () => {
-  const source = await glyphAsset();
+  const source = await fieldAsset();
 
   // OES_standard_derivatives 并非处处可用 —— 本机 ANGLE Metal 后端就不支持。
   // 高光改为取密度的过渡带，不再需要任何扩展。这条测试守的是别再退回去。
