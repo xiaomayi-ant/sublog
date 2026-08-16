@@ -1,0 +1,341 @@
+---
+// 实验页：在保持河道形态的前提下调流体内里。noindex，和 /lab/river 同性质。
+// 这里的旋钮是给眼睛用的 —— 拨到满意的位置，把数值抄进 HomeRiver 即可。
+import Base from '../../layouts/Base.astro';
+---
+
+<Base title="流体河实验" description="河道形态不变，内里换成流体。" noIndex>
+  <article class="fluid-lab">
+    <header>
+      <p class="kicker">LAB · FLUID RIVER</p>
+      <h1>河道不动，内里换成流体</h1>
+      <p class="lede">
+        上下两条河用<strong>同一套几何</strong>：同一条中心线、同一组河宽、
+        同一批缎带半径。上面是现状，下面跟着滑块走。
+        河道、河岸、弯度不受任何滑块影响 —— 它们只改内里填什么。
+      </p>
+    </header>
+
+    <section class="pane">
+      <p class="tag">现状 · 每层灌纯色 + 纤维层</p>
+      <div class="stage"><canvas id="river-plain"></canvas></div>
+    </section>
+
+    <section class="pane">
+      <p class="tag" id="fluid-tag">融合</p>
+      <div class="stage"><canvas id="river-fluid"></canvas></div>
+    </section>
+
+    <form class="knobs" id="knobs">
+      <label class="knob">
+        <span>整体深浅 <output id="out-wash">1.00</output></span>
+        <input type="range" name="washOpacity" min="0.2" max="1.2" step="0.02" value="1" />
+        <small>八层水彩的不透明度倍率。往左河变浅。</small>
+      </label>
+      <label class="knob">
+        <span>流体纹理强度 <output id="out-strength">0.50</output></span>
+        <input type="range" name="fluidStrength" min="0" max="1" step="0.02" value="0.5" />
+        <small>0 = 完全是现状的纯色；1 = 颜色结构被纹理顶掉。</small>
+      </label>
+      <label class="knob knob--switch">
+        <span>纤维层</span>
+        <input type="checkbox" name="fibers" checked />
+        <small>河道内部的静止纹路，流动靠虚线相位平移。</small>
+      </label>
+      <label class="knob">
+        <span>纤维密度 <output id="out-density">1.00</output></span>
+        <input type="range" name="fiberDensity" min="0.1" max="1.2" step="0.02" value="1" />
+        <small>1.00 = 现状的 50 条。太密会读成一把梳齿而不是水纹。</small>
+      </label>
+      <label class="knob">
+        <span>纤维浓度 <output id="out-fiberopacity">1.00</output></span>
+        <input type="range" name="fiberOpacity" min="0" max="1.5" step="0.02" value="1" />
+        <small>条纹整体的不透明度倍率。</small>
+      </label>
+      <label class="knob">
+        <span>深端浓度 <output id="out-depth">1.00</output></span>
+        <input type="range" name="fluidDepth" min="0" max="1" step="0.02" value="1" />
+        <small>
+          流体最深那一档的浓度。1 = 现状（深斑约到 #ade4f3）；
+          往左深斑变淡，0 时几乎消失。河体本身很淡，
+          一块明显更深的斑会跳出来读作“污渍”而不是“深处”。
+        </small>
+      </label>
+      <label class="knob">
+        <span>密度均匀度 <output id="out-even">0.00</output></span>
+        <input type="range" name="fluidEvenness" min="0" max="0.9" step="0.02" value="0" />
+        <small>
+          把密度往中间压。0 = 现状（深色聚成离散的斑）；往右斑逐渐化开。
+          这才是“斑”的成因 —— 和改造前那条河比最深处几乎一样深，变的是分布。
+        </small>
+      </label>
+      <label class="knob">
+        <span>弯道岸浪 <output id="out-bank">0.00</output></span>
+        <input type="range" name="bankWave" min="0" max="0.6" step="0.01" value="0" />
+        <small>
+          弯道二次流：表层水涌向外岸，外岸由曲率符号决定。只在弯得够急处起浪，
+          直河段保持平静。河不大，值取小。
+        </small>
+      </label>
+      <div class="knob knob--wide">
+        <button type="button" data-preset="1,0.5,1,1,1,0">回到现状基准</button>
+        <button type="button" data-preset="0.75,0.4,1,0.4,0.7,0.16">疏纤维 + 轻岸浪</button>
+        <button type="button" data-preset="0.62,0.5,1,0.24,0.55,0.24">更疏 + 明显岸浪</button>
+        <button type="button" data-preset="0.62,0.5,0,1,1,0">无纤维 · 只有流体</button>
+      </div>
+    </form>
+
+    <p class="readout" id="readout">—</p>
+  </article>
+</Base>
+
+<script>
+  import { createRiverRenderer, HOME_RIVER_PRESET } from '../../lib/riverRenderer.mjs';
+
+  const plain = document.querySelector<HTMLCanvasElement>('#river-plain');
+  const fluid = document.querySelector<HTMLCanvasElement>('#river-fluid');
+  const knobs = document.querySelector<HTMLFormElement>('#knobs');
+  const readout = document.querySelector<HTMLElement>('#readout');
+  const tag = document.querySelector<HTMLElement>('#fluid-tag');
+
+  if (plain && fluid && knobs) {
+    // 闭包里 TypeScript 不再认外层的 null 检查，先固化成非空引用
+    const plainCanvas = plain;
+    const fluidCanvas = fluid;
+    const form = knobs;
+
+    createRiverRenderer({ canvas: plainCanvas, initialState: HOME_RIVER_PRESET, yOffset: -0.08 });
+
+    let handle: { destroy(): void } | null = null;
+
+    /** 旋钮是构造期参数，改一次就重建一次 —— 实验页不值得为此加一套 setter。 */
+    function rebuild() {
+      const data = new FormData(form);
+      const washOpacity = Number(data.get('washOpacity'));
+      const fluidStrength = Number(data.get('fluidStrength'));
+      const fibers = data.get('fibers') === 'on';
+      const fiberDensity = Number(data.get('fiberDensity'));
+      const fiberOpacity = Number(data.get('fiberOpacity'));
+      const bankWave = Number(data.get('bankWave'));
+      const fluidDepth = Number(data.get('fluidDepth'));
+      const fluidEvenness = Number(data.get('fluidEvenness'));
+
+      handle?.destroy();
+      handle = createRiverRenderer({
+        canvas: fluidCanvas,
+        initialState: HOME_RIVER_PRESET,
+        yOffset: -0.08,
+        fluidInterior: true,
+        fibers,
+        washOpacity,
+        fluidStrength,
+        fiberDensity,
+        fiberOpacity,
+        bankWave,
+        fluidDepth,
+        fluidEvenness,
+      });
+
+      const show = (id: string, value: number) => {
+        const output = document.querySelector<HTMLOutputElement>(id);
+        if (output) output.value = value.toFixed(2);
+      };
+      show('#out-wash', washOpacity);
+      show('#out-strength', fluidStrength);
+      show('#out-density', fiberDensity);
+      show('#out-fiberopacity', fiberOpacity);
+      show('#out-bank', bankWave);
+      show('#out-depth', fluidDepth);
+      show('#out-even', fluidEvenness);
+      if (tag) {
+        tag.textContent =
+          `融合 · 深浅 ${washOpacity.toFixed(2)} · 纹理 ${fluidStrength.toFixed(2)} · ` +
+          `纤维 ${fibers ? `${fiberDensity.toFixed(2)}×${fiberOpacity.toFixed(2)}` : '关'} · ` +
+          `岸浪 ${bankWave.toFixed(2)}`;
+      }
+      measure();
+    }
+
+    let measuring = 0;
+    async function measure() {
+      const token = ++measuring;
+      await new Promise((r) => setTimeout(r, 600));
+      if (token !== measuring) return;
+
+      // 取融合那条河的实际显示色分位（已与白底合成），以及整页帧率
+      const context = fluidCanvas.getContext('2d');
+      const samples: number[][] = [];
+      if (context) {
+        for (let x = 0; x < fluidCanvas.width; x += 9) {
+          for (let y = 0; y < fluidCanvas.height; y += 9) {
+            const d = context.getImageData(x, y, 1, 1).data;
+            const a = d[3] / 255;
+            if (a < 0.02) continue;
+            samples.push([d[0] * a + 255 * (1 - a), d[1] * a + 255 * (1 - a), d[2] * a + 255 * (1 - a)]);
+          }
+        }
+      }
+      const luma = ([r, g, b]: number[]) => 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      samples.sort((a, b) => luma(b) - luma(a));
+      const hex = (f: number) => {
+        const p = samples[Math.floor(samples.length * f)];
+        return p ? `#${p.slice(0, 3).map((v) => Math.round(v).toString(16).padStart(2, '0')).join('')}` : '—';
+      };
+
+      const gaps: number[] = [];
+      await new Promise<void>((done) => {
+        let count = 0;
+        let last = performance.now();
+        requestAnimationFrame(function tick(now) {
+          gaps.push(now - last);
+          last = now;
+          if (++count >= 40) return done();
+          requestAnimationFrame(tick);
+        });
+      });
+      if (token !== measuring || !readout) return;
+      const average = gaps.reduce((a, b) => a + b, 0) / gaps.length;
+      readout.textContent =
+        `融合河的实际显示色：最浅 ${hex(0.05)} · 中位 ${hex(0.5)} · 最深 ${hex(0.95)}　` +
+        `｜　两条河同时渲染 ${(1000 / average).toFixed(1)} fps`;
+    }
+
+    form.addEventListener('input', rebuild);
+    form.addEventListener('click', (event) => {
+      const button = (event.target as HTMLElement).closest<HTMLElement>('[data-preset]');
+      if (!button) return;
+      const [wash, strength, fibersOn, density, fiberAlpha, bank] = button
+        .dataset.preset!.split(',')
+        .map(Number);
+      const field = (name: string) => form.elements.namedItem(name) as HTMLInputElement;
+      field('washOpacity').value = String(wash);
+      field('fluidStrength').value = String(strength);
+      field('fibers').checked = fibersOn === 1;
+      field('fiberDensity').value = String(density);
+      field('fiberOpacity').value = String(fiberAlpha);
+      field('bankWave').value = String(bank);
+      rebuild();
+    });
+    rebuild();
+  }
+</script>
+
+<style>
+  .fluid-lab {
+    padding-block: var(--space-2xl) var(--space-3xl);
+  }
+
+  .kicker {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    letter-spacing: 0.08em;
+    color: var(--color-ink-faint);
+  }
+
+  h1 {
+    margin-top: var(--space-sm);
+    font-size: var(--text-3xl);
+  }
+
+  .lede {
+    max-width: var(--measure);
+    margin-top: var(--space-md);
+    color: var(--color-ink-soft);
+  }
+
+  .pane {
+    margin-top: var(--space-lg);
+  }
+
+  .tag {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    letter-spacing: 0.06em;
+    color: var(--color-ink-faint);
+    margin-bottom: var(--space-xs);
+  }
+
+  /* 满幅出血，和首屏的河同一个取景，否则形态没法比 */
+  .stage {
+    position: relative;
+    width: 100vw;
+    height: 38vh;
+    margin-inline: calc(50% - 50vw);
+    overflow: hidden;
+  }
+
+  .stage canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .knobs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    gap: var(--space-lg);
+    margin-top: var(--space-xl);
+    padding-top: var(--space-lg);
+    border-top: 1px solid var(--color-line);
+  }
+
+  .knob {
+    display: grid;
+    gap: var(--space-xs);
+    font-size: var(--text-sm);
+  }
+
+  .knob > span {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    letter-spacing: 0.04em;
+  }
+
+  .knob small {
+    color: var(--color-ink-faint);
+    font-size: var(--text-xs);
+    line-height: 1.5;
+  }
+
+  .knob input[type='range'] {
+    width: 100%;
+    accent-color: var(--color-river);
+  }
+
+  .knob--switch {
+    align-content: start;
+  }
+
+  .knob--wide {
+    display: flex;
+    flex-wrap: wrap;
+    align-content: start;
+    gap: var(--space-xs);
+  }
+
+  .knob--wide button {
+    padding: 0.4rem 0.7rem;
+    border: 1px solid var(--color-line);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--color-ink-soft);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    cursor: pointer;
+  }
+
+  .knob--wide button:hover {
+    border-color: var(--color-river);
+    color: var(--color-river);
+  }
+
+  .readout {
+    margin-top: var(--space-lg);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--color-ink-faint);
+  }
+</style>

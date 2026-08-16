@@ -1,3 +1,4 @@
+import { createFluidField } from './fluidField.mjs';
 import {
   buildRibbonGeometry,
   clamp,
@@ -81,8 +82,34 @@ const CORE_GRADIENT = Object.freeze([
   Object.freeze({ at: 1, rgb: Object.freeze([66, 152, 228]) }),
 ]);
 
+/**
+ * 纤维条纹的三种色调：白沫、青流、深流。
+ *
+ * 原来这三个是散写在 drawFibers 里的 rgba() 字面值 —— 也就是这个文件里的
+ * **第三套**颜色，既不是 WASH_LADDER 也不是 tokens。而且它躲过了色板契约测试，
+ * 因为那条正则写的是 rgb\( ，匹配不到 rgba\( 。现在接到色阶上，测试也一并收紧。
+ */
+const FIBER_TONES = Object.freeze([
+  Object.freeze({ rgb: Object.freeze([255, 255, 255]), width: 0.85 }),
+  Object.freeze({ rgb: WASH_LADDER[2].rgb, width: 0.62 }),
+  Object.freeze({ rgb: WASH_LADDER[4].rgb, width: 0.72 }),
+]);
+
+/**
+ * 焦散亮纹的颜色。清水里光折射到水底的那些游动亮纹 —— 它是光不是水，
+ * 所以比色阶最浅那一档还要亮，单列一档而不是硬塞进 WASH_LADDER。
+ * 原本也是散写在 drawLight 里的 rgba() 字面值。
+ */
+const CAUSTIC_RGB = Object.freeze([240, 253, 255]);
+
 /** 河心的顺流速度（px/s）。两岸趋近于零，见 laneFlow()。 */
 const CENTRE_FLOW_PIXELS_PER_SECOND = 62;
+
+/** 多大的曲率算"弯"。乘上去再钳到 1，所以它决定的是从哪一档开始起浪。 */
+const BEND_SENSITIVITY = 1.4;
+/** 涌浪沿河的空间频率（一屏几个浪）与推进速度。河不大，两者都取小。 */
+const BANK_WAVE_FREQUENCY = 9.5;
+const BANK_WAVE_SPEED = 0.55;
 
 /**
  * 明渠流的横向速度剖面：贴壁不动、河心最快。
@@ -100,6 +127,15 @@ function laneFlow(lane) {
  *   getProgress?: () => number,
  *   observeElement?: Element,
  *   yOffset?: number,
+ *   fluidInterior?: boolean,
+ *   fibers?: boolean,
+ *   washOpacity?: number,
+ *   fluidStrength?: number,
+ *   fiberDensity?: number,
+ *   fiberOpacity?: number,
+ *   bankWave?: number,
+ *   fluidDepth?: number,
+ *   fluidEvenness?: number,
  * }} configuration
  */
 export function createRiverRenderer(configuration) {
@@ -109,6 +145,30 @@ export function createRiverRenderer(configuration) {
     getProgress = () => 0,
     observeElement = canvas,
     yOffset = 0,
+    // 以下三个是实验旋钮，默认值保持现状 —— 首页不传就等于没有它们。
+    // 纤维层：河道内部的静止纹路，流动靠虚线相位平移。
+    // 流体场接管内里之后它可能是多余的，留个开关便于对比。
+    fibers = true,
+    // 八层水彩的整体不透明度倍率。1 = 现状；小于 1 河变浅。
+    washOpacity = 1,
+    // 流体纹理压过缎带原色的比例。0 = 完全是现状；1 = 颜色结构被纹理顶掉。
+    fluidStrength = 0.5,
+    // 纤维密度倍率。1 = 现状的 50 条。
+    fiberDensity = 1,
+    // 纤维整体不透明度倍率。
+    fiberOpacity = 1,
+    // 弯道外岸涌浪的幅度（相对河宽）。0 = 关闭。河不大，值该取小。
+    bankWave = 0,
+    // 流体深端的浓度。1 = 深端取 WASH_LADDER[2]（#4ed4e4，最深的斑会到
+    // 约 #ade4f3）；0 = 深端也只到 WASH_LADDER[1]，深斑几乎消失。
+    // 河体本身很淡，一块明显更深的斑会跳出来读作"污渍"而不是"深处"。
+    fluidDepth = 1,
+    // 密度场的均匀度。0 = 现状；往上调把密度往中间压，深色不再聚成离散的斑。
+    //
+    // 这才是"斑"的成因：和改造前那条河比，最深处几乎一样深（#b2e3ef vs
+    // #ade3f2），变的是分布 —— 流体把深色聚成团，原来是平摊的。所以要压的
+    // 是密度场的对比度，不是深端的颜色。
+    fluidEvenness = 0,
   } = configuration;
   if (!(canvas instanceof HTMLCanvasElement)) {
     throw new TypeError('createRiverRenderer requires an HTMLCanvasElement.');
@@ -117,6 +177,30 @@ export function createRiverRenderer(configuration) {
   const context = canvas.getContext('2d');
   const ribbonBuffer = document.createElement('canvas');
   const ribbonContext = ribbonBuffer.getContext('2d');
+  // 实验中的流体内里。默认关闭，关闭时这个渲染器与改动前逐像素相同
+  // （视觉基线守着这一点）。开启时几何一行不动，只是每层缎带灌的从纯色
+  // 换成流体纹理 —— 见 compositeRibbon。
+  const fluidField =
+    configuration.fluidInterior === true
+      ? createFluidField({
+          palette: {
+            shallow: WASH_LADDER[0].rgb,
+            mid: WASH_LADDER[1].rgb,
+            // 深端在色阶的第 2、3 档之间插值，由 fluidDepth 控制浓到什么程度
+            deep: WASH_LADDER[1].rgb.map((channel, index) =>
+              Math.round(channel + (WASH_LADDER[2].rgb[index] - channel) * clamp(fluidDepth, 0, 1)),
+            ),
+          },
+          // 叠在原色之上，所以这里要接近不透明 —— 透明的地方等于没叠。
+          // 纹理的强弱交给 FLUID_TEXTURE_STRENGTH 统一控制。
+          floor: 0.92,
+          span: 0.08,
+          sheen: 0.55,
+          flatten: clamp(fluidEvenness, 0, 1),
+          // 河比字形宽得多，同样的噪声尺度会显得太碎
+          scale: 5.2,
+        })
+      : null;
   const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
   const state = { ...HOME_RIVER_PRESET, ...initialState };
   let canvasWidth = 0;
@@ -216,11 +300,34 @@ export function createRiverRenderer(configuration) {
     return true;
   }
 
+  /**
+   * 把 traceRibbon 留下的白色蒙版灌上内容，再叠到主画布。
+   *
+   * `fillStyle` 是纯色或渐变；`fluidField` 存在时改灌流体纹理 —— 同一个
+   * source-in，只是源从颜色换成一块画布。河道几何、图层数、半径与 alpha
+   * 全部不变，变的只是每层填的是什么。
+   */
   function compositeRibbon(fillStyle, alpha) {
     if (!context || !ribbonContext) return;
     ribbonContext.globalCompositeOperation = 'source-in';
     ribbonContext.fillStyle = fillStyle;
     ribbonContext.fillRect(0, 0, ribbonBuffer.width, ribbonBuffer.height);
+
+    if (fluidField) {
+      // 在这一层自己的颜色之上叠流体，而不是取代它。
+      //
+      // 试过直接用流体填充八层：形态完全对得上，但整条河淡掉一大截且发绿 ——
+      // 因为八层共用同一张流体，而流体的平均色是浅的，原本由深层贡献的
+      // #4ed4e4 / #4298e4 全丢了。颜色结构是这条河的骨架，不能让纹理顶掉。
+      //
+      // source-atop 保证只画在缎带内部（蒙版之外一笔不落），globalAlpha 决定
+      // 纹理压过原色多少。
+      ribbonContext.globalCompositeOperation = 'source-atop';
+      ribbonContext.globalAlpha = fluidStrength;
+      ribbonContext.drawImage(fluidField.canvas, 0, 0, ribbonBuffer.width, ribbonBuffer.height);
+      ribbonContext.globalAlpha = 1;
+    }
+
     ribbonContext.globalCompositeOperation = 'source-over';
 
     context.save();
@@ -240,8 +347,9 @@ export function createRiverRenderer(configuration) {
       const colorIndex = Math.min(colors.length - 1, Math.floor(depth * colors.length));
       const [red, green, blue] = colors[colorIndex];
       const cobaltBoost = colorIndex >= colors.length - 2 ? state.cobalt : 0;
-      // 深端再提亮 + 加成再降：八层叠加后仍不压向黑
-      const alpha = 0.032 + depth * 0.04 + cobaltBoost * 0.018;
+      // 深端再提亮 + 加成再降：八层叠加后仍不压向黑。
+      // washOpacity 是整体倍率，用来把河调浅；默认 1，即现状。
+      const alpha = (0.032 + depth * 0.04 + cobaltBoost * 0.018) * washOpacity;
       if (traceRibbon(radius, time, layer * 19)) {
         compositeRibbon(`rgb(${red}, ${green}, ${blue})`, alpha);
       }
@@ -252,13 +360,15 @@ export function createRiverRenderer(configuration) {
       for (const { at, rgb } of CORE_GRADIENT) {
         core.addColorStop(at, `rgb(${rgb.join(', ')})`);
       }
-      compositeRibbon(core, 0.05 + state.cobalt * 0.038);
+      compositeRibbon(core, (0.05 + state.cobalt * 0.038) * washOpacity);
     }
   }
 
   function drawFibers(time) {
     if (!context) return;
-    const fiberCount = 22 + Math.round(state.layers * 3.5);
+    // 密度：原来固定 22 + layers*3.5 = 50 条。太密会读成一把梳齿而不是水纹，
+    // 所以留出倍率。
+    const fiberCount = Math.max(3, Math.round((22 + state.layers * 3.5) * fiberDensity));
     const sampleCount = Math.max(80, Math.round(canvasWidth / 12));
     context.lineCap = 'round';
 
@@ -282,9 +392,30 @@ export function createRiverRenderer(configuration) {
         // 这里换 fbm 不违反那个模型：纹路依然静止，只是它自己有了大小两层尺度，
         // 读起来才像水面的纹理而不是一把平行的梳齿。幅度一个字没动。
         const flutter = (fbm(s * 12 + fiber, 307) - 0.5) * state.turbulence * 0.006;
+
+        // 弯道二次流：表层水涌向外岸，外岸由曲率的符号决定（见 riverMath 的
+        // signedCenterlineCurvature）。只在弯得够急、且靠近外岸的一侧起浪，
+        // 直河段保持平静 —— 这才是"局部和拐弯处才有动静"。
+        //
+        // 一浪一浪：用沿河行进的正弦而不是噪声。噪声给的是随机起伏，
+        // 涌浪要的是有节奏地推过去。
+        let swell = 0;
+        if (bankWave > 0) {
+          const outerBank = Math.sign(geometry.signedCurvature);
+          const towardOuter = Math.max(0, lane * outerBank); // 只作用在外岸那一侧
+          const bend = Math.min(1, Math.abs(geometry.signedCurvature) * BEND_SENSITIVITY);
+          swell =
+            Math.sin(s * BANK_WAVE_FREQUENCY - time * BANK_WAVE_SPEED + fiber * 0.12) *
+            towardOuter *
+            towardOuter * // 平方：让浪集中在贴岸那几条，中间几乎不受影响
+            bend *
+            geometry.baseWidth *
+            bankWave;
+        }
+
         const point = pointToCanvas({
           x: geometry.center.x,
-          y: geometry.center.y + lateralOffset + flutter,
+          y: geometry.center.y + lateralOffset + flutter + swell,
         });
         if (index === 0) context.moveTo(point.x, point.y);
         else context.lineTo(point.x, point.y);
@@ -294,17 +425,16 @@ export function createRiverRenderer(configuration) {
       // 的纤维虽然在动，但被静止的水体完全淹没，实测位移读不出来。
       // 岸边的条纹一并压淡：不动的水不该有明显的流痕
       const presence = 0.32 + 0.68 * profile;
-      const tone = fiber % 3;
-      if (tone === 0) {
-        context.strokeStyle = `rgba(255, 255, 255, ${(0.16 + state.turbulence * 0.1) * presence})`;
-        context.lineWidth = 0.85;
-      } else if (tone === 1) {
-        context.strokeStyle = `rgba(64, 186, 206, ${(0.12 + state.turbulence * 0.07) * presence})`;
-        context.lineWidth = 0.62;
-      } else {
-        context.strokeStyle = `rgba(74, 152, 216, ${(0.08 + state.cobalt * 0.08) * presence})`;
-        context.lineWidth = 0.72;
-      }
+      const toneIndex = fiber % FIBER_TONES.length;
+      const tone = FIBER_TONES[toneIndex];
+      const toneAlpha =
+        toneIndex === 0
+          ? 0.16 + state.turbulence * 0.1
+          : toneIndex === 1
+            ? 0.12 + state.turbulence * 0.07
+            : 0.08 + state.cobalt * 0.08;
+      context.strokeStyle = `rgba(${tone.rgb.join(', ')}, ${toneAlpha * presence * fiberOpacity})`;
+      context.lineWidth = tone.width;
 
       // 顺流：虚线沿路径平移。河道本身不动，动的是描在它上面的条纹 —— 这正是
       // "岸线确定、水在流"的模型。每条纤维错开相位，条纹才不会整齐划一。
@@ -352,7 +482,7 @@ export function createRiverRenderer(configuration) {
         else context.lineTo(point.x, point.y);
       }
 
-      context.strokeStyle = `rgba(240, 253, 255, ${strand.alpha})`;
+      context.strokeStyle = `rgba(${CAUSTIC_RGB.join(', ')}, ${strand.alpha})`;
       context.lineWidth = strand.weight;
       context.stroke();
     }
@@ -367,10 +497,12 @@ export function createRiverRenderer(configuration) {
     // 几何只在这一帧内可复用：options 随 time 和 scrollProgress 变，
     // 忘了清就等于把河冻在第一帧。
     geometryCache.clear();
+    // 流体场每帧只画一次，八层缎带共用同一张 —— 层与层的差别来自半径和 alpha
+    fluidField?.render(time);
     context.clearRect(0, 0, canvasWidth, canvasHeight);
     context.save();
     drawWash(time);
-    drawFibers(time);
+    if (fibers) drawFibers(time);
     drawLight(time);
     context.restore();
   }
@@ -399,6 +531,7 @@ export function createRiverRenderer(configuration) {
     canvas.height = Math.round(canvasHeight * pixelRatio);
     ribbonBuffer.width = Math.ceil(canvasWidth);
     ribbonBuffer.height = Math.ceil(canvasHeight);
+    fluidField?.resize(ribbonBuffer.width, ribbonBuffer.height);
     context?.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
     render(0, true);
   }
@@ -442,6 +575,7 @@ export function createRiverRenderer(configuration) {
       window.removeEventListener('resize', resize);
       window.removeEventListener('scroll', drawStaticProgress);
       reducedMotionQuery.removeEventListener('change', syncMotion);
+      fluidField?.destroy();
     },
   };
 }

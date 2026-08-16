@@ -6,7 +6,13 @@ import Meta from '../components/Meta.astro';
 <Base title="未找到" description="这条水路没有抵达任何页面。" noIndex>
   <section class="not-found" aria-labelledby="not-found-title">
     <Meta items={['404', 'Not found']} />
-    <p class="number" aria-hidden="true">404</p>
+    {/* 数字里盛着水：水路没有抵达这里，但水还在动。
+        DOM 里的文字既是底稿也是降级形态 —— 没有 WebGL、或用户要求减少动效时，
+        它就是原来那个静止的浅水色 404，一行 JS 都不必执行。 */}
+    <div class="number-stack" data-fluid-glyph aria-hidden="true">
+      <p class="number">404</p>
+      <canvas class="number-fluid"></canvas>
+    </div>
     <h1 id="not-found-title">这条水路没有抵达这里。</h1>
     <p class="description">页面可能已经移动，也可能从未存在。可以回到源头，或者继续阅读与探索。</p>
     <nav class="routes" aria-label="返回站点">
@@ -17,20 +23,80 @@ import Meta from '../components/Meta.astro';
   </section>
 </Base>
 
+<script>
+  import { createFluidGlyph } from '../lib/fluidGlyph.mjs';
+  import { WASH_LADDER } from '../lib/riverRenderer.mjs';
+
+  const stack = document.querySelector<HTMLElement>('[data-fluid-glyph]');
+  const canvas = stack?.querySelector<HTMLCanvasElement>('.number-fluid');
+  const number = stack?.querySelector<HTMLElement>('.number');
+
+  if (stack && canvas && number) {
+    // 直接吃河的色阶，而不是再抄一份色值 —— 两处同源，河改色这边跟着走。
+    //
+    // 用的是渲染器声明的那三档原色，不是河在屏幕上的观感色。后者（实测
+    // #f0fdfe → #b2e3ef）是八层 alpha 0.03~0.09 叠出来的结果，范围窄到
+    // 放进字形里几乎读不出纹理 —— 那就白做了流体。
+    const handle = createFluidGlyph({
+      canvas,
+      source: number,
+      palette: {
+        shallow: WASH_LADDER[0].rgb,
+        mid: WASH_LADDER[1].rgb,
+        deep: WASH_LADDER[2].rgb,
+      },
+    });
+
+    // 只有真的接管了才隐藏底下的静态数字 —— 失败时页面回到改动前的样子
+    if (handle?.ok) stack.dataset.fluidGlyph = 'on';
+  }
+</script>
+
 <style>
   .not-found {
     min-height: 58vh;
     padding-top: var(--space-2xl);
   }
 
-  .number {
+  .number-stack {
+    position: relative;
+    width: max-content;
+    max-width: 100%;
     margin-top: var(--space-xl);
+  }
+
+  .number {
+    margin: 0;
     color: var(--color-sky);
     font-family: var(--font-mono);
     font-size: clamp(6rem, 25vw, 15rem);
     font-weight: 600;
     letter-spacing: -0.08em;
     line-height: 0.75;
+  }
+
+  /* 流体盖在文字上，尺寸由 ResizeObserver 跟着 .number 的盒子走。
+     没接管时它是空的（0×0），底下的静态数字照常显示。 */
+  .number-fluid {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  /* 接管成功才把静态数字让位。用 visibility 而不是 display：
+     字形的排版盒子必须留着，画布是按它的 getBoundingClientRect 定尺寸的。 */
+  .number-stack[data-fluid-glyph='on'] .number {
+    visibility: hidden;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    /* 减少动效时渲染器只画静止的一帧，那一帧仍比纯色好看；
+       但如果它没能接管，静态数字必须还在。 */
+    .number-stack:not([data-fluid-glyph='on']) .number {
+      visibility: visible;
+    }
   }
 
   h1 {

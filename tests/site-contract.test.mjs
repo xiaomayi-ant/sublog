@@ -251,9 +251,13 @@ test('the home hero uses a measured editorial typography hierarchy', async () =>
   assert.match(home, /data-intro-motion="per-load-word-reveal"/);
   assert.match(home, /aria-label="Be water, my friend\."/);
   assert.match(home, /class="intro-be"[^>]*>Be<\/span>/);
+  // 「water」必须仍是真实的文本节点，不能被画布顶掉：站名靠它，aria-label 靠它，
+  // 流体字形的遮罩也是从它的排版（字体、字号、字距）读出来的。
+  // 末尾那个可选的 canvas 是字身里的流体；接管失败时它只是一块空画布，
+  // 页面回到原来的透明字身 + 扫光。
   assert.match(
     home,
-    /class="intro-be"[^>]*>Be<\/span><span class="intro-space"[^>]*>&nbsp;<\/span><span class="intro-water"[^>]*><span class="intro-water-fill"[^>]*>water<\/span><\/span>/,
+    /class="intro-be"[^>]*>Be<\/span><span class="intro-space"[^>]*>&nbsp;<\/span><span class="intro-water"[^>]*><span class="intro-water-fill"[^>]*>water(<canvas class="intro-water-fluid"[^>]*><\/canvas>)?<\/span><\/span>/,
   );
   assert.match(home, /class="intro-line intro-line--friend"/);
   assert.match(home, /class="intro-be" style="--word-delay: 120ms"/);

@@ -34,6 +34,10 @@
   /* 派生色：从 ink / river 派生，不再各处自造 rgba */
   --color-ink-soft: rgba(76, 54, 48, 0.72);
   --color-ink-faint: rgba(76, 54, 48, 0.46);
+  /* 墨的最淡一档，实色而不是透明 —— 它只做入场动画的起点色。
+     用实色是因为那一帧还叠着 blur 和 opacity，再套一层 alpha 就不好算了。
+     承载文字请用上面两档，这一档远不达对比度要求。 */
+  --color-ink-mist: #c3b6b1;
   --color-line: rgba(76, 54, 48, 0.16);
   --color-river-soft: rgba(22, 81, 190, 0.1);
   /* 压在河上的文字。带 alpha 的墨会和身后的底混合：白底上 ink-soft 是 4.84:1，

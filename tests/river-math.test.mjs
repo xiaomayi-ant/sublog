@@ -8,6 +8,7 @@ import {
   fbm,
   riverWidth,
   sampleCenterline,
+  signedCenterlineCurvature,
   smoothNoise,
   warpedFbm,
 } from "../src/lib/riverMath.mjs";
@@ -73,6 +74,46 @@ test("domain warp shifts the field without leaving its range", () => {
   assert.notEqual(warped, plain);
   // strength 为 0 时退化回未扭曲的 fbm —— 幅度参数是有意义的
   assert.equal(warpedFbm(1.7, 23, 0), plain);
+});
+
+test("signed curvature keeps the direction that the magnitude throws away", () => {
+  const options = { ...baseOptions, bend: 1.3, width: 1.26, aspect: 4.37, time: 0, progress: 0 };
+  const signed = [];
+  for (let index = 0; index <= 24; index += 1) {
+    signed.push(signedCenterlineCurvature(index / 24, options));
+  }
+
+  // 大小必须与既有的 centerlineCurvature 一致 —— 后者现在就是它的绝对值
+  for (let index = 0; index <= 24; index += 1) {
+    assert.ok(
+      Math.abs(Math.abs(signed[index]) - centerlineCurvature(index / 24, options)) < 1e-12,
+      "带符号曲率的绝对值应当等于 centerlineCurvature",
+    );
+  }
+
+  // 符号是外岸在哪一侧。蜿蜒的河必然两侧都出现过 —— 全同号说明它只朝一个方向弯，
+  // 弯道二次流的方向就无从谈起。
+  assert.ok(signed.some((value) => value > 0.05), "外岸应当出现在 +normal 一侧");
+  assert.ok(signed.some((value) => value < -0.05), "外岸应当出现在 -normal 一侧");
+});
+
+test("bends are localised — straight reaches really are straight", () => {
+  // 岸浪只该出现在拐弯处，这要求曲率本身有足够的动态范围：
+  // 如果全河曲率都差不多，无论怎么调灵敏度都做不出"局部才有动静"。
+  const options = { ...baseOptions, bend: 1.3, width: 1.26, aspect: 4.37, time: 0, progress: 0 };
+  const magnitudes = [];
+  for (let index = 0; index <= 40; index += 1) {
+    magnitudes.push(centerlineCurvature(index / 40, options));
+  }
+  const peak = Math.max(...magnitudes);
+  const sorted = [...magnitudes].sort((a, b) => a - b);
+  const median = sorted[Math.floor(sorted.length / 2)];
+
+  assert.ok(peak > 0.4, `弯道处的曲率太小（${peak.toFixed(3)}），做不出可见的岸浪`);
+  assert.ok(
+    median < peak * 0.62,
+    `曲率沿河太均匀（中位 ${median.toFixed(3)} vs 峰值 ${peak.toFixed(3)}），无法把动效限制在拐弯处`,
+  );
 });
 
 test("the centerline stays finite while scroll progress changes its composition", () => {

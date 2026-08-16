@@ -27,7 +27,9 @@ import HomeRiver from './HomeRiver.astro';
           <span class="intro-be" style="--word-delay: 120ms">Be</span>
           <span class="intro-space">&nbsp;</span>
           <span class="intro-water" style="--word-delay: 620ms"
-            ><span class="intro-water-fill" data-text="water">water</span></span
+            ><span class="intro-water-fill" data-text="water"
+              >water<canvas class="intro-water-fluid" aria-hidden="true"></canvas></span
+          ></span
           ><span class="intro-comma" style="--word-delay: 620ms">,</span>
         </span>
         <span class="intro-line intro-line--friend" aria-hidden="true">
@@ -162,11 +164,36 @@ import HomeRiver from './HomeRiver.astro';
     will-change: background-position;
   }
 
+  /* 字身里的流体。放在 .intro-water-fill 内部而不是外面：那个元素带着
+     water-surface 的 transform，做了包含块，画布才会跟着字一起晃。 */
+  .intro-water-fluid {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  /* 接管成功才让位。字身的填充色和那道扫光交给流体，
+     但三层 text-shadow 留着 —— 边缘高光才是"玻璃"的来源，
+     而且 text-shadow 不受 color: transparent 影响。 */
+  .intro-water-fill[data-fluid-glyph='on'] {
+    color: transparent;
+  }
+
+  .intro-water-fill[data-fluid-glyph='on']::before {
+    display: none;
+  }
+
   /* 减重：700 字重 × 85px × 满彩度赭墨曾是整页最重的元素，与"轻灵"直接冲突。
      大字的对比度标准是 3.0，这里 7.31:1 仍有两倍余量。正文的 --color-ink 不动。 */
   .intro-line--friend {
     color: rgba(76, 54, 48, 0.86);
     font-weight: 500;
+    /* 浮现的起点与落点。落点跟这一行的实际字色一致，起点是那团模糊的颜色 ——
+       换掉它就换掉了整个入场的性格，几何和时长都不必动。 */
+    --intro-reveal-from: var(--color-ink-mist);
+    --intro-reveal-to: rgba(76, 54, 48, 0.86);
   }
 
   .intro-letter {
@@ -307,15 +334,31 @@ import HomeRiver from './HomeRiver.astro';
     }
   }
 
+  /* 逐字浮现。
+     真正制造"变化感"的不是位移也不是淡入，是 blur 把字糊成一团、再收拢成字形
+     的那个过程 —— 单独的逐字淡入几乎读不出来。所以模糊量是这个动效的主体，
+     不是副作用。
+
+     但那团模糊的颜色不该写死。起点色和落点色都走自定义属性，任何容器都能
+     覆盖它们；不覆盖时退回赭墨那一档。详见 docs/intro-reveal.md。 */
   @keyframes intro-letter-in {
     from {
       opacity: 0;
-      filter: blur(3px);
+      color: var(--intro-reveal-from, var(--color-ink-mist));
+      filter: blur(var(--intro-reveal-blur, 3px));
       transform: translate3d(0, 0.18em, 0);
+    }
+
+    /* 颜色要在最糊的那一段保持住。
+       和模糊同步收敛的话，到 190ms 时颜色已经基本变回落点色 —— 糊团的颜色
+       根本来不及被看见，那"任意颜色"就是个空参数。实测过才发现这一点。 */
+    58% {
+      color: var(--intro-reveal-from, var(--color-ink-mist));
     }
 
     to {
       opacity: 1;
+      color: var(--intro-reveal-to, var(--color-ink));
       filter: blur(0);
       transform: translate3d(0, 0, 0);
     }
@@ -382,6 +425,31 @@ import HomeRiver from './HomeRiver.astro';
 
 <script>
   import { paceLines } from '../lib/typewriter.mjs';
+  import { createFluidGlyph } from '../lib/fluidGlyph.mjs';
+  import { WASH_LADDER } from '../lib/riverRenderer.mjs';
+
+  // 「water」这个字身里也盛着水，用的是和河、和 404 同一个流体场与同一条色阶。
+  //
+  // 只接管填充：字身的颜色和那道扫光让位，三层 text-shadow 留着 —— 边缘高光
+  // 才是"玻璃"的来源。接管失败（拿不到 WebGL / 着色器编译不过）时什么都不做，
+  // 页面回到原来那套透明字身 + 扫光，一行都不必改。
+  const waterFill = document.querySelector<HTMLElement>('.intro-water-fill');
+  const waterCanvas = waterFill?.querySelector<HTMLCanvasElement>('.intro-water-fluid');
+
+  if (waterFill && waterCanvas) {
+    const handle = createFluidGlyph({
+      canvas: waterCanvas,
+      source: waterFill,
+      palette: {
+        shallow: WASH_LADDER[0].rgb,
+        mid: WASH_LADDER[1].rgb,
+        deep: WASH_LADDER[2].rgb,
+      },
+      // 字比 404 那个小得多，高光收敛一些，否则一个词里全是亮斑
+      sheen: 0.7,
+    });
+    if (handle?.ok) waterFill.dataset.fluidGlyph = 'on';
+  }
 
   const questions = document.querySelector<HTMLElement>('.hero-questions');
   const typeMotion = window.matchMedia('(prefers-reduced-motion: reduce)');

@@ -1,5 +1,8 @@
-// 河流的视觉基线。改渲染器之前先 capture，改完 check —— 它回答的是
+// 站点的视觉基线。改渲染相关的东西之前先 capture，改完 check —— 它回答的是
 // "像素动了没有"，而不是"动得对不对"，后者只能靠眼睛看并排对照。
+//
+// 起初只覆盖首页的河，现在也覆盖 404 的流体字形，所以脚本从 river-baseline
+// 改名为 visual-baseline —— 名字得跟着覆盖面走。
 //
 //   node scripts/river-baseline.mjs capture   # 写入基线
 //   node scripts/river-baseline.mjs check     # 与基线比对
@@ -24,7 +27,7 @@ import { tmpdir } from 'node:os';
 
 const projectRoot = resolve(import.meta.dirname, '..');
 const distRoot = join(projectRoot, 'dist');
-const baselineRoot = join(projectRoot, 'tests/baselines/river');
+const baselineRoot = join(projectRoot, 'tests/baselines/site');
 const manifestPath = join(baselineRoot, 'manifest.json');
 
 const CHROME =
@@ -38,6 +41,14 @@ const SHOTS = [
   { name: 'home-1440x900', path: '/', width: 1440, height: 900 },
   { name: 'home-390x844', path: '/', width: 390, height: 844 },
   { name: 'lab-1440x900', path: '/lab/river/', width: 1440, height: 900 },
+  // 404 页。注意这一张锁的是**降级形态**，不是流体本身：截图带 --disable-gpu，
+  // 该模式下拿不到 WebGL 上下文，createFluidGlyph 返回 null，页面回落到原来的
+  // 静态浅水色数字（实测此时 data-fluid-glyph 为空；去掉 --disable-gpu 才是 "on"）。
+  //
+  // 这是有意的取舍：GPU 渲染结果跨机器不稳，哈希会假红；而"没有 WebGL 时 404
+  // 仍然完好"恰恰是最该钉死的性质 —— 它是用户走错路时看到的那一页。
+  // 流体本身的正确性由 tests/not-found-contract.test.mjs 的结构断言 + 人眼负责。
+  { name: 'notfound-1440x900', path: '/404.html', width: 1440, height: 900 },
 ];
 
 const MIME = {
