@@ -82,12 +82,6 @@ const CORE_GRADIENT = Object.freeze([
   Object.freeze({ at: 1, rgb: Object.freeze([66, 152, 228]) }),
 ]);
 
-/**
- * 流体纹理压过缎带原色的比例（实验用）。
- * 0 = 完全是现在的河；1 = 完全被流体取代（实测会丢掉色阶结构，见 compositeRibbon）。
- */
-const FLUID_TEXTURE_STRENGTH = 0.5;
-
 /** 河心的顺流速度（px/s）。两岸趋近于零，见 laneFlow()。 */
 const CENTRE_FLOW_PIXELS_PER_SECOND = 62;
 
@@ -108,6 +102,9 @@ function laneFlow(lane) {
  *   observeElement?: Element,
  *   yOffset?: number,
  *   fluidInterior?: boolean,
+ *   fibers?: boolean,
+ *   washOpacity?: number,
+ *   fluidStrength?: number,
  * }} configuration
  */
 export function createRiverRenderer(configuration) {
@@ -117,6 +114,14 @@ export function createRiverRenderer(configuration) {
     getProgress = () => 0,
     observeElement = canvas,
     yOffset = 0,
+    // 以下三个是实验旋钮，默认值保持现状 —— 首页不传就等于没有它们。
+    // 纤维层：河道内部的静止纹路，流动靠虚线相位平移。
+    // 流体场接管内里之后它可能是多余的，留个开关便于对比。
+    fibers = true,
+    // 八层水彩的整体不透明度倍率。1 = 现状；小于 1 河变浅。
+    washOpacity = 1,
+    // 流体纹理压过缎带原色的比例。0 = 完全是现状；1 = 颜色结构被纹理顶掉。
+    fluidStrength = 0.5,
   } = configuration;
   if (!(canvas instanceof HTMLCanvasElement)) {
     throw new TypeError('createRiverRenderer requires an HTMLCanvasElement.');
@@ -267,7 +272,7 @@ export function createRiverRenderer(configuration) {
       // source-atop 保证只画在缎带内部（蒙版之外一笔不落），globalAlpha 决定
       // 纹理压过原色多少。
       ribbonContext.globalCompositeOperation = 'source-atop';
-      ribbonContext.globalAlpha = FLUID_TEXTURE_STRENGTH;
+      ribbonContext.globalAlpha = fluidStrength;
       ribbonContext.drawImage(fluidField.canvas, 0, 0, ribbonBuffer.width, ribbonBuffer.height);
       ribbonContext.globalAlpha = 1;
     }
@@ -291,8 +296,9 @@ export function createRiverRenderer(configuration) {
       const colorIndex = Math.min(colors.length - 1, Math.floor(depth * colors.length));
       const [red, green, blue] = colors[colorIndex];
       const cobaltBoost = colorIndex >= colors.length - 2 ? state.cobalt : 0;
-      // 深端再提亮 + 加成再降：八层叠加后仍不压向黑
-      const alpha = 0.032 + depth * 0.04 + cobaltBoost * 0.018;
+      // 深端再提亮 + 加成再降：八层叠加后仍不压向黑。
+      // washOpacity 是整体倍率，用来把河调浅；默认 1，即现状。
+      const alpha = (0.032 + depth * 0.04 + cobaltBoost * 0.018) * washOpacity;
       if (traceRibbon(radius, time, layer * 19)) {
         compositeRibbon(`rgb(${red}, ${green}, ${blue})`, alpha);
       }
@@ -303,7 +309,7 @@ export function createRiverRenderer(configuration) {
       for (const { at, rgb } of CORE_GRADIENT) {
         core.addColorStop(at, `rgb(${rgb.join(', ')})`);
       }
-      compositeRibbon(core, 0.05 + state.cobalt * 0.038);
+      compositeRibbon(core, (0.05 + state.cobalt * 0.038) * washOpacity);
     }
   }
 
@@ -423,7 +429,7 @@ export function createRiverRenderer(configuration) {
     context.clearRect(0, 0, canvasWidth, canvasHeight);
     context.save();
     drawWash(time);
-    drawFibers(time);
+    if (fibers) drawFibers(time);
     drawLight(time);
     context.restore();
   }
