@@ -37,3 +37,6 @@ tests/deployment-contract.test.mjs
 # 入库的是同一次抽取导出的 data/graph.json —— 构建期读的是它，
 # 所以 CI 从干净 checkout 也能建出完整图谱。
 data/*.db
+
+# 视觉基线比对时落下的当前帧：临时产物，用来和入库的基线并排看，看完即弃。
+tests/baselines/**/*.current.png

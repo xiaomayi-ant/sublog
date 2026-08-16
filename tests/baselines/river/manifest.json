@@ -1,0 +1,10 @@
+{
+  "capturedAt": "2026-08-16T06:55:03.156Z",
+  "chrome": "Google Chrome 151.0.7922.138",
+  "commit": "7fde3e3cf104402d98224c8d502dfb405ba4c79f",
+  "shots": {
+    "home-1440x900": "fd1f8bda3a517561a7e172a3944d3e288082de863f858bb16b75743b4e4ce7fa",
+    "home-390x844": "91bdc4e66e36010888d4b34654171fccd2f3265977e94c15dafd6ae432387e2c",
+    "lab-1440x900": "3a20f2c481cd3d44543dafbccd617063392c6ed4b63ebf6d2b9ae7731b1e9ad3"
+  }
+}
