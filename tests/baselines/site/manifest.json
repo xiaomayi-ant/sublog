@@ -1,7 +1,7 @@
 {
-  "capturedAt": "2026-08-16T12:40:00.906Z",
+  "capturedAt": "2026-08-16T12:53:09.150Z",
   "chrome": "Google Chrome 151.0.7922.138",
-  "commit": "0dc8216dccfa62f8aa1b5e03863cc3ba19055d97",
+  "commit": "0c5d5dba49c6a7498f6017b12f75525d15e170ca",
   "shots": {
     "home-1440x900": "bdbc7daf188943c7aa8bbdd4787408961cb1fc752689085e058bbd82d9fafc07",
     "home-390x844": "a821f84c291e2aa73bb567a542f3ab2ae040e93dddcc105f8c04c6c66c57e647",

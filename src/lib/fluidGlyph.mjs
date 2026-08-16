@@ -44,20 +44,42 @@ export function createFluidGlyph(configuration) {
   let destroyed = false;
   let glyph = { text: '', font: '', spacing: 0, baseline: 0, left: 0 };
 
-  /** 从 DOM 里读真实排版，而不是在这里另写一套 —— 字号是 clamp() 出来的。 */
+  /**
+   * 从 DOM 里读真实排版，而不是在这里另写一套 —— 字号是 clamp() 出来的。
+   *
+   * 两个踩过的坑：
+   *
+   * 1. font 简写必须带 font-style。漏掉它的话，DOM 显示斜体、画布画正体，
+   *    遮罩和字形错开，视觉上是一个词出现两次。CSS 简写的顺序是
+   *    style → variant → weight → size/line-height → family，少一段就整段失效。
+   * 2. 基线不要用「字号 × 系数」去猜。改成量出来的 ink box：把
+   *    actualBoundingBoxAscent/Descent 在元素盒子里居中，斜体、衬线、
+   *    不同 line-height 都能对上。
+   */
   function readGlyph() {
     const style = getComputedStyle(source);
     const rect = source.getBoundingClientRect();
-    const size = parseFloat(style.fontSize);
     const spacingRaw = style.letterSpacing;
+    const spacing = spacingRaw === 'normal' ? 0 : parseFloat(spacingRaw) || 0;
+    const font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize}/${style.lineHeight} ${style.fontFamily}`;
+    const text = (source.textContent || '').trim();
+
+    view.save();
+    view.setTransform(1, 0, 0, 1, 0, 0);
+    view.font = font;
+    if ('letterSpacing' in view) view.letterSpacing = `${spacing}px`;
+    const metrics = view.measureText(text);
+    view.restore();
+
+    const ascent = metrics.actualBoundingBoxAscent || 0;
+    const descent = metrics.actualBoundingBoxDescent || 0;
+
     return {
-      text: (source.textContent || '').trim(),
-      font: `${style.fontWeight} ${style.fontSize}/${style.lineHeight} ${style.fontFamily}`,
-      spacing: spacingRaw === 'normal' ? 0 : parseFloat(spacingRaw) || 0,
-      // 基线位置：行盒顶部 + 行高的一半 + 半个字高，够贴近 CSS 的实际排布
-      baseline: (rect.height + size * 0.72) / 2,
-      left: 0,
-      size,
+      text,
+      font,
+      spacing,
+      baseline: (rect.height + ascent - descent) / 2,
+      left: Math.max(0, (rect.width - (metrics.width || rect.width)) / 2),
     };
   }
 
