@@ -64,6 +64,36 @@ const TYPE_SCHEMES = [
     name: 'T6 · 尺寸对比：water 放大 1.18×',
     note: 'water 比其余字大一档，基线对齐。让它在句子里真的"大"一些。',
   },
+  {
+    id: 'smallcaps',
+    name: 'T7 · water 小型大写 WATER',
+    note: '大写把字变成一个标记而不是一个词。字号压到 0.78 补偿大写的视觉重量，字距放开。',
+  },
+  {
+    id: 'tracking',
+    name: 'T8 · 字距对比：其余放开 / water 收紧',
+    note: '其余字 +0.03em，water −0.045em。松紧对比是排版里最安静的一种强调 —— 不换字体、不换重量。',
+  },
+  {
+    id: 'light',
+    name: 'T9 · water 细字重 300',
+    note: '同一套字体压到最细。水是轻的，让它在句子里也最轻。',
+  },
+  {
+    id: 'three-line',
+    name: 'T10 · 三行：Be / water, / my friend.',
+    note: '每个成分独占一行。节奏被拉慢，water 落在正中间那一行。',
+  },
+  {
+    id: 'one-line',
+    name: 'T11 · 一行',
+    note: '整句排成一行，字号相应压小。读作一句引言而不是一个标题。',
+  },
+  {
+    id: 'combined',
+    name: 'T12 · 组合：T2 正体 + T8 字距 + T9 细重',
+    note: '三条不冲突的轴叠在一起：water 正体、更细、更紧，其余斜体、更松。这是我认为最值得先看的一版。',
+  },
 ];
 
 const REVEAL_COLORS = [
@@ -403,6 +433,41 @@ const INK_OPTIONS = [
     font-size: 1.18em;
     line-height: 0.9;
   }
+
+  /* T7 小型大写：真的转成大写而不是 font-variant —— 画布要能画出同样的字形，
+     而 ctx.font 对 small-caps 的支持不可靠。fluidGlyph 已支持 text-transform。 */
+  [data-type='smallcaps'] .w {
+    font-style: normal;
+    font-size: 0.78em;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  [data-type='tracking'] :is(.be, .cm, .fr) { letter-spacing: 0.03em; }
+  [data-type='tracking'] .w { letter-spacing: -0.045em; }
+
+  [data-type='light'] .w { font-weight: 300; }
+
+  /* T10 三行：让每个成分独占一行 */
+  [data-type='three-line'] { display: block; }
+  [data-type='three-line'] .be,
+  [data-type='three-line'] .fr { display: block; }
+  [data-type='three-line'] .w { display: inline-block; }
+
+  /* T11 一行：字号压小才排得下 */
+  [data-type='one-line'] {
+    font-size: clamp(1.6rem, 3vw, 2.4rem);
+    white-space: nowrap;
+  }
+
+  /* T12 组合 */
+  [data-type='combined'] .w {
+    font-style: normal;
+    font-weight: 300;
+    letter-spacing: -0.045em;
+  }
+
+  [data-type='combined'] :is(.be, .cm, .fr) { letter-spacing: 0.03em; }
 
   /* ── 浮现时那团模糊的颜色 ─────────────────────────── */
   .axis-note {

@@ -55,6 +55,8 @@ export function createFluidGlyph(configuration) {
    * 2. 基线不要用「字号 × 系数」去猜。改成量出来的 ink box：把
    *    actualBoundingBoxAscent/Descent 在元素盒子里居中，斜体、衬线、
    *    不同 line-height 都能对上。
+   * 3. text-transform 要自己套用。canvas 没有这个概念，DOM 上写
+   *    uppercase 而这里画小写，又是一次错位。
    */
   function readGlyph() {
     const style = getComputedStyle(source);
@@ -62,7 +64,14 @@ export function createFluidGlyph(configuration) {
     const spacingRaw = style.letterSpacing;
     const spacing = spacingRaw === 'normal' ? 0 : parseFloat(spacingRaw) || 0;
     const font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize}/${style.lineHeight} ${style.fontFamily}`;
-    const text = (source.textContent || '').trim();
+    const raw = (source.textContent || '').trim();
+    const transform = style.textTransform;
+    const text =
+      transform === 'uppercase'
+        ? raw.toUpperCase()
+        : transform === 'lowercase'
+          ? raw.toLowerCase()
+          : raw;
 
     view.save();
     view.setTransform(1, 0, 0, 1, 0, 0);
@@ -145,6 +154,11 @@ export function createFluidGlyph(configuration) {
 
   resize();
   schedule();
+  // 字体还没下载完时 measureText 量到的是回退字体，遮罩会和最终字形错开。
+  // T4（water 换 Gill Sans）就是这么错位的。字体就绪后重量一次。
+  document.fonts?.ready.then(() => {
+    if (!destroyed) resize();
+  });
 
   return {
     ok: true,
