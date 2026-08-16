@@ -47,6 +47,24 @@ export const RIVER_PRESETS = Object.freeze({
 
 export const HOME_RIVER_PRESET = RIVER_PRESETS.watercolor;
 
+/**
+ * 浅水 → 深水的色阶。**唯一真相在 `src/styles/tokens.css`**，这里是它的副本。
+ *
+ * 副本而不是运行时读 CSS 变量：渲染在首帧就要出结果，不该依赖样式表已解析；
+ * 两份不同步的风险改由契约测试 tests/river-palette.test.mjs 兜住 —— 它逐档
+ * 比对这里与 tokens.css，对不上就红。
+ *
+ * 历史：这两边曾经长期不一致（最深一档 renderer 是 #4298e4，tokens 声称
+ * #1651be，差 (44,71,38)），因为同步全靠一句注释。注释拦不住漂移。
+ */
+export const WATER_LADDER = Object.freeze([
+  Object.freeze({ token: '--water-100', rgb: Object.freeze([200, 241, 238]) }),
+  Object.freeze({ token: '--water-300', rgb: Object.freeze([132, 220, 217]) }),
+  Object.freeze({ token: '--water-500', rgb: Object.freeze([74, 184, 202]) }),
+  Object.freeze({ token: '--water-700', rgb: Object.freeze([38, 120, 143]) }),
+  Object.freeze({ token: '--color-river', rgb: Object.freeze([22, 81, 190]) }),
+]);
+
 /** 河心的顺流速度（px/s）。两岸趋近于零，见 laneFlow()。 */
 const CENTRE_FLOW_PIXELS_PER_SECOND = 62;
 
@@ -198,16 +216,7 @@ export function createRiverRenderer(configuration) {
   function drawWash(time) {
     if (!context) return;
     const layerCount = Math.round(state.layers);
-    // 这条浅水→深水的色阶就是全站色板的来源：前三档对应 tokens.css 的
-    // --water-100 / 300 / 500，最深一档是 --color-river #1651be。
-    // 改这里要同步改那边，否则标题与河会脱色。
-    const colors = [
-      [222, 252, 250],
-      [140, 240, 236],
-      [78, 212, 228],
-      [74, 186, 234],
-      [66, 152, 228],
-    ];
+    const colors = WATER_LADDER.map((step) => step.rgb);
 
     for (let layer = layerCount - 1; layer >= 0; layer -= 1) {
       const depth = layer / Math.max(1, layerCount - 1);
@@ -224,10 +233,12 @@ export function createRiverRenderer(configuration) {
 
     if (traceRibbon(0.72, time, 103) && ribbonContext) {
       const core = ribbonContext.createLinearGradient(0, 0, canvasWidth, canvasHeight);
-      core.addColorStop(0, 'rgb(222, 252, 250)');
-      core.addColorStop(0.42, 'rgb(78, 212, 228)');
-      core.addColorStop(0.72, 'rgb(96, 182, 250)');
-      core.addColorStop(1, 'rgb(66, 152, 228)');
+      // 核心那一道也走同一条色阶，否则它会自己漂 —— 原来这四个色标是另写的一组
+      const stop = (index) => `rgb(${colors[index].join(', ')})`;
+      core.addColorStop(0, stop(0));
+      core.addColorStop(0.42, stop(2));
+      core.addColorStop(0.72, stop(3));
+      core.addColorStop(1, stop(4));
       compositeRibbon(core, 0.05 + state.cobalt * 0.038);
     }
   }
