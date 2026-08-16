@@ -1,10 +1,10 @@
 {
-  "capturedAt": "2026-08-16T07:36:25.955Z",
+  "capturedAt": "2026-08-16T07:50:42.818Z",
   "chrome": "Google Chrome 151.0.7922.138",
-  "commit": "47237820ca5237b5c2071a6bf7ed49ac04305777",
+  "commit": "dd15b184bfda8a01eb42fc408cc5e77ec7bbbcc7",
   "shots": {
-    "home-1440x900": "644d3d375180c275636cbef043046e33f9f64dc0b3f064725da205505d096296",
-    "home-390x844": "412a738ff019908dc5f0702ad61dc41ee3a1ea7a99663db71cc9fa77b4ea7f56",
+    "home-1440x900": "be9cb7a3bfcf806391c7d6502188caf3afb9a627649c8f7b25107f66909c5f53",
+    "home-390x844": "ad495ff9e03abdb9c8b7ec9a20ffc3583a30fabf552437adbbbeb5aad202c209",
     "lab-1440x900": "9606f28b981c4dc331738590f419cee4c0dee389670f5b3d477ea3e89a107072"
   }
 }

@@ -192,7 +192,9 @@ import HomeRiver from './HomeRiver.astro';
     width: max-content;
     max-width: min(100%, 46rem);
     margin-top: clamp(2.5rem, 6vh, 4.5rem);
-    color: var(--color-ink-soft);
+    /* 不是 --color-ink-soft：这两行压在河上而不是白底上，同一个 alpha
+       混进河面会掉一档对比度（4.84 → 3.81）。理由见 tokens.css。 */
+    color: var(--color-ink-on-water);
   }
 
   .question + .question {
@@ -220,7 +222,10 @@ import HomeRiver from './HomeRiver.astro';
   /* 等宽是工程师的方言，和"思考 AI"的定位相斥；换回编辑体斜体，
      它和标题同源，读作同一句话的另一种写法，而不是第二个问题。 */
   .type--en {
-    color: var(--color-ink-faint);
+    /* 原来是 --color-ink-faint（0.46）：白底上就只有 2.48:1，压到河上 2.22:1。
+       它比中文行淡这件事仍然保留，但改由 0.82 这一档承担 —— 层次主要靠
+       斜体编辑体和更小的字号，不必再靠把字淡到读不清。 */
+    color: var(--color-ink-on-water-faint);
     font-family: var(--font-display);
     font-style: italic;
     font-size: clamp(0.88rem, 1vw, 0.96rem);

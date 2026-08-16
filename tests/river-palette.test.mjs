@@ -62,6 +62,30 @@ async function tokenValues() {
   return values;
 }
 
+async function tokenAlphas() {
+  const css = await readFile(path.join(projectRoot, 'src/styles/tokens.css'), 'utf8');
+  const values = new Map();
+  const pattern = /(--[a-z0-9-]+)\s*:\s*rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)\s*;/g;
+  for (const [, name, r, g, b, a] of css.matchAll(pattern)) {
+    values.set(name, { rgb: [Number(r), Number(g), Number(b)], alpha: Number(a) });
+  }
+  return values;
+}
+
+function relativeLuminance([red, green, blue]) {
+  const channel = (value) => {
+    const v = value / 255;
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * channel(red) + 0.7152 * channel(green) + 0.0722 * channel(blue);
+}
+
+function contrast(foreground, background) {
+  const a = relativeLuminance(foreground);
+  const b = relativeLuminance(background);
+  return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+}
+
 test('every wash step stays on the same hue axis as its sibling token', async () => {
   const tokens = await tokenValues();
 
@@ -89,6 +113,44 @@ test('the ladder runs shallow to deep without doubling back', () => {
       `第 ${index + 1} 档比上一档更亮（${current.toFixed(1)} ≥ ${previous.toFixed(1)}）`,
     );
   }
+});
+
+// 首屏两行问句压在河上。带 alpha 的墨会和身后的底混合，所以对比度取决于
+// 河面而不是白底 —— 白底上达标不代表这里达标（--color-ink-soft 就是 4.84 → 3.81）。
+//
+// 这个底色是量出来的，不是猜的：在 1345×669、dpr 2 下对问句所在区域连采 40 帧，
+// 取显示色最暗的那一个像素。河的色阶若再调深，必须重新量并更新这个常量。
+const DARKEST_RIVER_UNDER_QUESTIONS = [177, 212, 231];
+const WCAG_AA_SMALL_TEXT = 4.5;
+
+test('hero questions stay readable where they actually sit — on the river', async () => {
+  const alphas = await tokenAlphas();
+
+  for (const token of ['--color-ink-on-water', '--color-ink-on-water-faint']) {
+    const declared = alphas.get(token);
+    assert.ok(declared, `tokens.css 里找不到 ${token}`);
+
+    const { rgb, alpha } = declared;
+    // 有效前景 = 墨按 alpha 混进它身后的河面
+    const effective = rgb.map(
+      (channel, index) => channel * alpha + DARKEST_RIVER_UNDER_QUESTIONS[index] * (1 - alpha),
+    );
+    const ratio = contrast(effective, DARKEST_RIVER_UNDER_QUESTIONS);
+
+    assert.ok(
+      ratio >= WCAG_AA_SMALL_TEXT,
+      `${token}（alpha ${alpha}）在最暗河面上只有 ${ratio.toFixed(2)}:1，低于 ${WCAG_AA_SMALL_TEXT}`,
+    );
+  }
+});
+
+test('the hero questions keep a visible weight difference between the two lines', async () => {
+  // 修对比度不能把层次一起修掉：英文行仍应比中文行淡。
+  const alphas = await tokenAlphas();
+  const strong = alphas.get('--color-ink-on-water').alpha;
+  const faint = alphas.get('--color-ink-on-water-faint').alpha;
+
+  assert.ok(faint < strong, `英文行（${faint}）应当比中文行（${strong}）淡`);
 });
 
 test('the renderer keeps no colour outside the two declared tables', async () => {
