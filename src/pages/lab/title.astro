@@ -37,40 +37,46 @@ const REVEAL_COLORS = [
 
 const INK_OPTIONS = [
   {
-    id: 'ink',
-    name: '1 · 现状：赭墨',
-    swatch: ['#4c3630', '#4c3630'],
-    note: 'Be 与 my friend. 同为 #4c3630（后者 0.86 alpha）。11.18:1，彩度 C*12 —— 暖意很弱，所以读作黑。',
+    id: 'sun-raw',
+    name: 'Y1 · 纯阳黄 --color-sun（原色，未处理）',
+    swatch: ['#f5c85b', '#f5c85b'],
+    note: '1.58:1。你要的那个黄，原样放上来。白底上它几乎浮不住 —— 这是它一直只做高光的原因。',
   },
   {
-    id: 'ember',
-    name: '2 · 暖赭 --color-ember',
-    swatch: ['#a8632c', '#a8632c'],
-    note: '站点既有的暖强调色。4.68:1 过大字 AAA。彩度 C*48，是墨的四倍 —— 一眼就是暖色而不是黑。',
+    id: 'sun-stroke',
+    name: 'Y2 · 阳黄字身 + 赭金描边',
+    swatch: ['#f5c85b', '#a8632c'],
+    note: '亮度一点不减，字形交给 0.6px 的描边去撑。这正是 water 那个词在用的思路：极浅的字身 + 边缘立形。',
   },
   {
-    id: 'deep-ember',
-    name: '3 · 深赭',
-    swatch: ['#8a4f1f', '#8a4f1f'],
-    note: '同色相压深一档。6.52:1，比 ember 沉稳，仍然明确是暖的。',
+    id: 'glint',
+    name: 'Y3 · 金 --color-glint #e8a63c',
+    swatch: ['#e8a63c', '#e8a63c'],
+    note: '2.11:1。站点 hover 浮光用的那一档，比阳黄橙一些、实一些，但仍不达标。',
   },
   {
-    id: 'olive-gold',
-    name: '4 · 橄榄金（最接近“暖黄”的可读档）',
-    swatch: ['#a7873a', '#a7873a'],
-    note: '沿阳黄色相 86° 压到 L*58 —— 这是既保住黄又能过大字 AA(3.0) 的极限，3.39:1。再亮就读不了，再暗就不黄了。代价：它读作橄榄，不是阳光。',
+    id: 'deep-gold',
+    name: 'Y4 · 深金 #d18f2c',
+    swatch: ['#d18f2c', '#d18f2c'],
+    note: '2.74:1，彩度 C*61 仍很高。差一点点到大字 AA 的 3.0。',
   },
   {
-    id: 'warm-cool',
-    name: '5 · 双层：Be 暖赭 / my friend. 赭墨',
-    swatch: ['#a8632c', '#4c3630'],
-    note: '句子走「暖 → 水 → 沉」。开口带暖，落到墨上收住。层次靠色温而不是深浅。',
+    id: 'orange-gold',
+    name: 'Y5 · 橙金 #c4832a（大字 AA 的门槛）',
+    swatch: ['#c4832a', '#c4832a'],
+    note: '3.17:1，色相 72°、彩度 C*58 —— 这是既明确是金、又刚好过大字 AA 的那一档。上一批的橄榄金压的是 86°（黄绿），所以发浊；往橙走就不会。',
   },
   {
-    id: 'two-warm',
-    name: '6 · 双层：Be 深赭 / my friend. 暖赭',
-    swatch: ['#8a4f1f', '#a8632c'],
-    note: '整句都在暖色里，靠深浅分层。第二行反而更亮，视线被往下带。',
+    id: 'amber-gold',
+    name: 'Y6 · 赭金 #b3742a',
+    swatch: ['#b3742a', '#b3742a'],
+    note: '3.85:1，比 Y5 稳，仍是 C*52 的高彩度金。',
+  },
+  {
+    id: 'sun-gradient',
+    name: 'Y7 · 阳黄 → 赭金 渐变',
+    swatch: ['#f5c85b', '#b3742a'],
+    note: '字身自上而下从阳黄过渡到赭金：上缘亮、下缘实。整体读作"被阳光照到的字"，而不是一块平涂的黄。',
   },
 ];
 ---
@@ -372,18 +378,25 @@ const INK_OPTIONS = [
   }
 
   /* 逗号字形小，同样透明度会看不见，所以跟着 Be 走但提一档 */
-  [data-ink='ink'] .be, [data-ink='ink'] .cm { color: #4c3630; }
-  [data-ink='ink'] .fr { color: rgba(76, 54, 48, 0.86); }
+  /* 每一档只改 Be / 逗号 / my friend.，water 不受影响 */
+  [data-ink='sun-raw'] :is(.be, .cm, .fr) { color: #f5c85b; }
 
-  [data-ink='ember'] .be, [data-ink='ember'] .cm, [data-ink='ember'] .fr { color: #a8632c; }
+  /* 描边：亮度不减，字形交给边缘。-webkit-text-stroke 比堆 text-shadow 干净 */
+  [data-ink='sun-stroke'] :is(.be, .cm, .fr) {
+    color: #f5c85b;
+    -webkit-text-stroke: 0.6px #a8632c;
+  }
 
-  [data-ink='deep-ember'] .be, [data-ink='deep-ember'] .cm, [data-ink='deep-ember'] .fr { color: #8a4f1f; }
+  [data-ink='glint'] :is(.be, .cm, .fr) { color: #e8a63c; }
+  [data-ink='deep-gold'] :is(.be, .cm, .fr) { color: #d18f2c; }
+  [data-ink='orange-gold'] :is(.be, .cm, .fr) { color: #c4832a; }
+  [data-ink='amber-gold'] :is(.be, .cm, .fr) { color: #b3742a; }
 
-  [data-ink='olive-gold'] .be, [data-ink='olive-gold'] .cm, [data-ink='olive-gold'] .fr { color: #a7873a; }
-
-  [data-ink='warm-cool'] .be, [data-ink='warm-cool'] .cm { color: #a8632c; }
-  [data-ink='warm-cool'] .fr { color: #4c3630; }
-
-  [data-ink='two-warm'] .be, [data-ink='two-warm'] .cm { color: #8a4f1f; }
-  [data-ink='two-warm'] .fr { color: #a8632c; }
+  /* 渐变：上缘阳黄、下缘赭金，读作"被阳光照到"而不是平涂 */
+  [data-ink='sun-gradient'] :is(.be, .cm, .fr) {
+    color: transparent;
+    background-image: linear-gradient(180deg, #f5c85b 0%, #d18f2c 55%, #b3742a 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+  }
 </style>
