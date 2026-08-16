@@ -153,12 +153,28 @@ test('the hero questions keep a visible weight difference between the two lines'
   assert.ok(faint < strong, `英文行（${faint}）应当比中文行（${strong}）淡`);
 });
 
-test('the renderer keeps no colour outside the two declared tables', async () => {
-  // 核心那道渐变原来把四个色标散写在 drawWash 里，其中 rgb(96,182,250)
-  // 不属于任何一条色阶，谁也没提过它，只能自己漂。现在它在 CORE_GRADIENT 里。
+test('the renderer keeps no colour outside the declared tables', async () => {
+  // 这个文件先后出现过三套颜色：WASH_LADDER、核心渐变那四个色标、以及纤维条纹的
+  // rgba() 字面值。前两套已经收进常量表；纤维那套躲过了这条测试的上一版 ——
+  // 因为正则写的是 rgb\( ，匹配不到 rgba\( 。现在两种都抓。
   const source = await readFile(path.join(projectRoot, 'src/lib/riverRenderer.mjs'), 'utf8');
   const afterTables = source.slice(source.indexOf('const CENTRE_FLOW_PIXELS_PER_SECOND'));
-  const literals = afterTables.match(/rgb\(\s*\d+\s*,\s*\d+\s*,\s*\d+/g) ?? [];
+  const literals = afterTables.match(/rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+/g) ?? [];
 
   assert.deepEqual(literals, [], `声明表之外还有写死的颜色：${literals.join(' / ')}`);
+});
+
+test('the fibre tones come from the wash ladder', async () => {
+  // 纤维原来用 rgba(64,186,206) 和 rgba(74,152,216) —— 与色阶接近但都不相等，
+  // 是这个文件里的第三套颜色。现在它们引用 WASH_LADDER 的档位。
+  const source = await readFile(path.join(projectRoot, 'src/lib/riverRenderer.mjs'), 'utf8');
+  const start = source.indexOf('const FIBER_TONES');
+  assert.ok(start >= 0, '找不到 FIBER_TONES');
+  // 只截这张表本身，不要连着后面的常量一起 —— 否则加一个新常量就会误报
+  const table = source.slice(start, source.indexOf(']);', start) + 3);
+
+  assert.ok(table.includes('WASH_LADDER'), '纤维色调应当引用 WASH_LADDER');
+  // 白沫那一档是例外：纯白不属于水的色阶，它是水面反光
+  const strays = table.match(/\[\s*\d+\s*,\s*\d+\s*,\s*\d+\s*\]/g) ?? [];
+  assert.deepEqual(strays, ['[255, 255, 255]'], `纤维色调里有游离的色值：${strays.join(' / ')}`);
 });

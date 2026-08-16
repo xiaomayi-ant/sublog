@@ -82,8 +82,34 @@ const CORE_GRADIENT = Object.freeze([
   Object.freeze({ at: 1, rgb: Object.freeze([66, 152, 228]) }),
 ]);
 
+/**
+ * 纤维条纹的三种色调：白沫、青流、深流。
+ *
+ * 原来这三个是散写在 drawFibers 里的 rgba() 字面值 —— 也就是这个文件里的
+ * **第三套**颜色，既不是 WASH_LADDER 也不是 tokens。而且它躲过了色板契约测试，
+ * 因为那条正则写的是 rgb\( ，匹配不到 rgba\( 。现在接到色阶上，测试也一并收紧。
+ */
+const FIBER_TONES = Object.freeze([
+  Object.freeze({ rgb: Object.freeze([255, 255, 255]), width: 0.85 }),
+  Object.freeze({ rgb: WASH_LADDER[2].rgb, width: 0.62 }),
+  Object.freeze({ rgb: WASH_LADDER[4].rgb, width: 0.72 }),
+]);
+
+/**
+ * 焦散亮纹的颜色。清水里光折射到水底的那些游动亮纹 —— 它是光不是水，
+ * 所以比色阶最浅那一档还要亮，单列一档而不是硬塞进 WASH_LADDER。
+ * 原本也是散写在 drawLight 里的 rgba() 字面值。
+ */
+const CAUSTIC_RGB = Object.freeze([240, 253, 255]);
+
 /** 河心的顺流速度（px/s）。两岸趋近于零，见 laneFlow()。 */
 const CENTRE_FLOW_PIXELS_PER_SECOND = 62;
+
+/** 多大的曲率算"弯"。乘上去再钳到 1，所以它决定的是从哪一档开始起浪。 */
+const BEND_SENSITIVITY = 1.4;
+/** 涌浪沿河的空间频率（一屏几个浪）与推进速度。河不大，两者都取小。 */
+const BANK_WAVE_FREQUENCY = 9.5;
+const BANK_WAVE_SPEED = 0.55;
 
 /**
  * 明渠流的横向速度剖面：贴壁不动、河心最快。
@@ -105,6 +131,9 @@ function laneFlow(lane) {
  *   fibers?: boolean,
  *   washOpacity?: number,
  *   fluidStrength?: number,
+ *   fiberDensity?: number,
+ *   fiberOpacity?: number,
+ *   bankWave?: number,
  * }} configuration
  */
 export function createRiverRenderer(configuration) {
@@ -122,6 +151,12 @@ export function createRiverRenderer(configuration) {
     washOpacity = 1,
     // 流体纹理压过缎带原色的比例。0 = 完全是现状；1 = 颜色结构被纹理顶掉。
     fluidStrength = 0.5,
+    // 纤维密度倍率。1 = 现状的 50 条。
+    fiberDensity = 1,
+    // 纤维整体不透明度倍率。
+    fiberOpacity = 1,
+    // 弯道外岸涌浪的幅度（相对河宽）。0 = 关闭。河不大，值该取小。
+    bankWave = 0,
   } = configuration;
   if (!(canvas instanceof HTMLCanvasElement)) {
     throw new TypeError('createRiverRenderer requires an HTMLCanvasElement.');
@@ -315,7 +350,9 @@ export function createRiverRenderer(configuration) {
 
   function drawFibers(time) {
     if (!context) return;
-    const fiberCount = 22 + Math.round(state.layers * 3.5);
+    // 密度：原来固定 22 + layers*3.5 = 50 条。太密会读成一把梳齿而不是水纹，
+    // 所以留出倍率。
+    const fiberCount = Math.max(3, Math.round((22 + state.layers * 3.5) * fiberDensity));
     const sampleCount = Math.max(80, Math.round(canvasWidth / 12));
     context.lineCap = 'round';
 
@@ -339,9 +376,30 @@ export function createRiverRenderer(configuration) {
         // 这里换 fbm 不违反那个模型：纹路依然静止，只是它自己有了大小两层尺度，
         // 读起来才像水面的纹理而不是一把平行的梳齿。幅度一个字没动。
         const flutter = (fbm(s * 12 + fiber, 307) - 0.5) * state.turbulence * 0.006;
+
+        // 弯道二次流：表层水涌向外岸，外岸由曲率的符号决定（见 riverMath 的
+        // signedCenterlineCurvature）。只在弯得够急、且靠近外岸的一侧起浪，
+        // 直河段保持平静 —— 这才是"局部和拐弯处才有动静"。
+        //
+        // 一浪一浪：用沿河行进的正弦而不是噪声。噪声给的是随机起伏，
+        // 涌浪要的是有节奏地推过去。
+        let swell = 0;
+        if (bankWave > 0) {
+          const outerBank = Math.sign(geometry.signedCurvature);
+          const towardOuter = Math.max(0, lane * outerBank); // 只作用在外岸那一侧
+          const bend = Math.min(1, Math.abs(geometry.signedCurvature) * BEND_SENSITIVITY);
+          swell =
+            Math.sin(s * BANK_WAVE_FREQUENCY - time * BANK_WAVE_SPEED + fiber * 0.12) *
+            towardOuter *
+            towardOuter * // 平方：让浪集中在贴岸那几条，中间几乎不受影响
+            bend *
+            geometry.baseWidth *
+            bankWave;
+        }
+
         const point = pointToCanvas({
           x: geometry.center.x,
-          y: geometry.center.y + lateralOffset + flutter,
+          y: geometry.center.y + lateralOffset + flutter + swell,
         });
         if (index === 0) context.moveTo(point.x, point.y);
         else context.lineTo(point.x, point.y);
@@ -351,17 +409,16 @@ export function createRiverRenderer(configuration) {
       // 的纤维虽然在动，但被静止的水体完全淹没，实测位移读不出来。
       // 岸边的条纹一并压淡：不动的水不该有明显的流痕
       const presence = 0.32 + 0.68 * profile;
-      const tone = fiber % 3;
-      if (tone === 0) {
-        context.strokeStyle = `rgba(255, 255, 255, ${(0.16 + state.turbulence * 0.1) * presence})`;
-        context.lineWidth = 0.85;
-      } else if (tone === 1) {
-        context.strokeStyle = `rgba(64, 186, 206, ${(0.12 + state.turbulence * 0.07) * presence})`;
-        context.lineWidth = 0.62;
-      } else {
-        context.strokeStyle = `rgba(74, 152, 216, ${(0.08 + state.cobalt * 0.08) * presence})`;
-        context.lineWidth = 0.72;
-      }
+      const toneIndex = fiber % FIBER_TONES.length;
+      const tone = FIBER_TONES[toneIndex];
+      const toneAlpha =
+        toneIndex === 0
+          ? 0.16 + state.turbulence * 0.1
+          : toneIndex === 1
+            ? 0.12 + state.turbulence * 0.07
+            : 0.08 + state.cobalt * 0.08;
+      context.strokeStyle = `rgba(${tone.rgb.join(', ')}, ${toneAlpha * presence * fiberOpacity})`;
+      context.lineWidth = tone.width;
 
       // 顺流：虚线沿路径平移。河道本身不动，动的是描在它上面的条纹 —— 这正是
       // "岸线确定、水在流"的模型。每条纤维错开相位，条纹才不会整齐划一。
@@ -409,7 +466,7 @@ export function createRiverRenderer(configuration) {
         else context.lineTo(point.x, point.y);
       }
 
-      context.strokeStyle = `rgba(240, 253, 255, ${strand.alpha})`;
+      context.strokeStyle = `rgba(${CAUSTIC_RGB.join(', ')}, ${strand.alpha})`;
       context.lineWidth = strand.weight;
       context.stroke();
     }

@@ -40,12 +40,31 @@ import Base from '../../layouts/Base.astro';
       <label class="knob knob--switch">
         <span>纤维层</span>
         <input type="checkbox" name="fibers" checked />
-        <small>河道内部的静止纹路，流动靠虚线相位平移。流体接管内里后它可能多余。</small>
+        <small>河道内部的静止纹路，流动靠虚线相位平移。</small>
+      </label>
+      <label class="knob">
+        <span>纤维密度 <output id="out-density">1.00</output></span>
+        <input type="range" name="fiberDensity" min="0.1" max="1.2" step="0.02" value="1" />
+        <small>1.00 = 现状的 50 条。太密会读成一把梳齿而不是水纹。</small>
+      </label>
+      <label class="knob">
+        <span>纤维浓度 <output id="out-fiberopacity">1.00</output></span>
+        <input type="range" name="fiberOpacity" min="0" max="1.5" step="0.02" value="1" />
+        <small>条纹整体的不透明度倍率。</small>
+      </label>
+      <label class="knob">
+        <span>弯道岸浪 <output id="out-bank">0.00</output></span>
+        <input type="range" name="bankWave" min="0" max="0.6" step="0.01" value="0" />
+        <small>
+          弯道二次流：表层水涌向外岸，外岸由曲率符号决定。只在弯得够急处起浪，
+          直河段保持平静。河不大，值取小。
+        </small>
       </label>
       <div class="knob knob--wide">
-        <button type="button" data-preset="1,0.5,1">回到现状基准</button>
-        <button type="button" data-preset="0.62,0.5,0">更浅 · 无纤维</button>
-        <button type="button" data-preset="0.45,0.62,0">最浅 · 无纤维</button>
+        <button type="button" data-preset="1,0.5,1,1,1,0">回到现状基准</button>
+        <button type="button" data-preset="0.75,0.4,1,0.4,0.7,0.16">疏纤维 + 轻岸浪</button>
+        <button type="button" data-preset="0.62,0.5,1,0.24,0.55,0.24">更疏 + 明显岸浪</button>
+        <button type="button" data-preset="0.62,0.5,0,1,1,0">无纤维 · 只有流体</button>
       </div>
     </form>
 
@@ -78,6 +97,9 @@ import Base from '../../layouts/Base.astro';
       const washOpacity = Number(data.get('washOpacity'));
       const fluidStrength = Number(data.get('fluidStrength'));
       const fibers = data.get('fibers') === 'on';
+      const fiberDensity = Number(data.get('fiberDensity'));
+      const fiberOpacity = Number(data.get('fiberOpacity'));
+      const bankWave = Number(data.get('bankWave'));
 
       handle?.destroy();
       handle = createRiverRenderer({
@@ -88,14 +110,25 @@ import Base from '../../layouts/Base.astro';
         fibers,
         washOpacity,
         fluidStrength,
+        fiberDensity,
+        fiberOpacity,
+        bankWave,
       });
 
-      document.querySelector<HTMLOutputElement>('#out-wash')!.value = washOpacity.toFixed(2);
-      document.querySelector<HTMLOutputElement>('#out-strength')!.value = fluidStrength.toFixed(2);
+      const show = (id: string, value: number) => {
+        const output = document.querySelector<HTMLOutputElement>(id);
+        if (output) output.value = value.toFixed(2);
+      };
+      show('#out-wash', washOpacity);
+      show('#out-strength', fluidStrength);
+      show('#out-density', fiberDensity);
+      show('#out-fiberopacity', fiberOpacity);
+      show('#out-bank', bankWave);
       if (tag) {
         tag.textContent =
           `融合 · 深浅 ${washOpacity.toFixed(2)} · 纹理 ${fluidStrength.toFixed(2)} · ` +
-          `纤维 ${fibers ? '开' : '关'}`;
+          `纤维 ${fibers ? `${fiberDensity.toFixed(2)}×${fiberOpacity.toFixed(2)}` : '关'} · ` +
+          `岸浪 ${bankWave.toFixed(2)}`;
       }
       measure();
     }
@@ -148,10 +181,16 @@ import Base from '../../layouts/Base.astro';
     form.addEventListener('click', (event) => {
       const button = (event.target as HTMLElement).closest<HTMLElement>('[data-preset]');
       if (!button) return;
-      const [wash, strength, fibers] = button.dataset.preset!.split(',').map(Number);
-      (form.elements.namedItem('washOpacity') as HTMLInputElement).value = String(wash);
-      (form.elements.namedItem('fluidStrength') as HTMLInputElement).value = String(strength);
-      (form.elements.namedItem('fibers') as HTMLInputElement).checked = fibers === 1;
+      const [wash, strength, fibersOn, density, fiberAlpha, bank] = button
+        .dataset.preset!.split(',')
+        .map(Number);
+      const field = (name: string) => form.elements.namedItem(name) as HTMLInputElement;
+      field('washOpacity').value = String(wash);
+      field('fluidStrength').value = String(strength);
+      field('fibers').checked = fibersOn === 1;
+      field('fiberDensity').value = String(density);
+      field('fiberOpacity').value = String(fiberAlpha);
+      field('bankWave').value = String(bank);
       rebuild();
     });
     rebuild();

@@ -134,7 +134,16 @@ export function riverWidth(position, suppliedOptions = {}) {
   return 0.091 * widthControl * irregularity * downstreamBasin * sourceTaper;
 }
 
-export function centerlineCurvature(position, suppliedOptions = {}) {
+/**
+ * 带符号的曲率。符号告诉我们**弯道的外岸在哪一侧**。
+ *
+ * 这在真实河流里是有物理意义的：弯道会产生二次流（螺旋流），表层水涌向外岸、
+ * 底层水贴着河床回到内岸。外岸冲刷、内岸淤积就是这么来的。
+ * 曲率取绝对值等于把这个方向丢掉，而它正是"水往哪边涌"的答案。
+ *
+ * 约定：法线取 (-tangent.y, tangent.x)，于是符号为正时外岸在 +normal 一侧。
+ */
+export function signedCenterlineCurvature(position, suppliedOptions = {}) {
   const options = optionsWithDefaults(suppliedOptions);
   const s = clamp(position, 0, 1);
   const aspect = Math.max(1e-6, options.aspect);
@@ -150,7 +159,12 @@ export function centerlineCurvature(position, suppliedOptions = {}) {
   const speedSquared = firstX * firstX + firstY * firstY;
 
   if (speedSquared < 1e-12) return 0;
-  return Math.abs(firstX * secondY - firstY * secondX) / Math.pow(speedSquared, 1.5);
+  return (firstX * secondY - firstY * secondX) / Math.pow(speedSquared, 1.5);
+}
+
+/** 曲率大小。曲率钳制只关心弯得多急，不关心朝哪边弯。 */
+export function centerlineCurvature(position, suppliedOptions = {}) {
+  return Math.abs(signedCenterlineCurvature(position, suppliedOptions));
 }
 
 /**
@@ -183,11 +197,15 @@ export function buildRibbonGeometry(position, suppliedOptions = {}) {
     y: tangent.x,
   };
 
+  // 一次算出带符号的曲率，大小与方向都从它来 —— 不必求两遍
+  const signedCurvature = signedCenterlineCurvature(s, options);
+
   return {
     center,
     tangent,
     normal,
-    curvature: centerlineCurvature(s, options),
+    curvature: Math.abs(signedCurvature),
+    signedCurvature,
     baseWidth: riverWidth(s, options),
     aspect,
   };
