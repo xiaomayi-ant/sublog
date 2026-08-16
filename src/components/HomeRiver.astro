@@ -30,10 +30,24 @@
   if (canvas) {
     // 河固定在首屏，形态不再随滚动变化 —— getProgress 保持默认的 0。
     // 它跟着首屏一起滚走，而不是被钉在视口顶部让页面从背后滑过。
+    //
+    // 下面这组数值是在 /lab/fluid-river 上逐项拨出来的，不是推算的。
+    // 河道几何完全不受它们影响 —— 它们只改内里填什么、以及哪里起浪。
     createRiverRenderer({
       canvas,
       initialState: HOME_RIVER_PRESET,
       yOffset: -0.08,
+      // 内里换成流体场：域扭曲场随时间演化，纹理被拉伸、卷起、再合上。
+      // 这是河原来那套（虚线沿固定路径平移，一维位移）做不到的。
+      fluidInterior: true,
+      fluidStrength: 0.96,
+      washOpacity: 0.94,
+      // 纤维压到三成：原来的 50 条太密，读起来是一把梳齿而不是水纹。
+      // 条数少了就把每条调浓一点，免得纹路整个消失。
+      fiberDensity: 0.32,
+      fiberOpacity: 1.4,
+      // 弯道二次流：表层水涌向外岸。只在弯得够急处起浪，直河段保持平静。
+      bankWave: 0.32,
     });
   }
 </script>
