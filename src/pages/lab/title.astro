@@ -36,10 +36,42 @@ const REVEAL_COLORS = [
 ];
 
 const INK_OPTIONS = [
-  { id: 'ink', name: '1 · 现状 --color-ink #4c3630', note: '赭墨。Lab 色相 41°，距水的互补方向 5°。11.18:1。' },
-  { id: 'soft', name: '2 · 统一到 0.86 alpha', note: '现在只有「my friend.」是这一档，Be 和逗号是满值。统一之后整句更匀。' },
-  { id: 'warm', name: '3 · 更暖更浅 #6b5048', note: '同色相往上提一档，减重但保住暖意。' },
-  { id: 'cold', name: '4 · 冷墨 --water-900 #13303a', note: 'tokens.css 明确否决过：彩度压下去之后暖意消失，只剩"更黑"。放这里做对照。' },
+  {
+    id: 'ink',
+    name: '1 · 现状：赭墨',
+    swatch: ['#4c3630', '#4c3630'],
+    note: 'Be 与 my friend. 同为 #4c3630（后者 0.86 alpha）。11.18:1，彩度 C*12 —— 暖意很弱，所以读作黑。',
+  },
+  {
+    id: 'ember',
+    name: '2 · 暖赭 --color-ember',
+    swatch: ['#a8632c', '#a8632c'],
+    note: '站点既有的暖强调色。4.68:1 过大字 AAA。彩度 C*48，是墨的四倍 —— 一眼就是暖色而不是黑。',
+  },
+  {
+    id: 'deep-ember',
+    name: '3 · 深赭',
+    swatch: ['#8a4f1f', '#8a4f1f'],
+    note: '同色相压深一档。6.52:1，比 ember 沉稳，仍然明确是暖的。',
+  },
+  {
+    id: 'olive-gold',
+    name: '4 · 橄榄金（最接近“暖黄”的可读档）',
+    swatch: ['#a7873a', '#a7873a'],
+    note: '沿阳黄色相 86° 压到 L*58 —— 这是既保住黄又能过大字 AA(3.0) 的极限，3.39:1。再亮就读不了，再暗就不黄了。代价：它读作橄榄，不是阳光。',
+  },
+  {
+    id: 'warm-cool',
+    name: '5 · 双层：Be 暖赭 / my friend. 赭墨',
+    swatch: ['#a8632c', '#4c3630'],
+    note: '句子走「暖 → 水 → 沉」。开口带暖，落到墨上收住。层次靠色温而不是深浅。',
+  },
+  {
+    id: 'two-warm',
+    name: '6 · 双层：Be 深赭 / my friend. 暖赭',
+    swatch: ['#8a4f1f', '#a8632c'],
+    note: '整句都在暖色里，靠深浅分层。第二行反而更亮，视线被往下带。',
+  },
 ];
 ---
 
@@ -107,8 +139,14 @@ const INK_OPTIONS = [
           <div class="row">
             <p class="tag">{option.name}</p>
             <p class="note">{option.note}</p>
-            <p class="sentence" data-water="contour" data-ink={option.id}>
-              Be <span class="w" data-text="water">water<canvas></canvas></span>, my friend.
+            <p class="swatches">
+              {option.swatch.map((colour) => <i style={`background:${colour}`} />)}
+              <code>{option.swatch.join(' / ')}</code>
+            </p>
+            <p class="sentence" data-water="bevel" data-ink={option.id}>
+              <span class="be">Be</span>&nbsp;<span class="w" data-text="water"
+                >water<canvas></canvas></span
+              ><span class="cm">,</span>&nbsp;<span class="fr">my friend.</span>
             </p>
           </div>
         ))
@@ -312,19 +350,40 @@ const INK_OPTIONS = [
   }
 
   /* ── 其余字的墨色 ─────────────────────────────────── */
-  [data-ink='ink'] {
-    color: var(--color-ink);
+  /* water 的颜色与格式在这一组里完全不变，只改 Be / 逗号 / my friend. */
+  .swatches {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: var(--space-xs);
   }
 
-  [data-ink='soft'] {
-    color: rgba(76, 54, 48, 0.86);
+  .swatches i {
+    width: 1.6rem;
+    height: 0.7rem;
+    border: 1px solid var(--color-line);
+    border-radius: 2px;
   }
 
-  [data-ink='warm'] {
-    color: #6b5048;
+  .swatches code {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--color-ink-faint);
   }
 
-  [data-ink='cold'] {
-    color: var(--water-900);
-  }
+  /* 逗号字形小，同样透明度会看不见，所以跟着 Be 走但提一档 */
+  [data-ink='ink'] .be, [data-ink='ink'] .cm { color: #4c3630; }
+  [data-ink='ink'] .fr { color: rgba(76, 54, 48, 0.86); }
+
+  [data-ink='ember'] .be, [data-ink='ember'] .cm, [data-ink='ember'] .fr { color: #a8632c; }
+
+  [data-ink='deep-ember'] .be, [data-ink='deep-ember'] .cm, [data-ink='deep-ember'] .fr { color: #8a4f1f; }
+
+  [data-ink='olive-gold'] .be, [data-ink='olive-gold'] .cm, [data-ink='olive-gold'] .fr { color: #a7873a; }
+
+  [data-ink='warm-cool'] .be, [data-ink='warm-cool'] .cm { color: #a8632c; }
+  [data-ink='warm-cool'] .fr { color: #4c3630; }
+
+  [data-ink='two-warm'] .be, [data-ink='two-warm'] .cm { color: #8a4f1f; }
+  [data-ink='two-warm'] .fr { color: #a8632c; }
 </style>
