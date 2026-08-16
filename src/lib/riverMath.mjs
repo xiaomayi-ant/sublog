@@ -115,7 +115,16 @@ export function centerlineCurvature(position, suppliedOptions = {}) {
   return Math.abs(firstX * secondY - firstY * secondX) / Math.pow(speedSquared, 1.5);
 }
 
-export function buildRibbonSample(position, radius = 1, suppliedOptions = {}) {
+/**
+ * 河道里与半径无关的那一半：中心线、切线、法线、曲率、河宽。
+ *
+ * 分出来是因为它在一帧内被重复算了很多遍 —— 八层水彩、五十条纤维、三股亮纹
+ * 都落在各自的 s 网格上，同一个 s 的这些量对所有图层是同一份。渲染器按帧缓存它，
+ * 每层只再算与半径有关的那一小段（见 ribbonEdges）。
+ *
+ * 拆分不改变任何数值：buildRibbonSample 现在由这两半拼出来，结果逐位相同。
+ */
+export function buildRibbonGeometry(position, suppliedOptions = {}) {
   const options = optionsWithDefaults(suppliedOptions);
   const s = clamp(position, 0, 1);
   const aspect = Math.max(1e-6, options.aspect);
@@ -135,8 +144,22 @@ export function buildRibbonSample(position, radius = 1, suppliedOptions = {}) {
     x: -tangent.y,
     y: tangent.x,
   };
-  const requestedHalfWidth = riverWidth(s, options) * radius;
-  const curvature = centerlineCurvature(s, options);
+
+  return {
+    center,
+    tangent,
+    normal,
+    curvature: centerlineCurvature(s, options),
+    baseWidth: riverWidth(s, options),
+    aspect,
+  };
+}
+
+/** 与半径有关的那一半：给定几何与半径，算出两岸。曲率钳制发生在这里。 */
+export function ribbonEdges(geometry, radius = 1, suppliedOptions = {}) {
+  const options = optionsWithDefaults(suppliedOptions);
+  const { center, normal, curvature, baseWidth, aspect } = geometry;
+  const requestedHalfWidth = baseWidth * radius;
   const halfWidth =
     options.curvatureLimit === false
       ? requestedHalfWidth
@@ -145,10 +168,6 @@ export function buildRibbonSample(position, radius = 1, suppliedOptions = {}) {
   const offsetY = normal.y * halfWidth;
 
   return {
-    center,
-    tangent,
-    normal,
-    curvature,
     width: halfWidth * 2,
     left: {
       x: center.x + offsetX,
@@ -158,5 +177,18 @@ export function buildRibbonSample(position, radius = 1, suppliedOptions = {}) {
       x: center.x - offsetX,
       y: center.y - offsetY,
     },
+  };
+}
+
+export function buildRibbonSample(position, radius = 1, suppliedOptions = {}) {
+  const options = optionsWithDefaults(suppliedOptions);
+  const geometry = buildRibbonGeometry(position, options);
+
+  return {
+    center: geometry.center,
+    tangent: geometry.tangent,
+    normal: geometry.normal,
+    curvature: geometry.curvature,
+    ...ribbonEdges(geometry, radius, options),
   };
 }
