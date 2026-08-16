@@ -5,9 +5,11 @@ import {
   buildRibbonSample,
   centerlineCurvature,
   clamp,
+  fbm,
   riverWidth,
   sampleCenterline,
   smoothNoise,
+  warpedFbm,
 } from "../src/lib/riverMath.mjs";
 
 const baseOptions = {
@@ -27,6 +29,50 @@ test("smooth noise is deterministic, bounded, and locally continuous", () => {
   assert.equal(first, repeated);
   assert.ok(first >= 0 && first <= 1);
   assert.ok(Math.abs(first - nearby) < 0.02);
+});
+
+test("fbm is deterministic, stays in the same range as one octave, and is locally continuous", () => {
+  const first = fbm(2.25, 17);
+  const repeated = fbm(2.25, 17);
+  const nearby = fbm(2.251, 17);
+
+  assert.equal(first, repeated);
+  // 归一化过，值域必须和 smoothNoise 一致 —— 调用处按 [0,1] 的语义在用它
+  assert.ok(first >= 0 && first <= 1);
+  // 最细那一档倍频约为基频的 8 倍，局部连续性相应放宽，但仍必须连续
+  assert.ok(Math.abs(first - nearby) < 0.02);
+});
+
+test("fbm carries detail that a single octave does not", () => {
+  // 单倍频在细尺度上几乎是直线；叠了四层之后，同样一小段里应当能读出更多起伏。
+  // 用相邻采样差的总变差来量：这是"多尺度"唯一可证伪的表现。
+  function totalVariation(sample) {
+    let sum = 0;
+    let previous = sample(0);
+    for (let index = 1; index <= 400; index += 1) {
+      const current = sample(index / 400);
+      sum += Math.abs(current - previous);
+      previous = current;
+    }
+    return sum;
+  }
+
+  const single = totalVariation((s) => smoothNoise(s * 8, 17));
+  const layered = totalVariation((s) => fbm(s * 8, 17));
+
+  assert.ok(layered > single * 1.3, `expected more detail: ${layered} vs ${single}`);
+});
+
+test("domain warp shifts the field without leaving its range", () => {
+  const plain = fbm(1.7, 23);
+  const warped = warpedFbm(1.7, 23);
+
+  assert.equal(warped, warpedFbm(1.7, 23));
+  assert.ok(warped >= 0 && warped <= 1);
+  // 扭曲必须真的改变了采样位置，否则这个函数等于白加
+  assert.notEqual(warped, plain);
+  // strength 为 0 时退化回未扭曲的 fbm —— 幅度参数是有意义的
+  assert.equal(warpedFbm(1.7, 23, 0), plain);
 });
 
 test("the centerline stays finite while scroll progress changes its composition", () => {

@@ -48,6 +48,44 @@ export function smoothNoise(value, seed = 0) {
   return lerp(hash(lower, seed), hash(lower + 1, seed), fade(fraction));
 }
 
+/**
+ * 分形布朗运动：把同一种噪声按倍频叠起来。
+ *
+ * smoothNoise 只有一个尺度，读起来是规整的起伏；叠上去之后大尺度的涌和
+ * 小尺度的皱同时在，才像水。频率步进取 2.03 而不是 2：整数倍频会让各层的
+ * 峰周期性对齐，叠出肉眼可见的规律条纹。
+ *
+ * 结果除以振幅之和归一回 [0, 1]，与 smoothNoise 的值域一致 —— 调用处那些
+ * (x - 0.5) * 幅度 的写法不必跟着改。
+ */
+export function fbm(value, seed = 0, octaves = 4) {
+  let total = 0;
+  let amplitude = 0.5;
+  let frequency = 1;
+  let normalisation = 0;
+
+  for (let octave = 0; octave < octaves; octave += 1) {
+    total += amplitude * smoothNoise(value * frequency + octave * 19.7, seed + octave * 101);
+    normalisation += amplitude;
+    amplitude *= 0.5;
+    frequency *= 2.03;
+  }
+
+  return total / normalisation;
+}
+
+/**
+ * 域扭曲：先用一层噪声去偏移采样坐标，再在偏移后的坐标上取噪声。
+ *
+ * 直接叠噪声得到的是"原地起伏"，扭曲之后才有"被水拖着走"的样子。
+ * 流体质感与缎带质感的分界就在这里 —— 前者的纹理被流动拉长、错开，
+ * 后者只是整体平移。
+ */
+export function warpedFbm(value, seed = 0, strength = 0.6) {
+  const warp = fbm(value * 0.5, seed + 613, 3) - 0.5;
+  return fbm(value + warp * strength, seed);
+}
+
 function gaussian(value, center, spread) {
   const distance = (value - center) / spread;
   return Math.exp(-(distance * distance));
@@ -115,7 +153,16 @@ export function centerlineCurvature(position, suppliedOptions = {}) {
   return Math.abs(firstX * secondY - firstY * secondX) / Math.pow(speedSquared, 1.5);
 }
 
-export function buildRibbonSample(position, radius = 1, suppliedOptions = {}) {
+/**
+ * 河道里与半径无关的那一半：中心线、切线、法线、曲率、河宽。
+ *
+ * 分出来是因为它在一帧内被重复算了很多遍 —— 八层水彩、五十条纤维、三股亮纹
+ * 都落在各自的 s 网格上，同一个 s 的这些量对所有图层是同一份。渲染器按帧缓存它，
+ * 每层只再算与半径有关的那一小段（见 ribbonEdges）。
+ *
+ * 拆分不改变任何数值：buildRibbonSample 现在由这两半拼出来，结果逐位相同。
+ */
+export function buildRibbonGeometry(position, suppliedOptions = {}) {
   const options = optionsWithDefaults(suppliedOptions);
   const s = clamp(position, 0, 1);
   const aspect = Math.max(1e-6, options.aspect);
@@ -135,8 +182,22 @@ export function buildRibbonSample(position, radius = 1, suppliedOptions = {}) {
     x: -tangent.y,
     y: tangent.x,
   };
-  const requestedHalfWidth = riverWidth(s, options) * radius;
-  const curvature = centerlineCurvature(s, options);
+
+  return {
+    center,
+    tangent,
+    normal,
+    curvature: centerlineCurvature(s, options),
+    baseWidth: riverWidth(s, options),
+    aspect,
+  };
+}
+
+/** 与半径有关的那一半：给定几何与半径，算出两岸。曲率钳制发生在这里。 */
+export function ribbonEdges(geometry, radius = 1, suppliedOptions = {}) {
+  const options = optionsWithDefaults(suppliedOptions);
+  const { center, normal, curvature, baseWidth, aspect } = geometry;
+  const requestedHalfWidth = baseWidth * radius;
   const halfWidth =
     options.curvatureLimit === false
       ? requestedHalfWidth
@@ -145,10 +206,6 @@ export function buildRibbonSample(position, radius = 1, suppliedOptions = {}) {
   const offsetY = normal.y * halfWidth;
 
   return {
-    center,
-    tangent,
-    normal,
-    curvature,
     width: halfWidth * 2,
     left: {
       x: center.x + offsetX,
@@ -158,5 +215,18 @@ export function buildRibbonSample(position, radius = 1, suppliedOptions = {}) {
       x: center.x - offsetX,
       y: center.y - offsetY,
     },
+  };
+}
+
+export function buildRibbonSample(position, radius = 1, suppliedOptions = {}) {
+  const options = optionsWithDefaults(suppliedOptions);
+  const geometry = buildRibbonGeometry(position, options);
+
+  return {
+    center: geometry.center,
+    tangent: geometry.tangent,
+    normal: geometry.normal,
+    curvature: geometry.curvature,
+    ...ribbonEdges(geometry, radius, options),
   };
 }

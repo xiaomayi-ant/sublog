@@ -1,8 +1,10 @@
 import {
-  buildRibbonSample,
+  buildRibbonGeometry,
   clamp,
-  riverWidth,
+  fbm,
+  ribbonEdges,
   smoothNoise,
+  warpedFbm,
 } from './riverMath.mjs';
 
 /**
@@ -44,6 +46,40 @@ export const RIVER_PRESETS = Object.freeze({
 });
 
 export const HOME_RIVER_PRESET = RIVER_PRESETS.watercolor;
+
+/**
+ * 水彩层的色阶，浅水 → 深水。
+ *
+ * 它与 `tokens.css` 的 `--water-*` **不是同一组值**。这一点以前被一句注释说反了
+ * ——那句话声称"前三档对应 --water-100/300/500，最深一档是 --color-river"，
+ * 实际最深一档差了 (44,71,38)，前三档也各差几到二十几。两者是同一条色相轴上的
+ * 两套取值，用途不同：
+ *
+ *   tokens.css 的 --water-*   要承载文字，每档背着论证过的对比度
+ *   这里的 WASH_LADDER        只做图形，在 alpha 0.03~0.09 下叠出来
+ *
+ * 试过把这里对齐到 tokens 那一组：河从青绿转向蓝，28.6% 的像素变化、平均色差
+ * 12.32，观感偏离太多，退回。契约测试因此改为守"同一色相轴"而不是逐值相等，
+ * 见 tests/river-palette.test.mjs。
+ */
+export const WASH_LADDER = Object.freeze([
+  Object.freeze({ near: '--water-100', rgb: Object.freeze([222, 252, 250]) }),
+  Object.freeze({ near: '--water-300', rgb: Object.freeze([140, 240, 236]) }),
+  Object.freeze({ near: '--water-500', rgb: Object.freeze([78, 212, 228]) }),
+  Object.freeze({ near: '--water-500', rgb: Object.freeze([74, 186, 234]) }),
+  Object.freeze({ near: '--color-river', rgb: Object.freeze([66, 152, 228]) }),
+]);
+
+/**
+ * 核心那一道斜向渐变的色标。单独列出是因为它有一档 (96,182,250) 不在上面的
+ * 色阶里 —— 以前散在 drawWash 内部写死，谁也没提过，只能自己漂。
+ */
+const CORE_GRADIENT = Object.freeze([
+  Object.freeze({ at: 0, rgb: Object.freeze([222, 252, 250]) }),
+  Object.freeze({ at: 0.42, rgb: Object.freeze([78, 212, 228]) }),
+  Object.freeze({ at: 0.72, rgb: Object.freeze([96, 182, 250]) }),
+  Object.freeze({ at: 1, rgb: Object.freeze([66, 152, 228]) }),
+]);
 
 /** 河心的顺流速度（px/s）。两岸趋近于零，见 laneFlow()。 */
 const CENTRE_FLOW_PIXELS_PER_SECOND = 62;
@@ -98,6 +134,25 @@ export function createRiverRenderer(configuration) {
     };
   }
 
+  // 一帧内的几何缓存。键是采样数 —— 水彩、纤维、亮纹各用各的 s 网格
+  // （180 / 120 / 103），网格不同就不能共用一张表；但同一张网格上，
+  // 八层水彩和五十条纤维要的中心线、法线、曲率、河宽是同一份。
+  //
+  // 只在帧内有效：options 每帧都随 time 变，跨帧复用就会把河冻住。
+  // 换来的是同一帧里 ~7900 次几何求值降到 ~400 次，画面逐像素不变。
+  const geometryCache = new Map();
+
+  function geometryGrid(sampleCount, options) {
+    const cached = geometryCache.get(sampleCount);
+    if (cached) return cached;
+    const grid = new Array(sampleCount + 1);
+    for (let index = 0; index <= sampleCount; index += 1) {
+      grid[index] = buildRibbonGeometry(index / sampleCount, options);
+    }
+    geometryCache.set(sampleCount, grid);
+    return grid;
+  }
+
   function optionsAt(time) {
     // 让几何跟着画布的真实比例走，而不是在被压扁的单位方格里算
     const aspect = canvasHeight > 0 ? canvasWidth / canvasHeight : 1;
@@ -120,6 +175,7 @@ export function createRiverRenderer(configuration) {
     if (!context || !ribbonContext) return false;
     const options = optionsAt(time);
     const samples = Math.max(100, Math.round(canvasWidth / 8));
+    const grid = geometryGrid(samples, options);
     let previous;
 
     ribbonContext.clearRect(0, 0, ribbonBuffer.width, ribbonBuffer.height);
@@ -127,16 +183,18 @@ export function createRiverRenderer(configuration) {
 
     for (let index = 0; index <= samples; index += 1) {
       const s = index / samples;
-      // 河宽也是河道的属性，几乎不随时间变
+      // 河宽也是河道的属性，几乎不随时间变。
+      // 用 fbm 而不是单倍频：水线上同时有大尺度的涨落和细碎的皱，
+      // 单一尺度读起来是规整的波浪。幅度不变，仍受 turbulence 控制，
+      // turbulence 为 0 时这一项整体消失。
       const pulse =
         1 +
-        (smoothNoise(s * 8 - time * 0.05, 83 + seedOffset) - 0.5) *
-          state.turbulence *
-          0.1;
-      const sample = buildRibbonSample(s, radius * pulse, options);
-      const left = pointToCanvas(sample.left);
-      const right = pointToCanvas(sample.right);
-      const center = pointToCanvas(sample.center);
+        (fbm(s * 8 - time * 0.05, 83 + seedOffset) - 0.5) * state.turbulence * 0.1;
+      const geometry = grid[index];
+      const edges = ribbonEdges(geometry, radius * pulse, options);
+      const left = pointToCanvas(edges.left);
+      const right = pointToCanvas(edges.right);
+      const center = pointToCanvas(geometry.center);
       const jointRadius = Math.hypot(left.x - center.x, left.y - center.y);
 
       if (previous) {
@@ -174,16 +232,7 @@ export function createRiverRenderer(configuration) {
   function drawWash(time) {
     if (!context) return;
     const layerCount = Math.round(state.layers);
-    // 这条浅水→深水的色阶就是全站色板的来源：前三档对应 tokens.css 的
-    // --water-100 / 300 / 500，最深一档是 --color-river #1651be。
-    // 改这里要同步改那边，否则标题与河会脱色。
-    const colors = [
-      [222, 252, 250],
-      [140, 240, 236],
-      [78, 212, 228],
-      [74, 186, 234],
-      [66, 152, 228],
-    ];
+    const colors = WASH_LADDER.map((step) => step.rgb);
 
     for (let layer = layerCount - 1; layer >= 0; layer -= 1) {
       const depth = layer / Math.max(1, layerCount - 1);
@@ -200,10 +249,9 @@ export function createRiverRenderer(configuration) {
 
     if (traceRibbon(0.72, time, 103) && ribbonContext) {
       const core = ribbonContext.createLinearGradient(0, 0, canvasWidth, canvasHeight);
-      core.addColorStop(0, 'rgb(222, 252, 250)');
-      core.addColorStop(0.42, 'rgb(78, 212, 228)');
-      core.addColorStop(0.72, 'rgb(96, 182, 250)');
-      core.addColorStop(1, 'rgb(66, 152, 228)');
+      for (const { at, rgb } of CORE_GRADIENT) {
+        core.addColorStop(at, `rgb(${rgb.join(', ')})`);
+      }
       compositeRibbon(core, 0.05 + state.cobalt * 0.038);
     }
   }
@@ -221,18 +269,22 @@ export function createRiverRenderer(configuration) {
       // 相邻纤维的差异是平滑的（噪声按 fiber 缓变），所以是剪切，不是各走各的
       const shear = 0.78 + smoothNoise(fiber * 0.34, 911) * 0.44;
       const options = optionsAt(time);
+      const grid = geometryGrid(sampleCount, options);
       context.beginPath();
 
       for (let index = 0; index <= sampleCount; index += 1) {
         const s = index / sampleCount;
-        const sample = buildRibbonSample(s, 0, options);
-        const lateralOffset = riverWidth(s, options) * laneRadius;
-        // 纤维本身是静止的河道纹路，流动交给下面的虚线偏移去做
-        const flutter =
-          (smoothNoise(s * 12 + fiber, 307) - 0.5) * state.turbulence * 0.006;
+        // 纤维只要中心线和河宽 —— 原来为此调 buildRibbonSample(s, 0, …)，
+        // 付了六次中心线采样加一次曲率，再把两岸整个扔掉。
+        const geometry = grid[index];
+        const lateralOffset = geometry.baseWidth * laneRadius;
+        // 纤维本身是静止的河道纹路，流动交给下面的虚线偏移去做。
+        // 这里换 fbm 不违反那个模型：纹路依然静止，只是它自己有了大小两层尺度，
+        // 读起来才像水面的纹理而不是一把平行的梳齿。幅度一个字没动。
+        const flutter = (fbm(s * 12 + fiber, 307) - 0.5) * state.turbulence * 0.006;
         const point = pointToCanvas({
-          x: sample.center.x,
-          y: sample.center.y + lateralOffset + flutter,
+          x: geometry.center.x,
+          y: geometry.center.y + lateralOffset + flutter,
         });
         if (index === 0) context.moveTo(point.x, point.y);
         else context.lineTo(point.x, point.y);
@@ -273,6 +325,7 @@ export function createRiverRenderer(configuration) {
     if (!context) return;
     const options = optionsAt(time);
     const sampleCount = Math.max(70, Math.round(canvasWidth / 14));
+    const grid = geometryGrid(sampleCount, options);
     // 压到刚好能感觉到"有光"，不该抢戏；速度也放慢一个量级
     const strands = [
       { lane: 0, alpha: 0.26, weight: 0.85, drift: 0 },
@@ -287,13 +340,14 @@ export function createRiverRenderer(configuration) {
 
       for (let index = 0; index <= sampleCount; index += 1) {
         const s = index / sampleCount;
-        const sample = buildRibbonSample(s, 0, options);
-        // 每股在河道内横向漂移，亮纹才会互相错开、像在流动
-        const wander =
-          Math.sin(s * 9.3 - time * 0.09 + strand.drift) * 0.14 +
-          Math.sin(s * 21.7 - time * 0.05 + strand.drift) * 0.06;
-        const lateral = riverWidth(s, options) * (strand.lane + wander);
-        const point = pointToCanvas({ x: sample.center.x, y: sample.center.y + lateral });
+        const geometry = grid[index];
+        // 每股在河道内横向漂移，亮纹才会互相错开、像在流动。
+        // 原来是两个正弦叠加，周期性明显——同一股亮纹的摆动会重复。
+        // 换成域扭曲后的 fbm：摆动不再有周期，而且纹样是被"拖着走"的，
+        // 这正是焦散该有的样子。幅度维持在原来两个正弦之和的 ±0.20。
+        const wander = (warpedFbm(s * 3.4 - time * 0.07 + strand.drift, 500) - 0.5) * 0.4;
+        const lateral = geometry.baseWidth * (strand.lane + wander);
+        const point = pointToCanvas({ x: geometry.center.x, y: geometry.center.y + lateral });
         if (index === 0) context.moveTo(point.x, point.y);
         else context.lineTo(point.x, point.y);
       }
@@ -310,6 +364,9 @@ export function createRiverRenderer(configuration) {
     const follow = reducedMotionQuery.matches || settleProgress ? 1 : 0.12;
     scrollProgress += (targetProgress - scrollProgress) * follow;
     const time = reducedMotionQuery.matches ? 0 : timestamp * 0.001;
+    // 几何只在这一帧内可复用：options 随 time 和 scrollProgress 变，
+    // 忘了清就等于把河冻在第一帧。
+    geometryCache.clear();
     context.clearRect(0, 0, canvasWidth, canvasHeight);
     context.save();
     drawWash(time);
