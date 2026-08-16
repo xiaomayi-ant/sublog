@@ -3,7 +3,7 @@
 > 代码：`src/lib/riverMath.mjs`（纯函数几何）、`src/lib/riverRenderer.mjs`（Canvas 2D 渲染）
 > 消费方：`src/components/HomeRiver.astro`（首屏）、`src/pages/lab/river.astro`（参数实验室）
 > 测试：`tests/river-math.test.mjs`、`tests/river-palette.test.mjs`、`tests/river-lab-contract.test.mjs`、`scripts/verify-river-lab-mutations.mjs`
-> 视觉基线：`npm run river:check`
+> 视觉基线：`npm run visual:check`
 
 ---
 
@@ -153,7 +153,7 @@ laneFlow(lane) = max(0, 1 - lane²)     // 抛物线：贴岸不动，河心最�
 
 ## 5. 调优记录
 
-四次改动，每次都有可复现的量化验收。基线工具见 `npm run river:baseline` / `river:check`。
+四次改动，每次都有可复现的量化验收。基线工具见 `npm run visual:baseline` / `visual:check`。
 
 ### 5.1 视觉基线（前置）
 
@@ -286,8 +286,8 @@ laneFlow(lane) = max(0, 1 - lane²)     // 抛物线：贴岸不动，河心最�
 ## 8. 如何验证
 
 ```bash
-npm run river:baseline     # 采集视觉基线（改渲染器之前）
-npm run river:check        # 与基线比对（改完之后）
+npm run visual:baseline     # 采集视觉基线（改渲染器之前）
+npm run visual:check        # 与基线比对（改完之后）
 npm run test:river:math    # 几何与噪声的纯数学测试
 npm run test:river:palette # 色阶契约
 npm test                   # 完整门禁，含变异测试
