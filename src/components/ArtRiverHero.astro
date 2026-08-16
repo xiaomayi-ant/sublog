@@ -21,7 +21,7 @@ import HomeRiver from './HomeRiver.astro';
         aria-label="Be water, my friend."
         data-intro-state="playing"
         data-water-color="liquid-glass"
-        data-friend-color="sun"
+        data-friend-color="ink"
       >
         <span class="intro-line intro-line--water" aria-hidden="true">
           <span class="intro-be" style="--word-delay: 120ms">Be</span>
@@ -113,12 +113,9 @@ import HomeRiver from './HomeRiver.astro';
     font-weight: 500;
   }
 
-  /* Y1：纯阳黄。--color-sun 在 tokens.css 里被标注为"永不承载文字"（1.58:1），
-     这里是明知故用的例外 —— 标题是 88px 的大字且不承载信息（aria-label 已给出
-     完整句子），观感优先。实测数据见 docs/。 */
   .intro-be {
     display: inline-block;
-    color: var(--color-sun);
+    color: var(--color-ink);
   }
 
   .intro-water,
@@ -126,9 +123,9 @@ import HomeRiver from './HomeRiver.astro';
     display: inline-block;
   }
 
-  /* 逗号跟着 Be 走，不再是水青 —— Y1 里整句非 water 的部分是同一个金 */
+  /* 逗号字形小，同样透明度会看不见，提一档但保持同一种水青 */
   .intro-comma {
-    color: var(--color-sun);
+    color: rgba(74, 184, 202, 0.55);
   }
 
   .intro-water-fill {
@@ -191,12 +188,12 @@ import HomeRiver from './HomeRiver.astro';
   /* 减重：700 字重 × 85px × 满彩度赭墨曾是整页最重的元素，与"轻灵"直接冲突。
      大字的对比度标准是 3.0，这里 7.31:1 仍有两倍余量。正文的 --color-ink 不动。 */
   .intro-line--friend {
-    color: var(--color-sun);
+    color: rgba(76, 54, 48, 0.86);
     font-weight: 500;
-    /* 浮现的起点与落点。落点必须跟这一行的实际字色一致，否则字会落到别的颜色上。
-       起点用更淡的一档金，糊团才和落点同族 —— 用赭墨那档灰会显得脏。 */
-    --intro-reveal-from: #f9e2ab;
-    --intro-reveal-to: var(--color-sun);
+    /* 浮现的起点与落点。落点跟这一行的实际字色一致，起点是那团模糊的颜色 ——
+       换掉它就换掉了整个入场的性格，几何和时长都不必动。 */
+    --intro-reveal-from: var(--color-ink-mist);
+    --intro-reveal-to: rgba(76, 54, 48, 0.86);
   }
 
   .intro-letter {

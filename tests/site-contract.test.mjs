@@ -280,23 +280,15 @@ test('the home hero uses a measured editorial typography hierarchy', async () =>
   assert.match(css, /font-size:clamp\(4\.25rem,6\.62vw,5\.5rem\)/);
   assert.match(css, /letter-spacing:-\.03em/);
   assert.match(home, /data-water-color="liquid-glass"/);
-  assert.match(home, /data-friend-color="sun"/);
-  // 标题保留两个色彩声部：暖光 + 玻璃。
-  //
-  // 原来是「墨 + 玻璃」——tokens.css 里论证过赭墨是水的互补方向（Lab 41° vs
-  // 216°）。但赭墨的彩度只有 C*12，那个互补意图在 88px 上读不出来，只读作黑。
-  // 改用 --color-sun（C*59）之后暖冷对峙才真正成立。
-  //
-  // 代价必须写明：--color-sun 是 1.58:1，tokens.css 标注它"永不承载文字"。
-  // 这里是明知故用的例外 —— 标题是 88px 大字、且不承载信息（aria-label 已给出
-  // 完整句子）。实测 Be 1.58、my friend. 1.17（压在河上更低），远低于大字 AA 的 3.0。
-  // 纯黑与深蓝仍不该出现在标题里。
-  assert.match(css, /\.intro-be[^}]*color:var\(--color-sun\)/);
+  assert.match(home, /data-friend-color="ink"/);
+  // 标题只保留两个色彩声部：墨 + 玻璃。纯黑是全站唯一无色相、且比墨更深的颜色，
+  // 深蓝虽在轴上但更饱和 —— 两者都不该再出现在标题里。
+  assert.match(css, /\.intro-be[^}]*color:var\(--color-ink\)/);
   assert.doesNotMatch(css, /#0a0a0a|--color-black/);
   assert.match(css, /\.intro-water-fill[^}]*background-clip:text/);
   assert.match(css, /\.intro-water-fill[^}]*animation:[^;}]*water-surface/);
   assert.match(css, /\.intro-water-fill[^}]*:before[^}]*animation:[^;}]*water-flow/);
-  assert.match(css, /\.intro-line--friend[^}]*color:var\(--color-sun\)/);
+  assert.match(css, /\.intro-line--friend[^}]*color:(?:#4c3630db|rgba\(76,54,48,\.86\))/);
   // 减重：不再是整页最重的元素
   assert.doesNotMatch(css, /\.intro-line--friend[^}]*font-weight:700/);
   assert.match(css, /\.intro-line--friend[^}]*font-weight:500/);
