@@ -1,8 +1,10 @@
 import {
   buildRibbonGeometry,
   clamp,
+  fbm,
   ribbonEdges,
   smoothNoise,
+  warpedFbm,
 } from './riverMath.mjs';
 
 /**
@@ -147,12 +149,13 @@ export function createRiverRenderer(configuration) {
 
     for (let index = 0; index <= samples; index += 1) {
       const s = index / samples;
-      // 河宽也是河道的属性，几乎不随时间变
+      // 河宽也是河道的属性，几乎不随时间变。
+      // 用 fbm 而不是单倍频：水线上同时有大尺度的涨落和细碎的皱，
+      // 单一尺度读起来是规整的波浪。幅度不变，仍受 turbulence 控制，
+      // turbulence 为 0 时这一项整体消失。
       const pulse =
         1 +
-        (smoothNoise(s * 8 - time * 0.05, 83 + seedOffset) - 0.5) *
-          state.turbulence *
-          0.1;
+        (fbm(s * 8 - time * 0.05, 83 + seedOffset) - 0.5) * state.turbulence * 0.1;
       const geometry = grid[index];
       const edges = ribbonEdges(geometry, radius * pulse, options);
       const left = pointToCanvas(edges.left);
@@ -251,9 +254,10 @@ export function createRiverRenderer(configuration) {
         // 付了六次中心线采样加一次曲率，再把两岸整个扔掉。
         const geometry = grid[index];
         const lateralOffset = geometry.baseWidth * laneRadius;
-        // 纤维本身是静止的河道纹路，流动交给下面的虚线偏移去做
-        const flutter =
-          (smoothNoise(s * 12 + fiber, 307) - 0.5) * state.turbulence * 0.006;
+        // 纤维本身是静止的河道纹路，流动交给下面的虚线偏移去做。
+        // 这里换 fbm 不违反那个模型：纹路依然静止，只是它自己有了大小两层尺度，
+        // 读起来才像水面的纹理而不是一把平行的梳齿。幅度一个字没动。
+        const flutter = (fbm(s * 12 + fiber, 307) - 0.5) * state.turbulence * 0.006;
         const point = pointToCanvas({
           x: geometry.center.x,
           y: geometry.center.y + lateralOffset + flutter,
@@ -313,10 +317,11 @@ export function createRiverRenderer(configuration) {
       for (let index = 0; index <= sampleCount; index += 1) {
         const s = index / sampleCount;
         const geometry = grid[index];
-        // 每股在河道内横向漂移，亮纹才会互相错开、像在流动
-        const wander =
-          Math.sin(s * 9.3 - time * 0.09 + strand.drift) * 0.14 +
-          Math.sin(s * 21.7 - time * 0.05 + strand.drift) * 0.06;
+        // 每股在河道内横向漂移，亮纹才会互相错开、像在流动。
+        // 原来是两个正弦叠加，周期性明显——同一股亮纹的摆动会重复。
+        // 换成域扭曲后的 fbm：摆动不再有周期，而且纹样是被"拖着走"的，
+        // 这正是焦散该有的样子。幅度维持在原来两个正弦之和的 ±0.20。
+        const wander = (warpedFbm(s * 3.4 - time * 0.07 + strand.drift, 500) - 0.5) * 0.4;
         const lateral = geometry.baseWidth * (strand.lane + wander);
         const point = pointToCanvas({ x: geometry.center.x, y: geometry.center.y + lateral });
         if (index === 0) context.moveTo(point.x, point.y);
