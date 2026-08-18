@@ -1,0 +1,107 @@
+---
+// 一张图，外加"它还没到时"的流体占位。
+//
+// 图不变：还是原来的 <img>，src / alt / 尺寸 / lazy 全部照旧。多出来的只有
+// 它下面那块画布 —— 图一到就淡出并归还 WebGL 上下文。
+//
+// 拿不到 WebGL、或上下文预算用完、或图已在缓存里，都不会接管，
+// 页面回到原来的灰底占位，一行 JS 都不必执行。
+interface Props {
+  src: string;
+  alt: string;
+  width: number;
+  height: number;
+  /** 传给 <img> 的 class，保持各页原有的样式钩子 */
+  imageClass?: string;
+  /** 占位盒子的宽高比，须与图一致，否则加载完会跳动 */
+  ratio: string;
+  loading?: 'lazy' | 'eager';
+}
+
+const { src, alt, width, height, imageClass, ratio, loading = 'lazy' } = Astro.props;
+---
+
+<div class="fluid-image" data-fluid-image style={`--ratio: ${ratio}`}>
+  <canvas class="fluid-image-water" aria-hidden="true"></canvas>
+  <img
+    class:list={['fluid-image-photo', imageClass]}
+    src={src}
+    alt={alt}
+    width={width}
+    height={height}
+    loading={loading}
+    decoding="async"
+  />
+</div>
+
+<script>
+  import { attachFluidPlaceholder } from '../lib/fluidPlaceholder.mjs';
+
+  for (const holder of document.querySelectorAll<HTMLElement>('[data-fluid-image]')) {
+    const canvas = holder.querySelector<HTMLCanvasElement>('.fluid-image-water');
+    const image = holder.querySelector<HTMLImageElement>('.fluid-image-photo');
+    if (canvas && image) attachFluidPlaceholder({ canvas, image });
+  }
+</script>
+
+<style>
+  .fluid-image {
+    position: relative;
+    aspect-ratio: var(--ratio);
+    overflow: hidden;
+    /* 没接管时的样子 —— 就是这三页原来的占位色 */
+    background: var(--color-line);
+  }
+
+  .fluid-image-water {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--duration-slow) var(--ease-out);
+  }
+
+  /* 接管成功：水浮起来，灰底让位（否则灰会透过水的半透明处） */
+  [data-fluid-placeholder='on'] {
+    background: transparent;
+  }
+
+  [data-fluid-placeholder='on'] .fluid-image-water {
+    opacity: 1;
+  }
+
+  /* 图到了：水退场 */
+  [data-fluid-placeholder='settled'] .fluid-image-water {
+    opacity: 0;
+  }
+
+  /* 默认可见。**不能默认 opacity:0** —— 那样脚本不跑（没有 WebGL、
+     脚本报错、预算用完）图就永远看不见了。只有水真的接管了才让它退到后面，
+     图一到再淡回来。 */
+  .fluid-image-photo {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 1;
+    transition: opacity var(--duration-slow) var(--ease-out);
+  }
+
+  [data-fluid-placeholder='on'] .fluid-image-photo {
+    opacity: 0;
+  }
+
+  [data-fluid-placeholder='settled'] .fluid-image-photo {
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .fluid-image-water,
+    .fluid-image-photo {
+      transition: none;
+    }
+  }
+</style>
