@@ -9,7 +9,9 @@ import path from 'node:path';
 
 const projectRoot = path.resolve(import.meta.dirname, '..');
 const COLLECTIONS = ['harness', 'llm', 'eval', 'notes'];
-const LABELS = { harness: '执行框架', llm: '模型', eval: '评估', notes: '笔记' };
+// 与 src/lib/content.ts 的 TYPE_LABELS 重复了一份 —— 这个脚本不走 Astro 运行时，
+// 拿不到 astro:content。harness 没有中文释义，直接用原词。
+const LABELS = { harness: 'Harness', llm: '模型', eval: '评估', notes: '笔记' };
 
 // 一期至少要有这么多篇才值得出。少于它就跳过这个月 ——
 // 一篇不构成"精选"，而空期挂在那里读起来不是"还没好"，是"没人管"。

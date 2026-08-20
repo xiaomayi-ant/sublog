@@ -88,8 +88,21 @@ test('已出期的相册有详情页，并摊开它的来源', async () => {
   const html = await readRoute('/albums/harness');
   assert.match(html, /2026-07/, '应当显示期号');
   assert.match(html, /封面来源/, '应当摊开封面的来源');
-  // 生成不可复现，prompt 和模型名是"这张封面怎么来的"唯一的答案
-  assert.match(html, /image_gen__imagegen|gpt-image/, '应当记录用了哪个模型');
+
+  // 生成不可复现，prompt 和模型名是"这张封面怎么来的"唯一的答案。
+  //
+  // 守的是**有没有记录**，不是用了哪一家。原来这里写死了
+  // /image_gen__imagegen|gpt-image/，换成 gemini-3-pro-image 出图就假红了 ——
+  // 那条断言把 provider 锁死，而 provider 本来就会换（OpenAI 和 xAI 的额度
+  // 都可能用尽）。改成拿 frontmatter 里的实际值去页面上找。
+  const source = await readFile(
+    path.join(projectRoot, 'src/content/albums/harness.md'),
+    'utf8',
+  );
+  const model = source.match(/^\s+model:\s*(.+?)\s*$/m)?.[1];
+  assert.ok(model, 'frontmatter 里没有 model —— 这张封面怎么来的就无从回答了');
+  assert.ok(html.includes(model), `页面上应当出现模型名「${model}」`);
+
   assert.match(html, /Album cover, 4:5 vertical/, '应当存下完整的 prompt');
   // 收录的文章要真的链得过去
   assert.match(html, /href="\/blog\/harness\/agent-action-boundaries"/);

@@ -19,6 +19,7 @@
     "test:links": "node --test tests/link-contract.test.mjs",
     "test:graph": "node --test tests/graph-extract.test.mjs",
     "test:oss": "node --experimental-strip-types --test tests/oss.test.mjs tests/album-prompt.test.mjs",
+    "verify:palette": "node scripts/verify-image-palette.mjs",
     "visual:baseline": "npm run build && node scripts/visual-baseline.mjs capture",
     "visual:check": "npm run build && node scripts/visual-baseline.mjs check",
     "album:plan": "node scripts/plan-album.mjs",

@@ -4,7 +4,12 @@
 import Base from '../../layouts/Base.astro';
 import Meta from '../../components/Meta.astro';
 import { getCollection } from 'astro:content';
-import { TYPE_LABELS, type ResearchCollection } from '../../lib/content';
+import {
+  TYPE_LABELS,
+  hasDistinctZh,
+  labelWith,
+  type ResearchCollection,
+} from '../../lib/content';
 import { ossImage } from '../../lib/oss';
 
 const entries = await getCollection('albums');
@@ -43,7 +48,7 @@ const pending = albums.filter((entry) => !entry.latest);
               <img
                 class="cover"
                 src={ossImage(latest.cover, 'thumb')}
-                alt={`${TYPE_LABELS[album as ResearchCollection].zh}相册 ${latest.month} 期的封面`}
+                alt={labelWith(album as ResearchCollection, `相册 ${latest.month} 期的封面`)}
                 width="640"
                 height="800"
                 loading="lazy"
@@ -51,7 +56,9 @@ const pending = albums.filter((entry) => !entry.latest);
               />
               <p class="card-name">
                 {TYPE_LABELS[album as ResearchCollection].zh}
-                <span class="card-en meta">{TYPE_LABELS[album as ResearchCollection].en}</span>
+                {hasDistinctZh(album as ResearchCollection) && (
+                  <span class="card-en meta">{TYPE_LABELS[album as ResearchCollection].en}</span>
+                )}
               </p>
               <p class="card-meta meta">
                 {latest.month} · 共 {issues.length} 期

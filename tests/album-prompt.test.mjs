@@ -2,6 +2,8 @@
 // 文字是烤进图里的，四本相册看起来是不是一套完全取决于这段模板，
 // 所以"共享的部分必须真的共享"这件事值得被钉住，而不是靠自觉。
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 import test from 'node:test';
 import { albumPrompt, MOTIFS } from '../src/lib/album-prompt.ts';
 
@@ -19,14 +21,55 @@ test('每一本的 prompt 都在 1200 字符以内', () => {
 test('四本共享同一段基底与版式骨架', () => {
   const prompts = ALBUMS.map((album) => albumPrompt(album));
   for (const shared of [
-    'Warm off-white paper ground',
-    'a single thin cobalt-blue line',
-    'one small warm-yellow accent, under 3%',
+    'Cool water palette only',
+    'no warm tint',
+    'under 3%',
     'the upper-left quadrant stays empty paper',
-    'Avoid: dark background',
+    'Avoid: warm or cream paper',
   ]) {
     for (let i = 0; i < prompts.length; i += 1) {
       assert.ok(prompts[i].includes(shared), `${ALBUMS[i]} 少了共享片段「${shared}」`);
+    }
+  }
+});
+
+test('色彩配方的每个色值都来自 tokens.css，不是抄的', async () => {
+  // 第一版的配方是手写英文散文，照搬自一套早已废弃的旧 tokens，站点换色后
+  // 没跟着走 —— 实测两张已出的图有 99% 的像素落在暖黄相，站点主色（水）
+  // 一个像素都没有。所以色值改成从 tokens.css 解析，这条守着别再抄回去。
+  const tokens = await readFile(
+    path.join(import.meta.dirname, '../src/styles/tokens.css'),
+    'utf8',
+  );
+  const expand = (hex) =>
+    hex.length === 4 ? `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}` : hex;
+  const value = (name) =>
+    expand(tokens.match(new RegExp(`${name}:\\s*(#[0-9a-fA-F]{3,8})`))[1].toLowerCase());
+
+  const prompt = albumPrompt('harness');
+  for (const name of ['--color-bg', '--water-100', '--water-500', '--water-700',
+    '--color-ink', '--color-sun']) {
+    assert.ok(
+      prompt.includes(value(name)),
+      `prompt 里没有 ${name} 的当前色值 ${value(name)} —— 配方和 tokens 又漂开了`,
+    );
+  }
+});
+
+test('配方点名禁止那些自带暖色相的词', () => {
+  // 只说 "cool palette" 压不住：brass / vellum / kraft 这些材质词本身就在
+  // 70–90°，实测里正是它们把图带到了平均色相 85°（--color-sun 的位置）。
+  const prompt = albumPrompt('harness');
+  for (const word of ['brass', 'ochre', 'kraft', 'sepia', 'olive', 'khaki', 'beige']) {
+    assert.match(prompt, new RegExp(`Avoid:[^.]*${word}`), `禁止项里少了「${word}」`);
+  }
+  // 意象里也不许再出现它们
+  for (const album of ALBUMS) {
+    for (const word of ['brass', 'vellum', 'kraft', 'ochre']) {
+      assert.ok(
+        !MOTIFS[album].motif.toLowerCase().includes(word),
+        `${album} 的意象里还留着暖色材质「${word}」`,
+      );
     }
   }
 });
