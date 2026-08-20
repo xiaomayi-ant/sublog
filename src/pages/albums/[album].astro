@@ -9,6 +9,7 @@ import Meta from '../../components/Meta.astro';
 import { getCollection } from 'astro:content';
 import {
   TYPE_LABELS,
+  labelWith,
   formatDate,
   getAllResearch,
   type ResearchCollection,
@@ -58,8 +59,8 @@ const label = TYPE_LABELS[album];
 ---
 
 <Base
-  title={`${label.zh}相册`}
-  description={`${label.zh}方向的相册，按月出期。`}
+  title={labelWith(album, '相册')}
+  description={labelWith(album, '方向的相册，按月出期。')}
   image={ossImage(issues[0].cover, 'og')}
 >
   <header class="page-head">
@@ -75,7 +76,7 @@ const label = TYPE_LABELS[album];
           <FluidImage
             imageClass="cover"
             src={ossImage(issue.cover, 'full')}
-            alt={`${label.zh}相册 ${issue.month} 期的封面`}
+            alt={labelWith(album, `相册 ${issue.month} 期的封面`)}
             width={1600}
             height={2000}
             ratio="4 / 5"

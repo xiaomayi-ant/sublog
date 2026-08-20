@@ -1,12 +1,18 @@
 ---
 // /blog — 四类分行排列：左栏类型名，右栏可折叠的文章列表（收起时只露最近一篇）
 import Base from '../layouts/Base.astro';
-import { getResearchByType, TYPE_LABELS, articleUrl, formatDate } from '../lib/content';
+import {
+  getResearchByType,
+  TYPE_LABELS,
+  hasDistinctZh,
+  articleUrl,
+  formatDate,
+} from '../lib/content';
 
 const groups = await getResearchByType();
 ---
 
-<Base title="Blog" description="对 AI 的一些学习：执行框架、模型、评估与笔记。">
+<Base title="Blog" description="对 AI 的一些学习：Harness、模型、评估与笔记。">
   <header class="page-head">
     <h1>Blog</h1>
     <p class="lede">对AI的一些学习</p>
@@ -20,7 +26,7 @@ const groups = await getResearchByType();
           <section class="type-row" aria-labelledby={`type-${name}`}>
             <h2 class="type-name" id={`type-${name}`}>
               <span class="type-en">{TYPE_LABELS[name].en}</span>
-              <span class="type-zh">/ {TYPE_LABELS[name].zh}</span>
+              {hasDistinctZh(name) && <span class="type-zh">/ {TYPE_LABELS[name].zh}</span>}
             </h2>
 
             <div class="type-feed">

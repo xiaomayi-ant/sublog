@@ -1,5 +1,8 @@
 // 相册封面的 prompt 模板。
 //
+// 这个模块只在 Node 侧跑（测试与出期规划），从不进浏览器产物，
+// 所以可以直接读文件系统去取 tokens。
+//
 // 文字是烤进图里的，所以四本相册看起来是不是一套，几乎完全取决于这个模板 ——
 // 每一期都由同一段 BASE 加一小段方向专属的意象拼成，变量只有意象和标题两处。
 // 一旦让每期自由发挥，四本封面会各说各话，而那恰恰是"协调一致"要防的事。
@@ -7,14 +10,67 @@
 // 意象不是随手挑的，来自每个方向自己写过的东西：
 // harness 谈边界与可逆性、llm 谈状态与记忆、eval 谈尺度与误差、notes 是过程与未定稿。
 // 这满足 culture-fragment-poster-engine 对"视觉基因来自材料本身"的要求。
+//
+// ── 色彩为什么必须从 tokens.css 读 ──────────────────────────────────
+//
+// 第一版的色彩段是手写的英文散文（"Warm off-white paper ground … deep
+// umber-brown … cobalt-blue line … warm-yellow accent"），照搬自
+// docs/design-plan.md 第 1 条那套早已废弃的旧 tokens。站点后来换成
+// --color-bg: #fff 加水色主导，这段配方没跟着走，于是漂了。
+//
+// 漂成什么样是量过的（Lab 色相角分桶，取样两张已出的图）：
+//
+//                     水色相 160°–250°   暖黄相 40°–110°   平均色相
+//   相册封面 harness         0%              99.7%          85°
+//   About 配图               0%              99.1%          85°
+//
+// 站点这边 --water-100/300/500/700 分别是 192°/194°/216°/230°，
+// 而 85° 正好压在 --color-sun 上 —— tokens.css 写明它"只做高光，永不承载
+// 文字"、配比约 1%。也就是说图把 1% 的强调色当成了 99% 的主色，而站点的
+// 主色一个像素都没有。图里的深色 #8d734d / #6e542c 落在 78–79°，正是
+// tokens.css 第 22 行判过死刑的那个位置（"偏到 70° 附近就成了橄榄／卡其"）。
+//
+// 所以色值不再手抄，直接从 tokens.css 解析 —— 与 riverRenderer 和 404 字形
+// 共用 WASH_LADDER 是同一个道理：同源，不是同步。
+//
+// 光改色彩词压不住：材质词自带色相。brass（黄铜）、vellum（羊皮纸）、
+// kraft 本身就在 70–90°，所以下面 MOTIFS 里的材质一并换成了冷的那一族，
+// 意象（闸门、层叠、量尺、折痕）原样保留 —— 那才是内容价值所在。
+//
+// prompt 只是请求，不是保证。真正的验收在 scripts/verify-image-palette.mjs：
+// 出图之后量色相分布，不达标就打回重出。
 
-/** 所有封面共享的部分。改这里等于改全系列，不要为某一期单独调。 */
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+
+const TOKENS_PATH = path.resolve(import.meta.dirname, '../styles/tokens.css');
+let tokensCache: string | null = null;
+
+/** 从 tokens.css 取一个色值。取不到就抛 —— 悄悄回退到硬编码正是漂移的来源。 */
+function token(name: string): string {
+  tokensCache ??= readFileSync(TOKENS_PATH, 'utf8');
+  const hex = tokensCache.match(new RegExp(`${name}:\\s*(#[0-9a-fA-F]{3,8})`))?.[1];
+  if (!hex) throw new Error(`tokens.css 里找不到 ${name}，色彩配方无法生成`);
+  // #fff → #ffffff，让 prompt 里的写法统一，也便于验收脚本比对
+  const value = hex.toLowerCase();
+  return value.length === 4
+    ? `#${value[1]}${value[1]}${value[2]}${value[2]}${value[3]}${value[3]}`
+    : value;
+}
+
+/**
+ * 所有封面共享的部分。改这里等于改全系列，不要为某一期单独调。
+ *
+ * 色彩的分工照抄 tokens.css 的比例感：底是清澈白，水色一族承担画面，
+ * 赭墨是唯一的暗调，阳黄压在 3% 以内当高光。
+ */
 const BASE = [
   'Album cover, 4:5 vertical, editorial art direction.',
-  'Warm off-white paper ground with visible fibre grain; deep umber-brown as the only dark tone;',
-  'a single thin cobalt-blue line as a structural element; one small warm-yellow accent, under 3% of the surface.',
-  'Restrained, museum-label precision, generous empty space, matte materials, soft directional daylight.',
-  'Shot like a still-life specimen plate, not a scene.',
+  `Ground: white paper ${token('--color-bg')}, faint grain, no warm tint.`,
+  `Cool water palette only: ${token('--water-100')} to ${token('--water-500')} to ${token('--water-700')};`,
+  `dark tone ${token('--color-ink')}; warm accent ${token('--color-sun')} under 3%.`,
+  'Restrained museum-label precision, generous empty space, matte materials, soft daylight.',
+  'A specimen plate, not a scene.',
 ].join(' ');
 
 /** 版式骨架：标题的位置固定，四本才叠得起来。 */
@@ -29,8 +85,12 @@ const LAYOUT = [
  * 所以这里只留最容易滑过去的那几项，不做穷举。
  */
 const FORBIDDEN = [
-  'Avoid: dark background, collage, gradients, gold foil, glow, 3D render look,',
-  'full-surface ornament, centered title stack, stock-photo people, saturated colour fields.',
+  // 前半守色相 —— 这些词是实测里把图带到 78–85° 的元凶，必须逐个点名。
+  // 只说 "cool palette" 不够，模型仍会默认给一张暖调纸面静物。
+  // 后半守形式，与改色彩前一致。合成一条是为了字符预算（上限 1200）。
+  'Avoid: warm or cream paper, brass, gold, ochre, kraft, sepia, olive, khaki, beige, any warm cast;',
+  'dark background, collage, gradients, glow, 3D render, full-surface ornament,',
+  'centered title stack, stock people, saturated colour fields.',
 ].join(' ');
 
 /**
@@ -54,37 +114,45 @@ export interface AlbumMotif {
   motif: string;
 }
 
+// 材质换过一轮：brass（黄铜）、vellum（羊皮纸）、handmade paper 这些词自带
+// 70–90° 的暖色相，光在 BASE 里写"cool water only"压不住 —— 实测两张已出的图
+// 有 99% 的像素落在暖黄相，材质词是主要来源之一。
+//
+// 换的是材质不是意象：闸门、层叠、量尺、折痕原样保留，它们来自每个方向自己
+// 写过的东西，是这四本封面的内容价值所在。铜绿（verdigris）尤其合用 ——
+// 它既是金属氧化的真实颜色、落在水色相里，又和水有天然的因果关系。
 export const MOTIFS: Record<'harness' | 'llm' | 'eval' | 'notes', AlbumMotif> = {
   // 边界、门、可逆性
   harness: {
     zh: '边界',
     en: 'HARNESS',
     motif:
-      'Subject: a single machined brass gate mechanism, half open, mounted on a pale plaster block; ' +
-      'one hairline scribed across the plaster passing through the opening.',
+      'Subject: a machined gate mechanism in pale verdigris copper, half open, ' +
+      'on a cool white porcelain block; ' +
+      'one hairline scribed across the porcelain through the opening.',
   },
   // 状态、记忆、上下文的沉积
   llm: {
     zh: '记忆',
     en: 'MODELS',
     motif:
-      'Subject: a stack of translucent vellum sheets on paper, each carrying a faint different mark, ' +
-      'edges slightly offset so the layers read as sediment seen from above.',
+      'Subject: a stack of translucent frosted-glass sheets on white paper, each with a faint different mark, ' +
+      'edges offset so the layers read as sediment from above.',
   },
   // 尺度、标准、误差
   eval: {
     zh: '尺度',
     en: 'EVAL',
     motif:
-      'Subject: a worn brass measuring rule and a fine mesh sieve laid on paper, ' +
-      'a few small ceramic tokens sorted into two uneven groups beside them.',
+      'Subject: a worn steel measuring rule and a fine mesh sieve laid on white paper, ' +
+      'a few small pale-celadon ceramic tokens sorted into two uneven groups beside them.',
   },
   // 过程、未定稿
   notes: {
     zh: '过程',
     en: 'NOTES',
     motif:
-      'Subject: a folded sheet of handmade paper with a soft crease and a torn edge, ' +
+      'Subject: a folded sheet of cool white paper with a soft crease and a torn edge, ' +
       'one graphite line running off the tear, a small pressed fibre caught in the fold.',
   },
 };
