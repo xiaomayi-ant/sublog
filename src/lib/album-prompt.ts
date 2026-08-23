@@ -66,17 +66,18 @@ function token(name: string): string {
  */
 const BASE = [
   'Album cover, 4:5 vertical, editorial art direction.',
-  `Ground: white paper ${token('--color-bg')}, faint grain, no warm tint.`,
-  `Cool water palette only: ${token('--water-100')} to ${token('--water-500')} to ${token('--water-700')};`,
-  `dark tone ${token('--color-ink')}; warm accent ${token('--color-sun')} under 3%.`,
-  'Restrained museum-label precision, generous empty space, matte materials, soft daylight.',
+  `Ground: white paper ${token('--color-bg')}, faint grain.`,
+  `Two axes only — warm copper ${token('--color-ember')} for the made object,`,
+  `cool water ${token('--water-100')} to ${token('--water-700')} for what it holds;`,
+  `dark tone ${token('--color-ink')}; ${token('--color-sun')} only as a spark under 3%.`,
+  'Museum-label precision, generous empty space, matte materials, soft daylight.',
   'A specimen plate, not a scene.',
 ].join(' ');
 
 /** 版式骨架：标题的位置固定，四本才叠得起来。 */
 const LAYOUT = [
-  'Composition: the subject occupies the lower two-thirds, offset to the right;',
-  'the upper-left quadrant stays empty paper and carries the title.',
+  'Composition: subject in the lower two-thirds, offset right;',
+  'upper-left quadrant stays empty paper and carries the title.',
 ].join(' ');
 
 /**
@@ -85,12 +86,16 @@ const LAYOUT = [
  * 所以这里只留最容易滑过去的那几项，不做穷举。
  */
 const FORBIDDEN = [
-  // 前半守色相 —— 这些词是实测里把图带到 78–85° 的元凶，必须逐个点名。
-  // 只说 "cool palette" 不够，模型仍会默认给一张暖调纸面静物。
-  // 后半守形式，与改色彩前一致。合成一条是为了字符预算（上限 1200）。
-  'Avoid: warm or cream paper, brass, gold, ochre, kraft, sepia, olive, khaki, beige, any warm cast;',
-  'dark background, collage, gradients, glow, 3D render, full-surface ornament,',
-  'centered title stack, stock people, saturated colour fields.',
+  // 前半守色相。禁的不是"暖"，是**卡其那一段**（Lab 色相 72°–110°）——
+  // tokens.css 第 22 行就判过它："偏到 70° 附近就成了橄榄／卡其，读作
+  // '发黄的黑'而不是'与水相对的暖'"。下面每个词都落在那一段里。
+  //
+  // 一度写成 "any warm cast"，那是矫枉过正：站点本来就有暖轴
+  // （--color-ink 41°、--color-ember 61°），禁掉暖等于禁掉半个色板。
+  // 红铜 40°–55° 是合法的，黄铜 78°–85° 不是 —— 两者必须分开点名。
+  'Avoid: warm or cream paper, brass, gold, ochre, kraft, sepia, olive, khaki;',
+  'no yellow-green cast; dark background, collage, gradients, glow, 3D render,',
+  'full-surface ornament, centered title stack, stock people, saturated colour fields.',
 ].join(' ');
 
 /**
@@ -98,10 +103,22 @@ const FORBIDDEN = [
  * 而大字（2 到 4 个汉字）在实测里是可靠的。编号、日期、说明都留给 HTML。
  */
 function titleClause(zh: string, en: string): string {
+  // zh 与 en 相同 = 这一本没有中文对应（harness 就是，见 content.ts 的
+  // TYPE_LABELS）。硬译出来的「边界」并不是 harness 的意思，封面上摆一个
+  // 不准确的大字比不摆更糟，所以只烤原词 —— 它自己就是主角，字号跟着上去。
+  const heading =
+    zh === en
+      ? [
+          `Baked-in typography: the single word "${en}" set very large in a high-contrast serif,`,
+          'with generous letter-spacing.',
+        ]
+      : [
+          `Baked-in typography: the two-character Chinese title "${zh}" set very large in a high-contrast serif,`,
+          `and the single word "${en}" beneath it in small letter-spaced uppercase sans.`,
+        ];
   return [
-    `Baked-in typography: the two-character Chinese title "${zh}" set very large in a high-contrast serif,`,
-    `and the single word "${en}" beneath it in small letter-spaced uppercase sans.`,
-    'These are the only characters anywhere in the image. No other text, no numbers, no labels, no watermark.',
+    ...heading,
+    'The only characters in the image; no other text, numbers, labels or watermark.',
   ].join(' ');
 }
 
@@ -123,13 +140,24 @@ export interface AlbumMotif {
 // 它既是金属氧化的真实颜色、落在水色相里，又和水有天然的因果关系。
 export const MOTIFS: Record<'harness' | 'llm' | 'eval' | 'notes', AlbumMotif> = {
   // 边界、门、可逆性
+  // 没有中文对应：harness 是马具、是"驾驭"，硬译成「边界」只说中了它的
+  // 一个侧面（安全边界），丢掉了主干 —— 缰绳、鞍、导航把原始动力变成
+  // 可控的运动。zh 与 en 相同即表示"只烤原词"，titleClause 据此分支。
   harness: {
-    zh: '边界',
-    en: 'HARNESS',
+    zh: 'Harness',
+    en: 'Harness',
+    // Agent = Model + Harness（Martin Fowler）的直译：控制层在外圈，模型在核心，
+    // 包裹而不触碰。冷暖分工正好承载这层语义 —— 暖铜是人造的控制层，
+    // 冷瓷是被驾驭的原始核心。边上那个闭合的触点是"决策"：不是均匀的机械
+    // 约束，而是有选择地闭合某一路。
+    //
+    // 走到这一版之前试过：闸门加石块（意思全错）、Watt 飞球调速器（概念最硬，
+    // 但"三条岔道闸住一条"在字符预算里压不住主体）、纯马具（太字面，没有
+    // 智能决策的位置）。
     motif:
-      'Subject: a machined gate mechanism in pale verdigris copper, half open, ' +
-      'on a cool white porcelain block; ' +
-      'one hairline scribed across the porcelain through the opening.',
+      'Subject: a warm copper ring mechanism with fine contacts along its inner rim, ' +
+      'encircling a pale celadon sphere that floats clear of it, touching nothing; ' +
+      'one contact on the rim is closed, the rest open.',
   },
   // 状态、记忆、上下文的沉积
   llm: {

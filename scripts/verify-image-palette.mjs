@@ -57,32 +57,55 @@ const distRoot = process.env.SITE_DIST_DIR
  */
 const THRESHOLDS = {
   /**
-   * 水色要占到**有彩像素**的这个比例。
+   * 合法色相要占到**有彩像素**的这个比例。
    *
-   * ⚠️ 第一版写的是"占全图像素"，阈值 25%，这是错的。第一张按新配方出的图
-   * 被它拦下来了：水色 14.4%、暖色 2.8%、平均色相 187°，而中性像素占 81.1% ——
-   * 那是一张以白纸为主、水色作点缀的克制静物，**正是 prompt 要求的**
-   * （generous empty space / a specimen plate, not a scene）。
-   * 拿全图占比当分母，等于在惩罚留白。
-   *
-   * 换成有彩像素作分母之后，同两张图：
-   *
-   *              水色 / 有彩像素
-   *   改配方前         0%      （有彩像素 99.8%，其中 99.7% 是暖黄）
-   *   改配方后      76.2%      （有彩像素 18.9%，其中绝大多数是水色）
-   *
-   * 区分度反而更强了 —— 这是修正指标缺陷，不是为了让图过关而放宽标准。
-   * 旧图在新指标下依然被拒，而且拒得更彻底。
+   * ⚠️ 第一版写的是"占全图像素"，阈值 25%，这是错的 —— 那等于在惩罚留白，
+   * 而留白是 prompt 明确要求的（generous empty space / a specimen plate）。
+   * 改用有彩像素作分母后，改配方前那两张图 0%、改配方后 76%，区分度更强。
    */
-  minWaterOfChromatic: 60,
-  /** 暖黄相的上限，仍然按全图算 —— 它防的是"整张图泛暖"，分母就该是整张图 */
-  maxWarmShare: 15,
-  /** 有彩像素的平均色相必须落在这个区间里 */
-  meanHue: [150, 250],
+  minLegalOfChromatic: 70,
+  /**
+   * 卡其禁区占全图的上限。这是整套判据里唯一真正"拦错误"的那条 ——
+   * 改配方前那两张图 99% 的面积压在 85°，正是这一段。
+   */
+  maxKhakiShare: 3,
 };
 
-const WATER_HUE = [160, 250];
-const WARM_HUE = [40, 110];
+/**
+ * 站点的两条色相轴，来自 tokens.css。
+ *
+ * ⚠️ 第二版判据（"水色占比 ≥60% / 暖黄 ≤15% / 平均色相落在 150°–250°"）
+ * 建立在一个错误前提上：把"和站点兼容"当成了"和站点同色相"。
+ * tokens.css 第 17–22 行写得很清楚 ——
+ *
+ *   「文字不再属于水的色相轴。河水是唯一的颜色，墨只负责和它形成冷暖搭配。
+ *     色相角要对准：河水的 Lab 色相是 216°，真正的互补方向是 36°。」
+ *
+ * 站点本来就是双轴：水色是冷轴，--color-ink 41° 与 --color-ember 61°
+ * 是暖轴，两者互补。"暖黄 ≤15%" 等于禁掉半个色板。
+ *
+ * 而"平均色相必须落在 150°–250°"在双轴下更是自相矛盾：暖 50° 与冷 200°
+ * 的平均是 125°，恰好落进卡其禁区。这条判据已经删掉。
+ *
+ * 改配方前那两张图错的从来不是"暖"，是三件别的事：平均色相 85° 正压在
+ * --color-sun 上（那一档规定"只做高光、配比约 1%"）却占了 99% 的面积；
+ * 深色落在 78–79°，是 tokens 第 22 行判过死刑的橄榄／卡其。
+ *
+ * 还有一个区分之前混掉了：brass（黄铜）78°–85° 与 copper（红铜）40°–55°
+ * 完全不是一回事。为了躲黄铜把材质一路推到铜绿（180°–200°），越过了
+ * 整个暖轴 —— 那才是"图太冷、读作阻力"的来源。
+ */
+const LEGAL_HUES = [
+  [30, 70], // 暖轴：--color-ink 41° / --color-ember 61°，红铜落在这里
+  [150, 250], // 冷轴：青瓷到 --water-700 230°
+];
+
+/** 卡其／橄榄。tokens.css：「偏到 70° 附近就成了橄榄／卡其」。大面积出现即错。 */
+const KHAKI_HUE = [72, 110];
+
+// 分开报告用，不直接参与判定
+const WATER_HUE = [150, 250];
+const WARM_HUE = [30, 70];
 
 /**
  * 彩度低于这个值的像素算中性，不参与色相统计。
@@ -134,6 +157,8 @@ const TARGETS = ${JSON.stringify(targets)};
 const NEUTRAL_CHROMA = ${NEUTRAL_CHROMA};
 const WATER = ${JSON.stringify(WATER_HUE)};
 const WARM = ${JSON.stringify(WARM_HUE)};
+const LEGAL = ${JSON.stringify(LEGAL_HUES)};
+const KHAKI = ${JSON.stringify(KHAKI_HUE)};
 
 function lab(r, g, b) {
   const f = (v) => { v /= 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
@@ -164,16 +189,16 @@ async function measure(url) {
   ctx.drawImage(img, 0, 0, W, H);
   const d = ctx.getImageData(0, 0, W, H).data;
 
-  let total = 0, neutral = 0, water = 0, warm = 0, other = 0, hueSum = 0, hueN = 0;
+  let total = 0, neutral = 0, water = 0, warm = 0, other = 0, legal = 0, khaki = 0;
   const inRange = (h, [lo, hi]) => h >= lo && h <= hi;
   for (let i = 0; i < d.length; i += 4) {
     total++;
     const { C, h } = lab(d[i], d[i + 1], d[i + 2]);
     if (C < NEUTRAL_CHROMA) { neutral++; continue; }
-    hueSum += h; hueN++;
+    if (LEGAL.some((range) => inRange(h, range))) legal++; else other++;
+    if (inRange(h, KHAKI)) khaki++;
     if (inRange(h, WATER)) water++;
     else if (inRange(h, WARM)) warm++;
-    else other++;
   }
   const pct = (n) => +((100 * n) / total).toFixed(1);
   return {
@@ -183,8 +208,8 @@ async function measure(url) {
     warmShare: pct(warm),
     otherShare: pct(other),
     // 分母是有彩像素：中性的白纸是设计要求的留白，不该拉低水色的分数
-    waterOfChromatic: total - neutral ? +((100 * water) / (total - neutral)).toFixed(1) : 0,
-    meanHue: hueN ? Math.round(hueSum / hueN) : null,
+    legalOfChromatic: total - neutral ? +((100 * legal) / (total - neutral)).toFixed(1) : 0,
+    khakiShare: pct(khaki),
   };
 }
 
@@ -269,17 +294,17 @@ function dumpDom(url) {
 function judge(stats) {
   if (stats.error) return [`量不到：${stats.error}`];
   const failures = [];
-  if (stats.waterOfChromatic < THRESHOLDS.minWaterOfChromatic) {
+  if (stats.legalOfChromatic < THRESHOLDS.minLegalOfChromatic) {
     failures.push(
-      `有彩像素里只有 ${stats.waterOfChromatic}% 是水色，低于 ${THRESHOLDS.minWaterOfChromatic}%`,
+      `有彩像素里只有 ${stats.legalOfChromatic}% 落在站点的两条色相轴上，` +
+        `低于 ${THRESHOLDS.minLegalOfChromatic}%`,
     );
   }
-  if (stats.warmShare > THRESHOLDS.maxWarmShare) {
-    failures.push(`暖黄相占到 ${stats.warmShare}%，高于 ${THRESHOLDS.maxWarmShare}%`);
-  }
-  const [lo, hi] = THRESHOLDS.meanHue;
-  if (stats.meanHue !== null && (stats.meanHue < lo || stats.meanHue > hi)) {
-    failures.push(`平均色相 ${stats.meanHue}° 落在 ${lo}°–${hi}° 之外`);
+  if (stats.khakiShare > THRESHOLDS.maxKhakiShare) {
+    failures.push(
+      `卡其区（${KHAKI_HUE[0]}°–${KHAKI_HUE[1]}°）占到 ${stats.khakiShare}%，` +
+        `高于 ${THRESHOLDS.maxKhakiShare}%`,
+    );
   }
   return failures;
 }
@@ -328,9 +353,9 @@ try {
 }
 
 console.log(
-  `色彩验收 —— 有彩像素里水色相 ${WATER_HUE[0]}°–${WATER_HUE[1]}° 占 ≥ ${THRESHOLDS.minWaterOfChromatic}%，` +
-    `全图暖黄相 ${WARM_HUE[0]}°–${WARM_HUE[1]}° ≤ ${THRESHOLDS.maxWarmShare}%，` +
-    `平均色相 ${THRESHOLDS.meanHue[0]}°–${THRESHOLDS.meanHue[1]}°\n`,
+  `色彩验收 —— 有彩像素里落在站点两条色相轴` +
+    `（暖 ${LEGAL_HUES[0][0]}°–${LEGAL_HUES[0][1]}° / 冷 ${LEGAL_HUES[1][0]}°–${LEGAL_HUES[1][1]}°）的 ` +
+    `≥ ${THRESHOLDS.minLegalOfChromatic}%，卡其区 ${KHAKI_HUE[0]}°–${KHAKI_HUE[1]}° ≤ ${THRESHOLDS.maxKhakiShare}%\n`,
 );
 
 let failed = 0;
@@ -339,16 +364,16 @@ for (const [name, stats] of Object.entries(results)) {
   if (failures.length === 0) {
     console.log(`✅ ${name}`);
     console.log(
-      `     水 ${stats.waterShare}%（占有彩 ${stats.waterOfChromatic}%）  暖 ${stats.warmShare}%  中性 ${stats.neutralShare}%  ` +
-        `平均色相 ${stats.meanHue}°  ${stats.size}`,
+      `     合规 ${stats.legalOfChromatic}%（暖 ${stats.warmShare}% / 冷 ${stats.waterShare}%）  卡其 ${stats.khakiShare}%  中性 ${stats.neutralShare}%  ` +
+        `${stats.size}`,
     );
   } else {
     failed += 1;
     console.log(`❌ ${name}`);
     if (!stats.error) {
       console.log(
-        `     水 ${stats.waterShare}%（占有彩 ${stats.waterOfChromatic}%）  暖 ${stats.warmShare}%  中性 ${stats.neutralShare}%  ` +
-          `平均色相 ${stats.meanHue}°  ${stats.size}`,
+        `     合规 ${stats.legalOfChromatic}%（暖 ${stats.warmShare}% / 冷 ${stats.waterShare}%）  卡其 ${stats.khakiShare}%  中性 ${stats.neutralShare}%  ` +
+          `${stats.size}`,
       );
     }
     for (const reason of failures) console.log(`     ← ${reason}`);
