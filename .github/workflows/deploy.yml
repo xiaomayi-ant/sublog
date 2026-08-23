@@ -73,6 +73,15 @@ jobs:
             echo "::error::$V 已经发布过。合并到 main 之前先 bump 版本：npm version patch|minor|major"
             exit 1
           fi
+          # tag 也要查。第一次上线 v0.1.0 时就栽在这里：仓库里早有一个手工打的
+          # v0.1.0（指向 8/16 的 a918564），gh release create 默默复用了它，
+          # 于是 Release 页面显示的源码是 8/16 的，而产物是当天构建的。
+          # 线上内容没错（release.json 烤的是真实 commit），但追溯会指到错的地方。
+          if gh api "repos/$GITHUB_REPOSITORY/git/refs/tags/$V" >/dev/null 2>&1; then
+            echo "::error::tag $V 已存在但没有对应的 Release —— gh release create 会复用它，"
+            echo "::error::导致 Release 指向错误的 commit。请 bump 版本，或先删掉那个遗留 tag。"
+            exit 1
+          fi
 
       - name: Stamp release
         id: rel
