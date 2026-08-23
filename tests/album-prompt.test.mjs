@@ -9,27 +9,61 @@ import { albumPrompt, MOTIFS } from '../src/lib/album-prompt.ts';
 
 const ALBUMS = Object.keys(MOTIFS);
 
-test('每一本的 prompt 都在 1200 字符以内', () => {
-  // skill 的规定。超了模型会开始丢前面的约束，而丢掉的通常正是色彩和禁止项 ——
-  // 表现为"某一期忽然不像这一套了"，且很难归因。
+test('prompt 不会无限膨胀', () => {
+  // 原来钉的是 1200，出处写的是"skill 的规定"—— 仓库和文档里都查不到依据，
+  // 而且实测有害：它逼着把关键约束压成从句，压出来的图就是那批碎石头。
+  // 真正有效的是写法而不是长度（见 album-prompt.ts 里 FORBIDDEN 上方的记录）。
+  // 这里只防膨胀，不再当设计约束。
   for (const album of ALBUMS) {
     const length = albumPrompt(album).length;
-    assert.ok(length <= 1200, `${album} 的 prompt 有 ${length} 字符，超过 1200`);
+    assert.ok(length <= 1800, `${album} 的 prompt 有 ${length} 字符，过长了`);
   }
 });
 
-test('四本共享同一段基底与版式骨架', () => {
+test('描述主体时不用否定式表述', () => {
+  // 实测：写 "no border" 模型反而画出了边框，换成"线跑出画面"才成立。
+  // 图像模型对否定的执行力很差。禁止项那一段（Avoid: …）是例外 ——
+  // 它是行业惯例且实测有效，所以只检查各本自己的意象与版式。
+  for (const album of ALBUMS) {
+    const own = `${MOTIFS[album].motif} ${MOTIFS[album].layout ?? ''}`;
+    for (const bad of [/\bno border\b/i, /\bwithout a border\b/i, /\bno edges?\b/i]) {
+      assert.doesNotMatch(own, bad, `${album} 的意象里用了否定式表述，改成正面描述`);
+    }
+  }
+});
+
+test('四本共享同一段基底', () => {
   const prompts = ALBUMS.map((album) => albumPrompt(album));
-  for (const shared of [
-    // BASE 从「只准冷」改成了冷暖双轴（见 album-prompt.ts 的 FORBIDDEN 注释）
-    'Two axes only',
-    'under 3%',
-    'upper-left quadrant stays empty paper',
-    'Avoid: warm or cream paper',
-  ]) {
+  for (const shared of ['Warm leads', 'under 3%', 'Avoid: warm or cream paper']) {
     for (let i = 0; i < prompts.length; i += 1) {
       assert.ok(prompts[i].includes(shared), `${ALBUMS[i]} 少了共享片段「${shared}」`);
     }
+  }
+});
+
+test('共享版式必须仍是多数', () => {
+  // 单本可以用 layout 覆盖，但覆盖多了"四本一套"就散了。
+  //
+  // 原来这条钉死"只有 llm 能例外"，加 notes 时就红了 —— 而那次例外是对的：
+  // 涟漪要铺满整幅才没有边界，容不下"主体偏右下、标题缩在左上的纸面"。
+  // 把断言从"名单"改成"比例"：守住的是实质（多数一致），而不是某个快照。
+  const custom = ALBUMS.filter((a) => MOTIFS[a].layout);
+  assert.ok(
+    custom.length * 2 <= ALBUMS.length,
+    `自定义版式的有 ${custom.length}/${ALBUMS.length} 本（${custom.join(', ')}）——` +
+      '过半就不叫"共享骨架"了',
+  );
+  // 没覆盖的那些必须真的吃到共享版式
+  for (const album of ALBUMS.filter((a) => !MOTIFS[a].layout)) {
+    assert.match(albumPrompt(album), /upper-left quadrant stays empty paper/);
+  }
+  // 覆盖的那些也得自己交代标题往哪放，不能把版式整个丢掉
+  for (const album of custom) {
+    assert.match(
+      MOTIFS[album].layout,
+      /title/i,
+      `${album} 覆盖了版式却没说标题放哪`,
+    );
   }
 });
 

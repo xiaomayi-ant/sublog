@@ -67,14 +67,25 @@ function token(name: string): string {
 const BASE = [
   'Album cover, 4:5 vertical, editorial art direction.',
   `Ground: white paper ${token('--color-bg')}, faint grain.`,
-  `Two axes only — warm copper ${token('--color-ember')} for the made object,`,
-  `cool water ${token('--water-100')} to ${token('--water-700')} for what it holds;`,
-  `dark tone ${token('--color-ink')}; ${token('--color-sun')} only as a spark under 3%.`,
+  // 写"色族"而不是"铜"。上一版这里是 warm copper for the made object，
+  // 结果四本封面全在用铜器具 —— 把暖色和一种材质绑死了。铜只是恰好落在
+  // 暖轴上的一种材质，不是唯一一种；赤陶、木、砖同样在 40°–61°。
+  `Warm leads: the ${token('--color-ember')} terracotta family carries the subject;`,
+  `cool ${token('--water-100')} to ${token('--water-700')} supports it;`,
+  // "as colour, never as a drawn mark"：上一版写 "only as a spark under 3%"，
+  // 模型把 spark 当字面的火花去画了，eval 和 notes 上各多出一个小图标。
+  `dark tone ${token('--color-ink')}; ${token('--color-sun')} under 3%, as colour, never as a drawn mark.`,
   'Museum-label precision, generous empty space, matte materials, soft daylight.',
   'A specimen plate, not a scene.',
 ].join(' ');
 
-/** 版式骨架：标题的位置固定，四本才叠得起来。 */
+/**
+ * 版式骨架：标题的位置固定，四本才叠得起来。
+ *
+ * 单本可以用 AlbumMotif.layout 覆盖它 —— 但那意味着这一本从"四本一套"里
+ * 走出去一步，只有当意象自带构图时才值得。LLM 就是：它的棋盘要从画面底边
+ * 铺满、远端消散，才能既有纵深又没有边界，容不下"主体偏右下、标题缩在左上"。
+ */
 const LAYOUT = [
   'Composition: subject in the lower two-thirds, offset right;',
   'upper-left quadrant stays empty paper and carries the title.',
@@ -94,7 +105,8 @@ const FORBIDDEN = [
   // （--color-ink 41°、--color-ember 61°），禁掉暖等于禁掉半个色板。
   // 红铜 40°–55° 是合法的，黄铜 78°–85° 不是 —— 两者必须分开点名。
   'Avoid: warm or cream paper, brass, gold, ochre, kraft, sepia, olive, khaki;',
-  'no yellow-green cast; dark background, collage, gradients, glow, 3D render,',
+  'no yellow-green cast; no icons, symbols, sparkles or stars;',
+  'dark background, collage, gradients, glow, 3D render,',
   'full-surface ornament, centered title stack, stock people, saturated colour fields.',
 ].join(' ');
 
@@ -129,6 +141,8 @@ export interface AlbumMotif {
   en: string;
   /** 这一本的意象，来自这个方向自己写过的主题 */
   motif: string;
+  /** 覆盖共享版式。只在意象自带构图时用 —— 见 LAYOUT 上方的说明。 */
+  layout?: string;
 }
 
 // 材质换过一轮：brass（黄铜）、vellum（羊皮纸）、handmade paper 这些词自带
@@ -159,36 +173,88 @@ export const MOTIFS: Record<'harness' | 'llm' | 'eval' | 'notes', AlbumMotif> = 
       'encircling a pale celadon sphere that floats clear of it, touching nothing; ' +
       'one contact on the rim is closed, the rest open.',
   },
-  // 状态、记忆、上下文的沉积
+  // 大模型本身：语言变成了数学。
+  //
+  // 围棋而不是"权重矩阵的铜板"。它多说了三件事：AlphaGo 是深度学习进入
+  // 公众视野的那个事件，用它讲发展有历史刻度；简单规则涌现出无法枚举的
+  // 复杂度，正是下一个 token 的预测涌现出推理；而"势"只能整体感知、
+  // 无法逐点计算，与涌现同构。
+  //
+  // 棋子在交点上拼出 LLM，这件事本身就是矩阵 —— 点阵字形就是一个 0/1 矩阵，
+  // 哪个交点有子、哪个没有。所以"融入矩阵元素"不必额外加东西，也就没有
+  // 破坏画面的风险。它还多说了一层：离散的点涌现出意义，正是语言模型在做的事。
+  // 网格跑出画外、不要边框 —— 那个空间没有边。
+  //
+  // 棋盘必须走赤陶／深赭那一档：传统榧木盘是浅木黄，正落在 70°–90° 的
+  // 卡其区 —— 最初两张被判死的图就死在那里。
   llm: {
-    zh: '记忆',
-    en: 'MODELS',
+    zh: 'LLM',
+    en: 'LLM',
+    // 这一版的写法与其余三本不同，是被实测逼出来的：
+    //   · 一律正面表述。写 "no border" 模型反而画出边框；改成"线跑出画面"才成立。
+    //   · 围棋子要写 biconvex discs。只写 stones 会得到碎石头。
+    //   · 透视与无边界会打架 —— 一旦倾斜，模型就要给平面一个立足点，边界就回来了。
+    //     解法是让近景直接从画面底边开始、左右顶满，远端消散进纸里，物理上没有边可画。
     motif:
-      'Subject: a stack of translucent frosted-glass sheets on white paper, each with a faint different mark, ' +
-      'edges offset so the layers read as sediment from above.',
+      'The upper quarter is off-white rice paper washed with drifting bands of pale water blue, ' +
+      'carrying the title. Beneath it a Go board stretches away from a low viewpoint: near cells ' +
+      'large, far cells compressing, every line running off the top and both sides without ever ' +
+      'showing a board edge. Go stones, smooth biconvex discs, rest on the intersections in the ' +
+      'near field: the two L matte black, the M pale jade.',
+    layout:
+      'Composition: the title sits centred across the top on the paper; ' +
+      'the board fills everything below it, reaching the bottom and both side edges of the picture.',
   },
-  // 尺度、标准、误差
+  // 评估方法学：用不同的尺量同一个东西。
+  //
+  // 画的是评估真正的困难 —— 不是"有没有尺"，是尺本身在变、而且互相不同意。
+  // 被量的是一个球：没有平面、没有正面，怎么量都不完整。
+  //
+  // 球是黄绿釉，不是青瓷。原来的浅青彩度只有 6.4，低于周围量具的 11.3 ——
+  // 主体比配角还灰，视觉重心反而被推给了量具。换成黄绿之后它才立得住。
+  // 代价是黄绿的色相落在 72°–110°，正是色彩判据里的卡其禁区，
+  // verify:palette 会报红。这是有意的例外，不是失手。
   eval: {
-    zh: '尺度',
-    en: 'EVAL',
+    zh: 'Eval',
+    en: 'Eval',
     motif:
-      'Subject: a worn steel measuring rule and a fine mesh sieve laid on white paper, ' +
-      'a few small pale-celadon ceramic tokens sorted into two uneven groups beside them.',
+      'Subject: a single pale chartreuse sphere, a soft yellow-green glaze, on white paper, ' +
+      'ringed by several mismatched ' +
+      'measuring instruments in warm terracotta metal — a rule, a caliper, a protractor — ' +
+      'none aligned with another, each giving a different reading.',
   },
-  // 过程、未定稿
+  // 随想、启发、别人的思路：几列波相遇。
+  //
+  // 这一本收三样东西 —— 自己的随想、得到的启发、看到别人的思路。
+  // 前两个方案都只说中了一样：
+  //   棱镜与光谱  说了"灵光一闪是离散的"，但只有一个源，没有"来自别处"；
+  //               而且那张 99% 是留白，几根彩虹谱线就把色彩判据拉垮。
+  //   杠杆        说了"以小博大"，"来自别处"和"还没成形"一样没说到。
+  //
+  // 干涉能同时说到三样：两列波相遇，产生的图样两列各自都没有 ——
+  // 那正是看到别人的思路之后发生的事。而且水是站点的主色（首页那条河、
+  // 整条 --water-* 色阶），四本里终于有一本真正用上它。
   notes: {
-    zh: '过程',
-    en: 'NOTES',
+    zh: 'Notes',
+    en: 'Notes',
     motif:
-      'Subject: a folded sheet of cool white paper with a soft crease and a torn edge, ' +
-      'one graphite line running off the tear, a small pressed fibre caught in the fold.',
+      'Subject: the surface of still shallow water, seen from directly above. ' +
+      'Two or three sets of concentric ripples spread outward from separate points. ' +
+      'Where the ripple sets meet they overlap into a finer interference pattern ' +
+      'that belongs to neither set. The ripples continue past all four edges of the picture. ' +
+      'A single small terracotta pebble rests at the centre of the nearest set, the only warm note.',
+    // 水要铺满整幅才没有边界，容不下"主体偏右下、标题缩在左上的纸面"。
+    // 标题改压在左上那片没有波及的静水上 —— 位置仍与另外三本呼应。
+    layout:
+      'Composition: the water fills the entire frame; ' +
+      'the upper-left area stays calm and unbroken, carrying the title.',
   },
 };
 
 /** 拼出一期封面的完整 prompt。存进 frontmatter 的就是它的返回值。 */
 export function albumPrompt(album: keyof typeof MOTIFS): string {
-  const { zh, en, motif } = MOTIFS[album];
-  return [BASE, motif, LAYOUT, titleClause(zh, en), FORBIDDEN].join(' ');
+  const { zh, en, motif, layout } = MOTIFS[album];
+  return [BASE, motif, layout ?? LAYOUT, titleClause(zh, en), FORBIDDEN].join(' ');
 }
 
 /**
@@ -209,15 +275,42 @@ export function sitePrompt(motif: string, ratio: string): string {
 }
 
 /**
- * /about 的配图。意象来自这一页自己的结尾那句
- * 「Be water, my friend. A reminder to stay adaptive without losing form.」——
- * 被水磨圆的石头是"形"，静水是"适应"，所以它是那句话的视觉转译，不是装饰。
+ * /about 的配图。
+ *
+ * 原来画的是「Be water, my friend.」的视觉转译（石头是"形"、静水是"适应"）。
+ * 转译本身没错，错在母题选偏了 —— 那句话已经是首页的大标题，About 的图
+ * 等于把站点的座右铭又说一遍。
+ *
+ * 而 About 这一页自己说的是另一件事：
+ *
+ *     Sumoer 找了点有趣的东西放在这里。
+ *     If it's interesting, it's worth chasing.
+ *
+ * 核心是"觉得有意思就去追"，不是"保持适应"。
+ *
+ * 试过分格标本盘，不行 —— 格子是"归档"的语言：每样东西被分好类、各就各位，
+ * 说的是"我收集完了"。而 chasing 是进行时，盒子把一件正在做的事画成了
+ * 已完成的事。而且盒子有边，画面立刻封闭。
+ *
+ * 改成散落的鹅卵石：没有容器就没有边界，可以散、可以叠、可以跑出画外。
+ * 它和这个站也是同源的 —— 石头被磨圆本来就是水的作品；有几颗还湿着、
+ * 带着光泽，说明是刚捡起来的，是新鲜的、还在进行的。
+ *
+ * 与封面的分别：这张不烤任何文字（旁边就是真排版的正文）。
+ * 封面是一本书的脸，这张是一段文字旁边的插图。
  */
 export function aboutPrompt(): string {
   return sitePrompt(
-    'Subject: one smooth river-worn grey stone resting beside a shallow ceramic dish of still water on paper; ' +
-      'the water surface perfectly calm, holding a single soft reflection; ' +
-      'a thin cobalt line scribed on the paper passing beneath both.',
+    'Subject: river-worn pebbles scattered across white paper, seen from directly above. ' +
+      // 颜色不能平列着写 —— 平列的话模型会均匀分配，深色就占了大头。
+      // 要写清主次：浅的是主，深的是点。
+      'Most of them are pale and well-rounded: chalk white, milky jade green, soft dove grey, ' +
+      'smooth and plump rather than flat or angular. ' +
+      'A few darker slate-blue or near-black stones sit among them as accents, not as the main note. ' +
+      'Some are still wet and catch the light in a bright highlight; the rest are dry and matte. ' +
+      'Each casts a soft shadow on the paper. ' +
+      'They lie at uneven distances, a few touching, most apart. ' +
+      'The scattering continues past the edges of the picture on two sides.',
     'Editorial still life, 3:4 vertical',
   );
 }
