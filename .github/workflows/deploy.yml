@@ -51,14 +51,36 @@ jobs:
         env:
           SITE_URL: ${{ secrets.SITE_URL }}
 
-      # release id 与本地部署同构：v<版本>-<UTC 时间戳>-<短 sha>
+      # 发布号就是 package.json 里的版本，v0.1.0 / v0.1.1 / v0.2.0 这样往上走。
+      #
+      # 原来拼的是 v<版本>-<UTC 时间戳>-<短 sha>，读作 v0.0.1-20260820155917-69cc2cc ——
+      # 而 0.0.1 从建站起就没改过，真正区分版本的只有后面那串机器字段，
+      # 前缀是死的。既然如此不如让版本号自己承担版本的职责。
+      #
+      # 唯一性由「同一个版本不许发两次」保证，见下面的 Guard 步骤。commit
+      # 仍然记在 release.json 与 Release 的说明里，不必挤进 tag。
+      #
+      # 服务器侧 pull-release.sh 对 tag 有白名单（必须 v 开头，且只含
+      # 0-9A-Za-z._-），纯 semver 满足；semver 的 build metadata 语法
+      # v0.1.0+abc1234 会被那条白名单拒掉，所以没有采用。
+      - name: Guard against duplicate release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          V="v$(node -p "require('./package.json').version")"
+          if gh release view "$V" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::$V 已经发布过。合并到 main 之前先 bump 版本：npm version patch|minor|major"
+            exit 1
+          fi
+
       - name: Stamp release
         id: rel
         env:
           SITE_URL: ${{ secrets.SITE_URL }}
         run: |
           set -eu
-          export RELEASE="v$(node -p "require('./package.json').version")-$(date -u +%Y%m%d%H%M%S)-$(git rev-parse --short=7 HEAD)"
+          export RELEASE="v$(node -p "require('./package.json').version")"
           node -e '
             const fs = require("node:fs");
             fs.writeFileSync("dist/release.json", JSON.stringify({
