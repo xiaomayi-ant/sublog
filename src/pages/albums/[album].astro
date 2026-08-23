@@ -23,7 +23,8 @@ export async function getStaticPaths() {
   const byId = new Map(all.map((entry) => [`${entry.collection}/${entry.id}`, entry]));
 
   return albums
-    .filter((entry) => entry.data.issues.length > 0)
+    // 有封面就有页。出没出期是另一回事 —— 一本相册可以先有脸、后有内容。
+    .filter((entry) => entry.data.coverArt || entry.data.issues.length > 0)
     .map((entry) => {
       const issues = [...entry.data.issues]
         .sort((a, b) => b.month.localeCompare(a.month))
@@ -35,7 +36,12 @@ export async function getStaticPaths() {
         }));
       return {
         params: { album: entry.data.album },
-        props: { album: entry.data.album, issues, body: entry.body ?? '' },
+        props: {
+          album: entry.data.album,
+          issues,
+          coverArt: entry.data.coverArt ?? null,
+          body: entry.body ?? '',
+        },
       };
     });
 }
@@ -51,23 +57,59 @@ interface Props {
     generatedAt: Date;
     articles: ResearchEntry[];
   }[];
+  coverArt: {
+    cover: string;
+    original?: string;
+    prompt: string;
+    model: string;
+    generatedAt: Date;
+  } | null;
   body: string;
 }
 
-const { album, issues, body } = Astro.props;
+const { album, issues, coverArt, body } = Astro.props;
+// OG 图优先用这一本自己的封面，没有才回落到最新一期
+const ogKey = coverArt?.cover ?? issues[0]?.cover;
 const label = TYPE_LABELS[album];
 ---
 
 <Base
   title={labelWith(album, '相册')}
   description={labelWith(album, '方向的相册，按月出期。')}
-  image={ossImage(issues[0].cover, 'og')}
+  image={ogKey ? ossImage(ogKey, 'og') : undefined}
 >
   <header class="page-head">
     <Meta items={['Album', label.en]} />
     <h1>{label.zh}</h1>
     {body.trim() && <p class="lede">{body.trim().split('\n\n')[0]}</p>}
   </header>
+
+  {
+    /* 还没出期，但这一本已经有封面：单独摆出来，并说清楚状态。
+       空着一片白比"还没出"这四个字更让人困惑。 */
+    issues.length === 0 && coverArt && (
+      <div class="solo">
+        <FluidImage
+          imageClass="cover"
+          src={ossImage(coverArt.cover, 'full')}
+          alt={labelWith(album, '相册封面')}
+          width={1600}
+          height={2000}
+          ratio="4 / 5"
+        />
+        <div class="solo-body">
+          <p class="issue-month">尚未出期</p>
+          <details class="trace">
+            <summary class="meta">封面来源</summary>
+            <p class="trace-meta meta">
+              {coverArt.model} · {formatDate(coverArt.generatedAt)}
+            </p>
+            <pre class="trace-prompt">{coverArt.prompt}</pre>
+          </details>
+        </div>
+      </div>
+    )
+  }
 
   <div class="issues">
     {
@@ -149,6 +191,14 @@ const label = TYPE_LABELS[album];
   /* 宽高比与占位底色移到 FluidImage 的包装盒上，这里只剩裁切方式 */
   .cover {
     object-fit: cover;
+  }
+
+  .solo {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--space-xl);
+    align-items: start;
+    margin-top: var(--space-2xl);
   }
 
   .issue-month {

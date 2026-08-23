@@ -16,14 +16,22 @@ const entries = await getCollection('albums');
 const albums = entries.map((entry) => {
   // 期号倒序，最新的一期在前
   const issues = [...entry.data.issues].sort((a, b) => b.month.localeCompare(a.month));
-  return { album: entry.data.album, issues, latest: issues[0] };
+  // 封面与"出没出期"解耦：优先用这一本自己的 coverArt，没有才回落到最新一期。
+  // 一本相册可以先有脸、后有内容 —— 攒够文章开期是另一件事。
+  const art = entry.data.coverArt;
+  return {
+    album: entry.data.album,
+    issues,
+    latest: issues[0],
+    cover: art?.cover ?? issues[0]?.cover,
+  };
 });
 
-// 已出的进网格，未出的收成底下一行。
-// 让未出的也占一个格位会很别扭：它比封面卡矮一大截，网格立刻散掉；
-// 而且它本来就不是一本相册，是"还没出"这件事，不该拿同等格位去说。
-const published = albums.filter((entry) => entry.latest);
-const pending = albums.filter((entry) => !entry.latest);
+// 有封面的进网格，什么都没有的收成底下一行。
+// 让后者也占一个格位会很别扭：它比封面卡矮一大截，网格立刻散掉；
+// 而且它本来就不是一本相册，是"还没有"这件事，不该拿同等格位去说。
+const published = albums.filter((entry) => entry.cover);
+const pending = albums.filter((entry) => !entry.cover);
 ---
 
 <Base title="相册" description="四个写作方向各一本相册，按月出期。">
@@ -42,13 +50,16 @@ const pending = albums.filter((entry) => !entry.latest);
   {
     published.length > 0 && (
       <ul class="grid">
-        {published.map(({ album, issues, latest }) => (
+        {published.map(({ album, issues, latest, cover }) => (
           <li>
             <a class="card-link" href={`/albums/${album}`}>
               <img
                 class="cover"
-                src={ossImage(latest.cover, 'thumb')}
-                alt={labelWith(album as ResearchCollection, `相册 ${latest.month} 期的封面`)}
+                src={ossImage(cover!, 'thumb')}
+                alt={labelWith(
+                  album as ResearchCollection,
+                  latest ? `相册 ${latest.month} 期的封面` : '相册封面',
+                )}
                 width="640"
                 height="800"
                 loading="lazy"
@@ -60,8 +71,9 @@ const pending = albums.filter((entry) => !entry.latest);
                   <span class="card-en meta">{TYPE_LABELS[album as ResearchCollection].en}</span>
                 )}
               </p>
+              {/* 有期就报期号，没有就直说还没出 —— 不要拿空白糊弄过去 */}
               <p class="card-meta meta">
-                {latest.month} · 共 {issues.length} 期
+                {latest ? `${latest.month} · 共 ${issues.length} 期` : '尚未出期'}
               </p>
             </a>
           </li>

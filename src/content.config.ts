@@ -63,6 +63,21 @@ const albums = defineCollection({
   schema: z.object({
     // 对应写作 collection 的名字：harness / llm / eval / notes
     album: z.enum(['harness', 'llm', 'eval', 'notes']),
+    // 这一本自己的封面，和"出没出期"解耦。
+    //
+    // 原来封面只能挂在 issue 上，于是"还没攒够文章开期"就等于"这本不能有脸"——
+    // 但相册的封面说的是这一本是什么，不是某一期是什么。两件事本来就该分开。
+    // 有它时索引页就用它；没有则回落到最新一期的封面。
+    coverArt: z
+      .object({
+        cover: z.string(),
+        original: z.string().optional(),
+        // 与 issue 封面同样的理由：图像生成不可复现，来源存不下来就没有版本可言
+        prompt: z.string(),
+        model: z.string(),
+        generatedAt: z.coerce.date(),
+      })
+      .optional(),
     issues: z
       .array(
         z.object({

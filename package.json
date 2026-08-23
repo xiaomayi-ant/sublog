@@ -1,7 +1,7 @@
 {
   "name": "water",
   "type": "module",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "engines": {
     "node": ">=22.12.0"
   },
@@ -30,7 +30,8 @@
     "deploy:site": "node scripts/deploy-site.mjs deploy",
     "deploy:rollback": "node scripts/deploy-site.mjs rollback",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "cover:draft": "NODE_USE_ENV_PROXY=1 node scripts/draft-cover.mjs"
   },
   "dependencies": {
     "@astrojs/rss": "^4.0.19",
