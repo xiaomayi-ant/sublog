@@ -4,7 +4,30 @@ import '../styles/tokens.css';
 import '../styles/global.css';
 import SiteNav from '../components/SiteNav.astro';
 import SiteFooter from '../components/SiteFooter.astro';
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import SiteFooterMinimal from '../components/SiteFooterMinimal.astro';
+
+/**
+ * 站点图标的缓存断路器，取自图标文件自身的内容哈希。
+ *
+ * 一开始写的是手动维护的数字（换图标时加一），但那又是一件"要记得做"的事 ——
+ * 而这一轮已经反复证明记不住。改成读文件算哈希：图标一变，查询串自动变，
+ * 缓存自动失效，没有人为环节。
+ *
+ * 为什么需要它：nginx 给 svg / ico 发的是
+ * Cache-Control: public, max-age=31536000, immutable。那条规则对带哈希
+ * 文件名的构建产物完全正确 —— 文件名变了缓存自然失效；但 favicon 的路径
+ * 永远是 /favicon.svg，于是 immutable 就成了"永远换不掉"：老访客会抱着
+ * 旧图标一整年。
+ */
+// 路径要从项目根算起，不能用 import.meta.url —— 构建产物里它指向 dist/ 下的
+// chunk，相对路径会解析成 dist/public/favicon.svg（构建直接报 ENOENT）。
+const ICON_VERSION = createHash('sha256')
+  .update(readFileSync(path.join(process.cwd(), 'public/favicon.svg')))
+  .digest('hex')
+  .slice(0, 8);
 
 interface Props {
   title: string;
@@ -56,9 +79,12 @@ const socialImage = new URL(image, site);
     <meta name="twitter:image" content={socialImage} />
     {/* 两个都给：支持 SVG 的浏览器用矢量那份，旧版 Safari 与部分抓取器只认 .ico。
         .ico 由 SVG 生成（16/32/48），改图标时两份要一起换，否则会出现
-        "Chrome 已经是新图标、别处还是旧的"。 */}
-    <link rel="icon" href="/favicon.ico" sizes="32x32" />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        "Chrome 已经是新图标、别处还是旧的"。
+
+        ?v= 是缓存断路器，值取自图标的内容哈希，换图标时自动跟着变，
+        不需要谁记得去改。理由见上面 ICON_VERSION 的说明。 */}
+    <link rel="icon" href={`/favicon.ico?v=${ICON_VERSION}`} sizes="32x32" />
+    <link rel="icon" href={`/favicon.svg?v=${ICON_VERSION}`} type="image/svg+xml" />
   </head>
   <body>
     <a class="skip-link" href="#content">跳到主要内容</a>
