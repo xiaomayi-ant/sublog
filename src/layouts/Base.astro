@@ -54,6 +54,10 @@ const socialImage = new URL(image, site);
     <meta name="twitter:title" content={`${title} · Water`} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={socialImage} />
+    {/* 两个都给：支持 SVG 的浏览器用矢量那份，旧版 Safari 与部分抓取器只认 .ico。
+        .ico 由 SVG 生成（16/32/48），改图标时两份要一起换，否则会出现
+        "Chrome 已经是新图标、别处还是旧的"。 */}
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   </head>
   <body>
