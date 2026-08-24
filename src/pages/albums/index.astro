@@ -38,13 +38,6 @@ const pending = albums.filter((entry) => !entry.cover);
   <header class="page-head">
     <Meta items={['Albums']} />
     <h1>相册</h1>
-    <p class="lede">
-      {
-        published.length === 0
-          ? '还没有出过期。'
-          : `四个方向各一本，按月出期。已出 ${published.length} 本。`
-      }
-    </p>
   </header>
 
   {
@@ -103,11 +96,6 @@ const pending = albums.filter((entry) => !entry.cover);
   h1 {
     font-size: var(--text-3xl);
     margin-top: var(--space-sm);
-  }
-
-  .lede {
-    margin-top: var(--space-md);
-    color: var(--color-ink-soft);
   }
 
   .grid {
