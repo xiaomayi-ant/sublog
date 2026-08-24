@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { access, readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import test from 'node:test';
@@ -176,6 +177,40 @@ test('sitemap and robots expose public routes and exclude drafts', async () => {
 
   assert.doesNotMatch(sitemap, /secret-draft|session-continuity-draft|\/404/);
   assert.match(robots, /Sitemap: https:\/\/water\.localhost\/sitemap\.xml/);
+});
+
+test('站点图标不是框架默认的，而且能被换掉', async () => {
+  const projectRoot = path.resolve(import.meta.dirname, '..');
+  const svg = await readFile(path.join(projectRoot, 'public/favicon.svg'), 'utf8');
+
+  // 从建站起标签栏上一直挂着 Astro 的默认 logo。这条守着别退回去。
+  assert.doesNotMatch(svg, /astro/i, 'favicon 又变回框架默认图标了');
+
+  // XML 注释里出现两个连续连字符会让整份 SVG 解析失败，浏览器直接读不了它 ——
+  // 写 CSS 变量名（--water-300）时踩过一次，图标会变成一片空白。
+  for (const comment of svg.match(/<!--[\s\S]*?-->/g) ?? []) {
+    assert.ok(
+      !comment.slice(4, -3).includes('--'),
+      'favicon.svg 的注释里出现了两个连续的连字符，XML 会解析失败',
+    );
+  }
+
+  // 只有 viewBox 而没有内在尺寸的 SVG，被当作 <img> 加载会失败
+  assert.match(svg, /<svg[^>]*\bwidth=/, 'favicon.svg 缺 width，当 img 加载会失败');
+  assert.match(svg, /<svg[^>]*\bheight=/, 'favicon.svg 缺 height');
+
+  // nginx 把 svg/ico 标成 immutable 缓存一年，而它们的路径永远不变 ——
+  // 没有查询串的话，老访客会抱着旧图标一整年
+  const html = await readFile(path.join(distRoot, 'index.html'), 'utf8');
+  assert.match(html, /favicon\.svg\?v=[a-f0-9]+/, '图标引用少了缓存断路器');
+  assert.match(html, /favicon\.ico\?v=[a-f0-9]+/, '.ico 的引用也要带断路器');
+
+  // 断路器必须真的跟着文件走，写死一个常量等于没有
+  const hash = createHash('sha256').update(svg).digest('hex').slice(0, 8);
+  assert.ok(
+    html.includes(`favicon.svg?v=${hash}`),
+    '缓存断路器与图标内容对不上 —— 它应当取自文件哈希，而不是手写的值',
+  );
 });
 
 test('the shared layout provides keyboard navigation affordances', async () => {
