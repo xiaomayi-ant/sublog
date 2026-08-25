@@ -76,6 +76,13 @@ const albums = defineCollection({
         prompt: z.string(),
         model: z.string(),
         generatedAt: z.coerce.date(),
+        // 出图之后又动过什么。
+        //
+        // 现在的封面不是模型一次吐出来的成品：先按 prompt 出画面，再（早期那几张）
+        // 用图像编辑擦掉烤进去的标题，最后用真实字体把标题和装裱边合成上去。
+        // 只存 prompt 的话，"照着这条 prompt 重跑一遍应该得到这张图"就是假的 ——
+        // 中间那两步没写下来，来源链就断在这里。
+        postProcess: z.string().optional(),
       })
       .optional(),
     issues: z
@@ -90,6 +97,8 @@ const albums = defineCollection({
           prompt: z.string(),
           model: z.string(),
           generatedAt: z.coerce.date(),
+          // 出图之后又动过什么，理由见 coverArt.postProcess
+          postProcess: z.string().optional(),
           // 这一期收录了哪些文章，形如 harness/agent-action-boundaries
           entries: z.array(z.string()).default([]),
         }),

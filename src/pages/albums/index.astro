@@ -5,6 +5,7 @@ import Base from '../../layouts/Base.astro';
 import Meta from '../../components/Meta.astro';
 import { getCollection } from 'astro:content';
 import {
+  COLLECTIONS,
   TYPE_LABELS,
   hasDistinctZh,
   labelWith,
@@ -12,7 +13,12 @@ import {
 } from '../../lib/content';
 import { ossImage } from '../../lib/oss';
 
-const entries = await getCollection('albums');
+// getCollection 返回的是文件名字母序，不吃 COLLECTIONS 的顺序 —— 要显式排。
+// 顺序的含义见 content.ts 里 COLLECTIONS 上方的说明。
+const order = new Map(COLLECTIONS.map((name, i) => [name as string, i]));
+const entries = (await getCollection('albums')).sort(
+  (a, b) => (order.get(a.data.album) ?? 99) - (order.get(b.data.album) ?? 99),
+);
 const albums = entries.map((entry) => {
   // 期号倒序，最新的一期在前
   const issues = [...entry.data.issues].sort((a, b) => b.month.localeCompare(a.month));
@@ -121,6 +127,8 @@ const pending = albums.filter((entry) => !entry.cover);
     background: var(--color-line);
     transition: opacity var(--duration-fast) var(--ease-out);
   }
+
+  /* 装裱边和标题都烧在图里了（见 compose-title.mjs），这里只留悬停反馈 */
 
   .card-link:hover .cover {
     opacity: 0.88;

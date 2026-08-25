@@ -88,7 +88,9 @@ const BASE = [
  */
 const LAYOUT = [
   'Composition: subject in the lower two-thirds, offset right;',
-  'upper-left quadrant stays empty paper and carries the title.',
+  // 原来这里是 "...and carries the title"。标题不再烤进图，但这块留白要留着 ——
+  // 它同时是构图锚点，去掉之后主体会漫上来。所以只换掉"承载标题"那半句。
+  'upper-left quadrant stays empty paper, reserved and unoccupied.',
 ].join(' ');
 
 /**
@@ -111,33 +113,28 @@ const FORBIDDEN = [
 ].join(' ');
 
 /**
- * 只烤大标题。小字一律不烤 —— 图像模型画小字几乎必然出错，
- * 而大字（2 到 4 个汉字）在实测里是可靠的。编号、日期、说明都留给 HTML。
+ * 图里不烤任何文字。
+ *
+ * 标题曾经是烤进图里的，四本因此永远统一不了 —— 图像模型不能指定字体文件，
+ * "high-contrast serif" 每次都会抽到不同的字形：LLM 抽到细窄无衬线感的，
+ * 另外三本抽到粗重衬线的，四本四个样，而且每次重出都重抽一次。字号"约半幅宽"、
+ * 位置"左上角"同样是模糊指令。追求四本一致等于反复摇骰子直到四个都是六点。
+ *
+ * 改成图片只出画面，标题在本地用真实字体合成进 PNG（见 scripts/compose-title.mjs）：
+ * 字体走 --font-display、颜色走 --color-ink，位置、字号、装裱边宽由一份版面参数决定，
+ * 四本像素级一致，以后加第五本也不会漂。
+ *
+ * 中途试过第三条路 —— 标题用 HTML 排在图片上（AlbumCover.astro）。四本确实统一了，
+ * 但图片本身成了半成品：左上角空一块，单独拿出去分享就是个缺角的东西。
+ * 合成进 PNG 同样统一，而且产出是完整成品，所以那个组件删掉了。
  */
-function titleClause(zh: string, en: string): string {
-  // zh 与 en 相同 = 这一本没有中文对应（harness 就是，见 content.ts 的
-  // TYPE_LABELS）。硬译出来的「边界」并不是 harness 的意思，封面上摆一个
-  // 不准确的大字比不摆更糟，所以只烤原词 —— 它自己就是主角，字号跟着上去。
-  const heading =
-    zh === en
-      ? [
-          `Baked-in typography: the single word "${en}" set very large in a high-contrast serif,`,
-          'with generous letter-spacing.',
-        ]
-      : [
-          `Baked-in typography: the two-character Chinese title "${zh}" set very large in a high-contrast serif,`,
-          `and the single word "${en}" beneath it in small letter-spaced uppercase sans.`,
-        ];
-  return [
-    ...heading,
-    'The only characters in the image; no other text, numbers, labels or watermark.',
-  ].join(' ');
-}
+const NO_TEXT =
+  'No text, no lettering, no characters, no numbers, no watermark anywhere in the image.';
 
 export interface AlbumMotif {
-  /** 烤进图里的中文标题，控制在 2–4 字 */
+  /** 封面上那个中文标题，控制在 2–4 字。不进 prompt —— 由合成写上去 */
   zh: string;
-  /** 烤进图里的英文词，单个词，全大写 */
+  /** 封面上的英文词，单个词，全大写。同样不进 prompt */
   en: string;
   /** 这一本的意象，来自这个方向自己写过的主题 */
   motif: string;
@@ -201,8 +198,9 @@ export const MOTIFS: Record<'harness' | 'llm' | 'eval' | 'notes', AlbumMotif> = 
       'large, far cells compressing, every line running off the top and both sides without ever ' +
       'showing a board edge. Go stones, smooth biconvex discs, rest on the intersections in the ' +
       'near field: the two L matte black, the M pale jade.',
+    // 只说画面怎么铺，不再说标题放哪 —— 标题的落位由 TITLE_PLACEMENT 统一管。
     layout:
-      'Composition: the title sits centred across the top on the paper; ' +
+      'Composition: the upper quarter stays as plain paper; ' +
       'the board fills everything below it, reaching the bottom and both side edges of the picture.',
   },
   // 评估方法学：用不同的尺量同一个东西。
@@ -214,6 +212,13 @@ export const MOTIFS: Record<'harness' | 'llm' | 'eval' | 'notes', AlbumMotif> = 
   // 主体比配角还灰，视觉重心反而被推给了量具。换成黄绿之后它才立得住。
   // 代价是黄绿的色相落在 72°–110°，正是色彩判据里的卡其禁区，
   // verify:palette 会报红。这是有意的例外，不是失手。
+  //
+  // 做过两次减法，都退回来了，记在这里省得再走一遍：
+  //   尺 + 圆规   圆规抢了主体，尺成了配角；"跨距压不到刻度上"这层意思
+  //               只有凑近看才成立，封面尺寸上读不出来。
+  //   只留一把尺  画面干净，但什么都不说了 —— 没有被量的东西，就没有"评估"，
+  //               只剩一件器物的静物照。
+  // 减到最后才看清：球不是配角，它就是那个"被评估的对象"，去掉它这张图没有主语。
   eval: {
     zh: 'Eval',
     en: 'Eval',
@@ -239,22 +244,22 @@ export const MOTIFS: Record<'harness' | 'llm' | 'eval' | 'notes', AlbumMotif> = 
     en: 'Notes',
     motif:
       'Subject: the surface of still shallow water, seen from directly above. ' +
-      'Two or three sets of concentric ripples spread outward from separate points. ' +
-      'Where the ripple sets meet they overlap into a finer interference pattern ' +
-      'that belongs to neither set. The ripples continue past all four edges of the picture. ' +
-      'A single small terracotta pebble rests at the centre of the nearest set, the only warm note.',
+      'A single set of concentric ripples spreads outward from one point in the lower right, ' +
+      'its rings widening across the water and running off the edges. ' +
+      'A small terracotta pebble rests at the centre of the rings, the only warm note. ' +
+      'The rest of the water is calm and unbroken.',
     // 水要铺满整幅才没有边界，容不下"主体偏右下、标题缩在左上的纸面"。
     // 标题改压在左上那片没有波及的静水上 —— 位置仍与另外三本呼应。
     layout:
       'Composition: the water fills the entire frame; ' +
-      'the upper-left area stays calm and unbroken, carrying the title.',
+      'the upper-left area stays calm and unbroken.',
   },
 };
 
 /** 拼出一期封面的完整 prompt。存进 frontmatter 的就是它的返回值。 */
 export function albumPrompt(album: keyof typeof MOTIFS): string {
-  const { zh, en, motif, layout } = MOTIFS[album];
-  return [BASE, motif, layout ?? LAYOUT, titleClause(zh, en), FORBIDDEN].join(' ');
+  const { motif, layout } = MOTIFS[album];
+  return [BASE, motif, layout ?? LAYOUT, NO_TEXT, FORBIDDEN].join(' ');
 }
 
 /**

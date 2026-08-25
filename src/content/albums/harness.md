@@ -2,10 +2,15 @@
 album: harness
 issues:
   - month: 2026-07
-    cover: harness/2026-07/cover-v3.jpg
-    original: harness/2026-07/cover-v3.png
+    cover: harness/2026-07/cover-titled.jpg
+    original: harness/2026-07/cover-titled.png
     model: gemini-3-pro-image
     generatedAt: 2026-08-22
+    postProcess: >-
+      下面这条 prompt 出的画面把标题也烤了进去，四本抽到四种字形。成品是在它之上改的：
+      先用 gemini-3-pro-image 做图像编辑擦掉那几个字（画面其余部分原样保留），
+      再由 scripts/compose-title.mjs 用 Iowan Old Style 把标题和装裱边合成上去。
+      所以照这条 prompt 重跑只能得到画面，得不到成品。
     entries:
       - harness/local-first-tool-design
       - harness/agent-action-boundaries
@@ -27,5 +32,6 @@ issues:
 
 Harness 这一本收的是「Agent 该在什么地方停下来」这一类问题。
 
-2026-07 期的封面是一台半开的黄铜闸门，装在石膏块上，一条钴蓝细线划过石膏、正好从闸口穿过去 ——
-边界不是把它关进笼子，是让它知道门在哪里。
+2026-07 期的封面是 Agent = Model + Harness 的直译：一圈紫铜的环状机构在外，内缘布着细小的触点，
+中间悬着一颗浅青瓷的球，环托着它却一处也没碰到。边上只有一个触点是闭合的 ——
+驾驭不是把它箍死，是有选择地闭合某一路。

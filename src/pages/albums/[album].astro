@@ -55,6 +55,7 @@ interface Props {
     prompt: string;
     model: string;
     generatedAt: Date;
+    postProcess?: string;
     articles: ResearchEntry[];
   }[];
   coverArt: {
@@ -63,6 +64,7 @@ interface Props {
     prompt: string;
     model: string;
     generatedAt: Date;
+    postProcess?: string;
   } | null;
   body: string;
 }
@@ -105,6 +107,8 @@ const label = TYPE_LABELS[album];
               {coverArt.model} · {formatDate(coverArt.generatedAt)}
             </p>
             <pre class="trace-prompt">{coverArt.prompt}</pre>
+            {/* 出图之后还动过的那两步。只摆 prompt 的话，来源链断在这里 */}
+            {coverArt.postProcess && <p class="trace-after">{coverArt.postProcess}</p>}
           </details>
         </div>
       </div>
@@ -147,6 +151,7 @@ const label = TYPE_LABELS[album];
                 {issue.model} · {formatDate(issue.generatedAt)}
               </p>
               <pre class="trace-prompt">{issue.prompt}</pre>
+              {issue.postProcess && <p class="trace-after">{issue.postProcess}</p>}
             </details>
           </div>
         </article>
@@ -265,6 +270,13 @@ const label = TYPE_LABELS[album];
     font-size: var(--text-xs);
     line-height: 1.7;
     white-space: pre-wrap;
+  }
+
+  .trace-after {
+    margin-top: var(--space-sm);
+    color: var(--color-ink-soft);
+    font-size: var(--text-sm);
+    line-height: 1.8;
   }
 
   .back-wrap {

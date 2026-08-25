@@ -1,6 +1,9 @@
 // album-prompt — 封面 prompt 模板的约束。
-// 文字是烤进图里的，四本相册看起来是不是一套完全取决于这段模板，
-// 所以"共享的部分必须真的共享"这件事值得被钉住，而不是靠自觉。
+// 四本相册看起来是不是一套，几乎全靠这段模板 —— 每本只有意象一处不同，
+// 所以"共享的部分必须真的共享"值得被钉住，而不是靠自觉。
+//
+// 标题不在这里了：图里一个字都不烤，标题由 scripts/compose-title.mjs
+// 用真实字体合成。模板要负责的是**给它留出位置**，见下面那条版式断言。
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -57,12 +60,14 @@ test('共享版式必须仍是多数', () => {
   for (const album of ALBUMS.filter((a) => !MOTIFS[a].layout)) {
     assert.match(albumPrompt(album), /upper-left quadrant stays empty paper/);
   }
-  // 覆盖的那些也得自己交代标题往哪放，不能把版式整个丢掉
+  // 覆盖的那些也得自己留出那块安静的地方 —— 标题要合成上去，
+  // 底下不能是棋盘或者涟漪。原来这条查的是 layout 里有没有 "title"，
+  // 那是标题还烤在图里时的写法；现在图里不提标题，要查的是**留白**本身。
   for (const album of custom) {
     assert.match(
       MOTIFS[album].layout,
-      /title/i,
-      `${album} 覆盖了版式却没说标题放哪`,
+      /stays (as )?(plain|calm|empty)/,
+      `${album} 覆盖了版式却没留出安静的区域，标题合成上去会压在画面上`,
     );
   }
 });
@@ -109,15 +114,22 @@ test('配方点名禁止那些自带暖色相的词', () => {
   }
 });
 
-test('只烤大标题，并且明确禁止其他任何文字', () => {
+test('图里一个字都不烤', () => {
+  // 曾经是"只烤大标题"。四本因此永远统一不了 —— 图像模型没有字体文件这个概念，
+  // "high-contrast serif" 每次采样都重画一次字形，四本抽到四种字重字宽，
+  // 而且每次重出再抽一次。改成图里不出现任何文字，标题本地合成。
+  //
+  // 这条同时挡住另一件事：模型画小号的编号、日期、标签几乎必然出错，
+  // 一句话全禁掉比事后挑错便宜。
   for (const album of ALBUMS) {
     const prompt = albumPrompt(album);
-    const { zh, en } = MOTIFS[album];
-    assert.ok(prompt.includes(`"${zh}"`), `${album} 的中文标题没进 prompt`);
-    assert.ok(prompt.includes(`"${en}"`), `${album} 的英文词没进 prompt`);
-    // 这一句是防小字出错的唯一手段 —— 图像模型画小号编号、日期几乎必然出错
-    assert.match(prompt, /only characters in the image/);
-    assert.match(prompt, /no other text, numbers, labels or watermark/);
+    assert.match(prompt, /No text, no lettering, no characters, no numbers, no watermark/);
+    // 意象里也不许再把标题塞回去 —— 引号里的词就是要求模型写字
+    assert.doesNotMatch(
+      `${MOTIFS[album].motif} ${MOTIFS[album].layout ?? ''}`,
+      /"[^"]+"/,
+      `${album} 的意象里还有带引号的字，那是在要求模型画字`,
+    );
   }
 });
 

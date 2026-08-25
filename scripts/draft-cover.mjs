@@ -20,22 +20,29 @@
 // curl 读而它不读，少了这个会报 ECONNRESET，看着像网络故障。
 
 import { spawnSync } from 'node:child_process';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, unlink, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import path from 'node:path';
 
-const MODEL = process.env.COVER_MODEL || 'gemini-3-pro-image';
-const OUT_DIR = path.join(homedir(), 'Desktop', 'sublog-covers', '候选');
+const MODEL = process.env.COVER_MODEL || 'google/gemini-3-pro-image';
+const OUT_DIR = path.join(homedir(), 'Desktop', 'sublog-covers');
 const MIN_DRAFTS = 2;
 
 const argv = process.argv.slice(2);
 const isAbout = argv.includes('--about');
 const album = argv.find((a) => !a.startsWith('--') && !/^\d+$/.test(a));
-const count = Math.max(MIN_DRAFTS, Number(argv.find((a) => /^\d+$/.test(a))) || MIN_DRAFTS);
+// 显式写了张数就照办，没写才兜到 MIN_DRAFTS。
+// 下限的用处是"别让人对着唯一一张判断行不行"，那是**默认行为**该管的事；
+// 明写 1 是一次自觉的选择（改动很小、只想看一眼），不该被工具驳回。
+const asked = Number(argv.find((a) => /^\d+$/.test(a)));
+const count = asked > 0 ? asked : MIN_DRAFTS;
 
-const key = process.env.GEMINI_API_KEY;
+// 走 OpenRouter 而不是 Gemini 直连：后者的预付额度已耗尽。
+// 顺带 OpenRouter 会在响应里回真实成本，不必再靠挂牌价估算 ——
+// 之前按挂牌价估，把单价理解错了 35 倍（估 $0.004/张，实际 $0.136/张）。
+const key = process.env.OPENROUTER_API_KEY;
 if (!key) {
-  console.error('缺少 GEMINI_API_KEY');
+  console.error('缺少 OPENROUTER_API_KEY');
   process.exit(2);
 }
 if (!isAbout && !album) {
@@ -53,36 +60,46 @@ const name = isAbout ? 'about' : album;
 console.log(`${name}：${prompt.length} 字符，${ratio}，出 ${count} 张\n`);
 
 await mkdir(OUT_DIR, { recursive: true });
-const stamp = new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '');
+
+// 每次先清掉这一本的旧候选。带时间戳累积的话，几轮之后目录里几十张图，
+// 谁也说不清哪张是哪一版 —— 那正是挑图挑不动的原因。
+// 只删本脚本自己按 <name>-<n>.png 生成的，不碰别的文件。
+for (const f of await readdir(OUT_DIR)) {
+  if (new RegExp(`^${name}-\\d+\\.png$`).test(f)) await unlink(path.join(OUT_DIR, f));
+}
+
 const made = [];
+let spent = 0;
 
 for (let i = 1; i <= count; i += 1) {
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${key}`,
-    {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { responseModalities: ['IMAGE'], imageConfig: { aspectRatio: ratio } },
-      }),
-      signal: AbortSignal.timeout(240000),
-    },
-  );
+  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
+    body: JSON.stringify({
+      model: MODEL,
+      // 画幅通过 prompt 交代 —— OpenRouter 这条路没有 imageConfig 那个参数，
+      // 但实测在文末写一句 "N:M vertical format" 是生效的
+      messages: [{ role: 'user', content: `${prompt} ${ratio} vertical format.` }],
+      modalities: ['image', 'text'],
+    }),
+    signal: AbortSignal.timeout(240000),
+  });
   if (!res.ok) {
     console.error(`  ${i}/${count} HTTP ${res.status} ${(await res.text()).slice(0, 160)}`);
     continue;
   }
   const body = await res.json();
-  const img = (body.candidates?.[0]?.content?.parts ?? []).find((p) => p.inlineData?.data);
-  if (!img) {
-    console.error(`  ${i}/${count} 没出图：${body.candidates?.[0]?.finishReason ?? '未知'}`);
+  const cost = body.usage?.cost ?? 0;
+  spent += cost;
+  const url = body.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+  if (!url) {
+    console.error(`  ${i}/${count} 没出图  $${cost.toFixed(4)}`);
     continue;
   }
-  const file = path.join(OUT_DIR, `${name}-${stamp}-${i}.png`);
-  await writeFile(file, Buffer.from(img.inlineData.data, 'base64'));
+  const file = path.join(OUT_DIR, `${name}-${i}.png`);
+  await writeFile(file, Buffer.from(url.split(',')[1], 'base64'));
   made.push(file);
-  console.log(`  ${i}/${count} → ${path.basename(file)}`);
+  console.log(`  ${i}/${count} → ${path.basename(file)}  $${cost.toFixed(4)}`);
 }
 
 if (made.length === 0) {
@@ -93,11 +110,12 @@ if (made.length < MIN_DRAFTS) {
   console.error(`\n⚠️ 只出了 ${made.length} 张，没法对照 —— 单张看不出"哪里不一样"。`);
 }
 
+console.log(`\n本次花费 $${spent.toFixed(4)}`);
 console.log(`\n── 色彩验收 ──`);
 spawnSync('node', [path.join(projectRoot, 'scripts/verify-image-palette.mjs'), ...made, '--report'], {
   stdio: 'inherit',
 });
 
-console.log(`\n候选都在 ${OUT_DIR}`);
+console.log(`\n候选都在 ${OUT_DIR}（这一本的旧候选已清掉，目录里只剩最新一批）`);
 console.log('并排看过再挑。定了之后：转 JPG → oss-upload → 写进 frontmatter。');
 spawnSync('open', [OUT_DIR], { stdio: 'ignore' });
