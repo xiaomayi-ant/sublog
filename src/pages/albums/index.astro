@@ -7,7 +7,6 @@ import { getCollection } from 'astro:content';
 import {
   COLLECTIONS,
   TYPE_LABELS,
-  hasDistinctZh,
   labelWith,
   type ResearchCollection,
 } from '../../lib/content';
@@ -64,12 +63,10 @@ const pending = albums.filter((entry) => !entry.cover);
                 loading="lazy"
                 decoding="async"
               />
-              <p class="card-name">
-                {TYPE_LABELS[album as ResearchCollection].zh}
-                {hasDistinctZh(album as ResearchCollection) && (
-                  <span class="card-en meta">{TYPE_LABELS[album as ResearchCollection].en}</span>
-                )}
-              </p>
+              {/* 英文原词已经烧在封面图里了（见 compose-title.mjs），这里不再重复一遍 ——
+                  封面上"LLM"已经很大声，卡片下面再写一次 LLM 只是回声。
+                  中文译名留着：它是封面给不了的信息，不是重复。 */}
+              <p class="card-name">{TYPE_LABELS[album as ResearchCollection].zh}</p>
               {/* 有期就报期号，没有就直说还没出 —— 不要拿空白糊弄过去 */}
               <p class="card-meta meta">
                 {latest ? `${latest.month} · 共 ${issues.length} 期` : '尚未出期'}
@@ -139,11 +136,6 @@ const pending = albums.filter((entry) => !entry.cover);
     font-family: var(--font-serif);
     font-size: var(--text-lg);
     color: var(--color-ink);
-  }
-
-  .card-en {
-    margin-left: var(--space-xs);
-    color: var(--color-ink-faint);
   }
 
   .card-meta {
