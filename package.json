@@ -26,6 +26,7 @@
     "test:mutation": "node scripts/verify-contract-mutations.mjs && node scripts/verify-river-lab-mutations.mjs && node scripts/verify-graph-mutations.mjs",
     "test:deploy": "node --test tests/deployment-contract.test.mjs",
     "graph:extract": "node scripts/extract-entities.mjs",
+    "github:digest": "node scripts/github-digest.mjs",
     "deploy:plan": "node scripts/deploy-site.mjs plan",
     "deploy:site": "node scripts/deploy-site.mjs deploy",
     "deploy:rollback": "node scripts/deploy-site.mjs rollback",

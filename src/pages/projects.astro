@@ -1,44 +1,119 @@
 ---
-// /projects — 结构化项目索引：编号 + 宋体项目名 + tagline + mono metadata 行，非卡片网格
+// /projects — 导航栏上叫「Github」。
+//
+// 原来这里只有两条手写的项目介绍，从不会自己变。现在加两段自动抓取的活动流：
+// 最近关注（star / fork 别人的仓库）和最近在做（自己 push 的仓库、发的 PR/issue），
+// 数据来自 data/github-activity.json（由 scripts/github-digest.mjs 定期生成，
+// 见 lib/githubActivity.ts 的读取层）。手写的项目列表留在最下面——
+// 那是想清楚了才写的作品介绍，和自动抓来的活动流是两种东西，不合并。
 import Base from '../layouts/Base.astro';
 import Meta from '../components/Meta.astro';
-import { getAllProjects, projectUrl, STATUS_LABELS } from '../lib/content';
+import { getAllProjects, projectUrl, STATUS_LABELS, formatDate } from '../lib/content';
+import {
+  getRecentlyFollowing,
+  getRecentlyBuilding,
+  getActivityGeneratedAt,
+  type ActivityItem,
+} from '../lib/githubActivity';
 
 const projects = await getAllProjects();
+const following = getRecentlyFollowing();
+const building = getRecentlyBuilding();
+const generatedAt = getActivityGeneratedAt();
+
+// 用绝对日期而不是"3 天前"——站点是静态构建的，相对时间会停在构建那一刻，
+// 首页"最近写的"那块已经踩过这个坑，这里直接沿用结论。
+const KIND_LABELS: Record<ActivityItem['kind'], string> = {
+  star: 'STAR',
+  fork: 'FORK',
+  'own-repo': 'PUSH',
+  pr: 'PR',
+  issue: 'ISSUE',
+};
 ---
 
-<Base title="Github" description="正在构建的工具、系统和独立产品。">
+<Base title="Github" description="最近在关注什么、在做什么，以及沉淀下来的项目。">
   <header class="page-head">
     <Meta items={['Github']} />
     <h1>Github</h1>
-    <p class="lede">正在构建的工具、系统和独立产品。</p>
+    <p class="lede">最近在关注什么、在做什么，以及沉淀下来的项目。</p>
   </header>
 
-  <ul class="list">
-    {
-      projects.map((project, i) => (
-        <li>
-          <a class="project" href={projectUrl(project)}>
-            <span class="project-num meta">
-              PROJECT {String(i + 1).padStart(2, '0')}
-            </span>
-            <span class="project-name">{project.data.title}</span>
-            <span class="project-tagline">{project.data.tagline}</span>
-            <span class="project-meta meta">
-              <span class={`status status--${project.data.status}`}>
-                <span class="status-dot" aria-hidden="true" />
-                {STATUS_LABELS[project.data.status]}
+  {
+    following.length > 0 && (
+      <section class="activity-section">
+        <div class="section-head">
+          <h2>最近在关注</h2>
+          {generatedAt && <span class="meta">更新于 {formatDate(new Date(generatedAt))}</span>}
+        </div>
+        <ul class="activity-list">
+          {following.map((item) => (
+            <li>
+              <a class="activity" href={item.url} target="_blank" rel="noreferrer">
+                <span class="activity-kind meta">{KIND_LABELS[item.kind]}</span>
+                <span class="activity-repo">{item.repo}</span>
+                <span class="activity-date meta">{formatDate(new Date(item.at))}</span>
+                {item.note && <span class="activity-note">{item.note}</span>}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )
+  }
+
+  {
+    building.length > 0 && (
+      <section class="activity-section">
+        <div class="section-head">
+          <h2>最近在做</h2>
+        </div>
+        <ul class="activity-list">
+          {building.map((item) => (
+            <li>
+              <a class="activity" href={item.url} target="_blank" rel="noreferrer">
+                <span class="activity-kind meta">{KIND_LABELS[item.kind]}</span>
+                <span class="activity-repo">{item.title}</span>
+                <span class="activity-date meta">{formatDate(new Date(item.at))}</span>
+                {item.note && <span class="activity-note">{item.note}</span>}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )
+  }
+
+  <section class="projects-section">
+    <div class="section-head">
+      <h2>长期项目</h2>
+    </div>
+    <ul class="list">
+      {
+        projects.map((project, i) => (
+          <li>
+            <a class="project" href={projectUrl(project)}>
+              <span class="project-num meta">
+                PROJECT {String(i + 1).padStart(2, '0')}
               </span>
-              <span aria-hidden="true">·</span>
-              <span>Type {project.data.type}</span>
-              <span aria-hidden="true">·</span>
-              <span>Built {project.data.built}</span>
-            </span>
-          </a>
-        </li>
-      ))
-    }
-  </ul>
+              <span class="project-name">{project.data.title}</span>
+              <span class="project-tagline">{project.data.tagline}</span>
+              <span class="project-meta meta">
+                <span class={`status status--${project.data.status}`}>
+                  <span class="status-dot" aria-hidden="true" />
+                  {STATUS_LABELS[project.data.status]}
+                </span>
+                <span aria-hidden="true">·</span>
+                <span>Type {project.data.type}</span>
+                <span aria-hidden="true">·</span>
+                <span>Built {project.data.built}</span>
+              </span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
 </Base>
 
 <style>
@@ -58,8 +133,75 @@ const projects = await getAllProjects();
     color: var(--color-ink-soft);
   }
 
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-md);
+    margin-top: var(--space-2xl);
+  }
+
+  .section-head h2 {
+    font-family: var(--font-serif);
+    font-size: var(--text-xl);
+    color: var(--color-ink);
+  }
+
+  .section-head .meta {
+    color: var(--color-ink-faint);
+  }
+
+  /* 活动流：一行一条，比项目卡片轻，没有状态点和多重 meta */
+  .activity-list {
+    margin-top: var(--space-md);
+  }
+
+  .activity {
+    display: grid;
+    grid-template-columns: 3.5rem minmax(0, 1fr) auto;
+    align-items: baseline;
+    column-gap: var(--space-md);
+    row-gap: var(--space-2xs);
+    padding-block: var(--space-sm);
+    border-top: 1px solid var(--color-line);
+    color: var(--color-ink);
+    text-decoration: none;
+  }
+
+  .activity-list li:last-child .activity {
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .activity:hover {
+    text-decoration: none;
+  }
+
+  .activity-kind {
+    color: var(--color-ink-faint);
+    transition: color var(--duration-fast) var(--ease-out);
+  }
+
+  .activity:hover .activity-kind {
+    color: var(--color-river);
+  }
+
+  .activity-repo {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+  }
+
+  .activity-date {
+    color: var(--color-ink-faint);
+    justify-self: end;
+  }
+
+  .activity-note {
+    grid-column: 2 / -1;
+    color: var(--color-ink-soft);
+  }
+
   .list {
-    margin-top: var(--space-xl);
+    margin-top: var(--space-md);
   }
 
   .project {
@@ -146,5 +288,20 @@ const projects = await getAllProjects();
 
   .status--active {
     color: var(--color-river);
+  }
+
+  @media (max-width: 32rem) {
+    .activity {
+      grid-template-columns: 3.5rem minmax(0, 1fr);
+    }
+
+    .activity-date {
+      grid-column: 2;
+      justify-self: start;
+    }
+
+    .activity-note {
+      grid-column: 1 / -1;
+    }
   }
 </style>

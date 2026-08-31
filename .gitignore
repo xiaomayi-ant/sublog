@@ -38,5 +38,13 @@ tests/deployment-contract.test.mjs
 # 所以 CI 从干净 checkout 也能建出完整图谱。
 data/*.db
 
+# github-digest 的增量判断缓存：只是"这条已经判过、结果是什么"的本地记忆，
+# 入库的是同一次运行导出的 data/github-activity.json，道理和上面的 .db 一样。
+data/github-activity-cache.json
+
 # 视觉基线比对时落下的当前帧：临时产物，用来和入库的基线并排看，看完即弃。
 tests/baselines/**/*.current.png
+
+# scheduler-hub 定时跑 github-digest 时落的本地日志
+.github-digest.log
+.github-digest.error.log
