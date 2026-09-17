@@ -9,6 +9,9 @@
 <style>
   .prose {
     max-width: var(--measure);
+    /* 数字→ProseDigits，英文字母→ProseLatin，中文落到普通字体栈——
+       三套字体分开，定义见 global.css 里那两个 @font-face。 */
+    font-family: "ProseDigits", "ProseLatin", var(--font-sans);
     font-size: var(--text-base);
     line-height: 1.9;
   }

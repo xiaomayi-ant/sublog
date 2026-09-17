@@ -6,6 +6,33 @@
   box-sizing: border-box;
 }
 
+/* 正文里中/英/数字三套字体分开，靠 unicode-range 按字符自动切换,
+   不用手写 <span lang="en"> 去包每个英文词。
+   原理：CSS 字体栈按声明顺序逐个问"这个字符你有没有字形",
+   第一个说"有"的就用它。下面两个是只认特定字符范围的命名字体,
+   插在 .prose 的字体栈最前面——数字先问 ProseDigits,
+   英文字母再问 ProseLatin,问不到的（也就是中文）落到普通的 CJK 字体栈。
+   两个字体都复用 tokens.css 里已经在用的栈（--font-display / --font-mono）,
+   不引入新字体、不发网络请求，local() 找不到时安静地退到下一层。 */
+@font-face {
+  font-family: "ProseLatin";
+  src:
+    local("Iowan Old Style"),
+    local("Palatino Linotype"),
+    local("Palatino"),
+    local("Baskerville");
+  unicode-range: U+0041-005A, U+0061-007A, U+00C0-024F;
+}
+
+@font-face {
+  font-family: "ProseDigits";
+  src:
+    local("SF Mono"),
+    local("Menlo"),
+    local("Consolas");
+  unicode-range: U+0030-0039;
+}
+
 html {
   background: var(--color-bg);
   color: var(--color-ink);
