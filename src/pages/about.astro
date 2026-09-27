@@ -16,8 +16,8 @@ import { TYPE_LABELS, formatDate, getAllResearch } from '../lib/content';
 // 三条。一条看不出节奏，五条就成了另一个 Blog 索引。
 const recent = (await getAllResearch()).slice(0, 3);
 
-// 徽章两组：上面一组是内容本身，下面一组是同一批内容的另一种读法。
-// 组名承担了说明职责，所以每一枚不再各带一句注解 —— 那样就退回列表了。
+// 曾经还有一组"读法"（图谱、相册）——两者都已下线，这一组跟着空了，
+// 整个拿掉，不留一个只剩标签没有徽章的空行。
 const badgeGroups = [
   {
     label: '内容',
@@ -26,10 +26,6 @@ const badgeGroups = [
       { name: '笔记', href: '/blog' },
       { name: '实验', href: '/lab' },
     ],
-  },
-  {
-    label: '读法',
-    items: [{ name: '图谱', href: '/graph' }],
   },
 ];
 ---
@@ -233,7 +229,7 @@ const badgeGroups = [
 
   /* 出口靠"推到底"来对齐，不靠固定间距去凑：它的位置本来由图的高度决定，
      和左栏落在哪儿毫无关系，对齐纯属碰运气。让右栏拉伸到与左栏同高，
-     再把出口推到底，它就和左栏最后一行（读法）收在同一条线上。 */
+     再把出口推到底，它就和左栏最后一行（内容徽章）收在同一条线上。 */
   .side {
     display: flex;
     flex-direction: column;

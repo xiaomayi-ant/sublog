@@ -1,6 +1,8 @@
-// graph-contract — 文章页沉浸化 + 知识图谱的构建契约。
-// 页脚与路由断言不依赖图谱数据；数据相关的断言按 data/graph.json 是否存在分两支，
-// 两种状态下都必须能构建、且表现一致（有产物出图谱区，没产物干净降级）。
+// graph-contract — 文章页沉浸化 + 概念关联（relations 区块）的构建契约。
+// 独立的 /graph 全站图谱页已下线；概念抽取管线和 ConceptGraph 组件没有跟着走 ——
+// 它们现在唯一的调用处是文章页底部的 relations 区块，这份契约测的是那一半。
+// 数据相关的断言按 data/graph.json 是否存在分两支，两种状态下都必须能构建、
+// 且表现一致（有产物出关联区，没产物干净降级）。
 //
 // graph.json 是入库的，所以 CI 上跑的是「有数据」那一支 —— 降级那一支留给
 // 还没跑过抽取的新克隆，以及万一产物被清掉的情况。
@@ -67,35 +69,23 @@ test('only the home page carries the signature footer', async () => {
   }
 });
 
-// /graph 永远存在：没有图谱数据时它也是一页（空态），不是一个 404
-test('the /graph route always builds, with or without graph data', async () => {
-  const html = await readRoute('/graph');
-  assert.match(html, /<html lang="zh-CN">/);
-  assert.match(html, /<title>图谱 · Water<\/title>/);
-  assert.match(html, /<main id="content"/);
-});
+// 概念图不再有独立路由，也不该再出现在导航里 —— 老路径必须彻底消失，
+// 避免半迁移状态（同一原则见 site-contract.test.mjs 里 albums 的那条）。
+test('the standalone /graph route and nav entry are fully retired', async () => {
+  await assert.rejects(access(path.join(distRoot, 'graph', 'index.html')), { code: 'ENOENT' });
 
-// /graph 是导航上的一项，不是只能靠概念页回链摸到的暗页
-test('the primary nav offers Graph alongside the other English entries', async () => {
-  for (const route of ['/', '/blog', '/graph']) {
+  for (const route of ['/', '/blog']) {
     const html = await readRoute(route);
     const nav = html.match(/<nav aria-label="主导航"[^>]*>[\s\S]*?<\/nav>/)?.[0];
     assert.ok(nav, `${route} should render the primary nav`);
-    assert.match(nav, />Graph</, `${route} nav should offer Graph`);
-    assert.match(nav, /href="\/graph"/, `${route} nav should link to /graph`);
+    assert.doesNotMatch(nav, />Graph</, `${route} nav should no longer offer Graph`);
+    assert.doesNotMatch(nav, /href="\/graph"/, `${route} nav should no longer link to /graph`);
   }
-
-  const graph = await readRoute('/graph');
-  const nav = graph.match(/<nav aria-label="主导航"[^>]*>[\s\S]*?<\/nav>/)?.[0];
-  assert.match(
-    nav,
-    /<a href="\/graph"[^>]*aria-current="page"/,
-    '/graph should mark its own nav item current',
-  );
 });
 
 // 图谱是浮在暖白底上的，不是装在盒子里的：力导向图形状不规则，
-// 方框只会把周围的留白切成四条死角。
+// 方框只会把周围的留白切成四条死角。锚点从独立的 /graph 页改到文章页的
+// relations 区块 —— 那是这个组件现在唯一的渲染位置。
 test('the concept graph carries no frame and speaks the warm palette', async () => {
   const source = await readFile(
     new URL('../src/components/ConceptGraph.astro', import.meta.url),
@@ -112,10 +102,13 @@ test('the concept graph carries no frame and speaks the warm palette', async () 
   assert.doesNotMatch(source, /--color-river/, 'the graph no longer uses the river blue');
   assert.doesNotMatch(source, /#1651be/i, 'no hard-coded river hex may survive');
 
-  // 画布可聚焦 —— 三种交互全靠指针，键盘用户得有一条别的路进去
-  const graph = await readRoute('/graph');
-  assert.match(graph, /<canvas[^>]*tabindex="0"/, 'the canvas must be keyboard reachable');
-  assert.match(graph, /<canvas[^>]*aria-label="[^"]+"/, 'the canvas needs an accessible name');
+  // 画布可聚焦 —— 三种交互全靠指针，键盘用户得有一条别的路进去。
+  // 只在有图数据时才断言：没有数据时 relations 区块整个不渲染。
+  if (await graphDataExists()) {
+    const article = await readRoute('/blog/llm/llm-state-and-memory');
+    assert.match(article, /<canvas[^>]*tabindex="0"/, 'the canvas must be keyboard reachable');
+    assert.match(article, /<canvas[^>]*aria-label="[^"]+"/, 'the canvas needs an accessible name');
+  }
 });
 
 test('graph data renders when the artifact exists, degrades cleanly when it does not', async () => {
@@ -123,26 +116,17 @@ test('graph data renders when the artifact exists, degrades cleanly when it does
   const article = await readRoute('/blog/llm/llm-state-and-memory');
 
   if (!hasData) {
-    // 无产物：整块不渲染，概念路由不生成，图谱页是空态但不报错
+    // 无产物：整块不渲染，概念路由不生成
     assert.doesNotMatch(article, /data-article-relations/);
     assert.equal(await pathExists('blog/concepts'), false);
-    const graph = await readRoute('/graph');
-    assert.doesNotMatch(graph, /data-graph-page/);
-    assert.match(graph, /graph:extract/, 'empty state should point at the extract command');
     return;
   }
 
-  // 有产物：文章页带图谱收尾区，概念聚合路由至少有一个
+  // 有产物：文章页带关联收尾区，概念聚合路由至少有一个
   assert.match(article, /data-article-relations/, 'article page should carry the relations block');
   assert.ok(await pathExists('blog/concepts'), 'expected at least one /blog/concepts/* route');
   const concepts = await readdir(path.join(distRoot, 'blog/concepts'));
   assert.ok(concepts.length > 0, 'expected at least one concept route');
-
-  // 图谱页内联了图数据
-  const graph = await readRoute('/graph');
-  assert.match(graph, /data-concept-graph/);
-  assert.match(graph, /data-graph-page/);
-  assert.doesNotMatch(graph, /graph:extract/, 'a populated graph must not show the empty state');
 
   // 概念名来自 LLM，什么字符都可能混进来：每条概念链接都必须落到真实存在的产物上
   const hrefs = new Set(

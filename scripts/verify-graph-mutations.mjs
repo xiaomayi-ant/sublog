@@ -1,11 +1,12 @@
 // verify-graph-mutations — 给 graph-contract 的契约做变异验证：
-// 往构建产物里注入故意的回归（文章页拖回完整页脚、/graph 路由丢失），
+// 往构建产物里注入故意的回归（文章页拖回完整页脚、老 /graph 路由死灰复燃），
 // 契约必须全部抓住；有漏网的就说明断言本身不够硬。
 //
-// 前四个变异不依赖图谱数据，任何状态下都跑；后面几个针对「有数据」那一支，
-// 只在 data/graph.json 存在时注入 —— 没产物的克隆上那些契约本来就不该断言什么。
+// 独立的 /graph 页已下线，概念图现在唯一的渲染位置是文章页底部的 relations
+// 区块——涉及画布的变异因此都挪进了「有数据」那一支，只在 data/graph.json
+// 存在时注入；前四个不依赖图谱数据，任何状态下都跑。
 import { spawn } from 'node:child_process';
-import { access, cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { access, cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -94,31 +95,28 @@ try {
       },
     },
     {
-      // /graph 路由消失 = 空态降级被打破了（它应该在任何数据状态下都能构建）
-      name: 'missing-graph-route',
+      // 独立的 /graph 路由死灰复燃 = 半迁移状态，老暗页又能被摸到
+      // 构建产物里已经没有 graph/ 目录了，先建出来才能放文件进去
+      name: 'graph-route-resurrected',
       apply: async (distDir) => {
-        await rm(path.join(distDir, 'graph/index.html'));
+        const dir = path.join(distDir, 'graph');
+        await mkdir(dir, { recursive: true });
+        await writeFile(
+          path.join(dir, 'index.html'),
+          '<!doctype html><html lang="zh-CN"><body>stale graph page</body></html>',
+        );
       },
     },
     {
-      // 画布丢了 tabindex = 三种交互全是指针驱动的，键盘用户没有任何入口
-      name: 'graph-canvas-not-focusable',
-      apply: async (distDir) => {
-        const page = path.join(distDir, 'graph/index.html');
-        const html = await readFile(page, 'utf8');
-        const mutated = html.replace(/(<canvas[^>]*?)\stabindex="0"/, '$1');
-        if (mutated === html) throw new Error('canvas mutation did not apply — 选择器过期了');
-        await writeFile(page, mutated);
-      },
-    },
-    {
-      // 导航里没有 Graph = /graph 退回成只能靠回链摸到的暗页
-      name: 'graph-missing-from-nav',
+      // 导航里又长出了 Graph = 一个已经彻底下线的入口重新暴露给访客
+      name: 'graph-reappears-in-nav',
       apply: async (distDir) => {
         const page = path.join(distDir, 'blog/index.html');
         const html = await readFile(page, 'utf8');
-        // <li> 上带着 Astro 的 scoped CID 属性，别把标签写死成 <li>
-        const mutated = html.replace(/<li[^>]*><a href="\/graph"[\s\S]*?<\/li>/, '');
+        const mutated = html.replace(
+          /<\/nav>/,
+          '<a href="/graph">Graph</a></nav>',
+        );
         if (mutated === html) throw new Error('nav mutation did not apply — 选择器过期了');
         await writeFile(page, mutated);
       },
@@ -147,6 +145,18 @@ try {
             page,
             html.replace('href="/blog/concepts/', 'href="/blog/concepts/nope-'),
           );
+        },
+      },
+      {
+        // 画布丢了 tabindex = 三种交互全是指针驱动的，键盘用户没有任何入口。
+        // 画布现在只出现在文章页的 relations 区块里，不再是独立 /graph 页。
+        name: 'graph-canvas-not-focusable',
+        apply: async (distDir) => {
+          const page = path.join(distDir, article);
+          const html = await readFile(page, 'utf8');
+          const mutated = html.replace(/(<canvas[^>]*?)\stabindex="0"/, '$1');
+          if (mutated === html) throw new Error('canvas mutation did not apply — 选择器过期了');
+          await writeFile(page, mutated);
         },
       },
     );

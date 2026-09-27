@@ -148,9 +148,6 @@ test('About and 404 are complete user-facing pages', async () => {
   assert.match(about, /href="\/blog\/[a-z]+\/[a-z0-9-]+"/, 'About 应当链到真实文章');
   assert.match(about, /href="\/blog"/, 'About 应当有回到 Blog 的出口');
 
-  // 另一种读法的入口 —— About 承担导航，这是它存在的主要理由之一
-  assert.match(about, /href="\/graph"/, 'About 应当能去图谱');
-
   // 站上唯一的站外去处落在这里；外链要带 rel
   assert.match(about, /href="https:\/\/github\.com\/xiaomayi-ant"[\s\S]{0,80}rel="noreferrer"/);
 
@@ -525,7 +522,7 @@ test('the signature belongs to the home page alone', async () => {
   assert.match(home, /class="foot-name"[^>]*>sumoer</, 'home should carry the name');
   assert.match(home, /class="foot-tagline"[^>]*>Vision: world peace</);
 
-  for (const route of ['/blog', '/about', '/projects', '/404', '/graph', '/lab']) {
+  for (const route of ['/blog', '/about', '/projects', '/404', '/lab']) {
     const html = await readRoute(route);
     assert.doesNotMatch(html, /class="foot-name"/, `${route} must not repeat the signature`);
     assert.doesNotMatch(html, /Vision: world peace/, `${route} must not repeat the tagline`);
