@@ -17,10 +17,22 @@ const isCurrent = (href: string) =>
   href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`);
 ---
 
-<header class="site-nav site-shell">
+<header class="site-nav site-shell" data-menu-open="false">
   <a class="brand" href="/">SUMOER</a>
+  <button
+    type="button"
+    class="nav-toggle"
+    id="nav-toggle"
+    aria-expanded="false"
+    aria-controls="site-nav-menu"
+    aria-label="打开导航菜单"
+  >
+    <span class="nav-toggle-bar" aria-hidden="true"></span>
+    <span class="nav-toggle-bar" aria-hidden="true"></span>
+    <span class="nav-toggle-bar" aria-hidden="true"></span>
+  </button>
   <nav aria-label="主导航">
-    <ul>
+    <ul id="site-nav-menu">
       {links.map(({ href, label }) => (
         <li>
           <a href={href} aria-current={isCurrent(href) ? 'page' : undefined}>
@@ -34,6 +46,11 @@ const isCurrent = (href: string) =>
 
 <style>
   .site-nav {
+    position: relative;
+    /* 首页的河流 canvas（.home-river-field，z-index:0）在 DOM 里排在
+       header 之后 —— 没有这条，窄屏下拉出来的菜单会被河盖在下面，
+       点开跟没点一样。 */
+    z-index: 10;
     display: flex;
     justify-content: space-between;
     align-items: baseline;
@@ -47,6 +64,16 @@ const isCurrent = (href: string) =>
     letter-spacing: 0.22em;
     color: var(--color-ink);
     text-decoration: none;
+  }
+
+  /* 汉堡按钮只在窄屏出现，桌面版靠 display:none 整个退出 flex 布局 ——
+     .site-nav 在桌面上因此仍然只有 brand / nav 两个可见子项，space-between 不受影响。 */
+  .nav-toggle {
+    display: none;
+    padding: 0;
+    background: none;
+    border: 0;
+    cursor: pointer;
   }
 
   ul {
@@ -97,13 +124,119 @@ const isCurrent = (href: string) =>
     font-style: italic;
   }
 
+  /* 窄屏（iPhone 竖屏全落在这个区间：溢出实测从 ~30rem 宽开始）：
+     六个链接横排的固有宽度会撑破视口 —— 折成汉堡菜单，nav 变成挂在
+     header 下方的下拉面板，不再参与桌面那套横排 flex。 */
   @media (max-width: 40rem) {
+    .site-nav {
+      align-items: center;
+    }
+
+    .nav-toggle {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 5px;
+      width: 1.75rem;
+      height: 1.75rem;
+    }
+
+    .nav-toggle-bar {
+      display: block;
+      height: 1.5px;
+      background: var(--color-ink);
+      transition: transform var(--duration-fast) var(--ease-out),
+        opacity var(--duration-fast) var(--ease-out);
+    }
+
+    /* 展开时三条杠收成一个叉 —— 按钮本身就是"点了会关闭"的提示，
+       不需要另外的文字或图标。 */
+    .site-nav[data-menu-open='true'] .nav-toggle-bar:nth-child(1) {
+      transform: translateY(6.5px) rotate(45deg);
+    }
+
+    .site-nav[data-menu-open='true'] .nav-toggle-bar:nth-child(2) {
+      opacity: 0;
+    }
+
+    .site-nav[data-menu-open='true'] .nav-toggle-bar:nth-child(3) {
+      transform: translateY(-6.5px) rotate(-45deg);
+    }
+
+    nav {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      left: 0;
+    }
+
     ul {
-      gap: 1.25rem;
+      display: none;
+      flex-direction: column;
+      gap: 0;
+      background: var(--color-bg);
+      border-bottom: 1px solid var(--color-line);
+      padding-block: var(--space-xs);
+    }
+
+    .site-nav[data-menu-open='true'] ul {
+      display: flex;
     }
 
     nav a {
+      display: block;
+      padding: var(--space-sm) var(--space-lg);
       font-size: 1rem;
+    }
+
+    /* 桌面版的浮光下划线在整行链接上会读成一条满宽的底边，
+       换成更简单的当前页背景色块，行为和桌面的 italic 标记是同一件事的另一种写法。 */
+    nav a::after {
+      display: none;
+    }
+
+    nav a[aria-current='page'] {
+      background: var(--color-river-soft);
     }
   }
 </style>
+
+<script>
+  const header = document.querySelector<HTMLElement>('.site-nav');
+  const toggle = document.querySelector<HTMLButtonElement>('#nav-toggle');
+  const menu = document.querySelector<HTMLElement>('#site-nav-menu');
+  const desktopQuery = window.matchMedia('(min-width: 40rem)');
+
+  if (header && toggle && menu) {
+    const setOpen = (open: boolean) => {
+      header.dataset.menuOpen = open ? 'true' : 'false';
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    };
+
+    toggle.addEventListener('click', () => {
+      setOpen(header.dataset.menuOpen !== 'true');
+    });
+
+    // 点菜单里的链接、按 Escape、或者点菜单外部，都应该把它收起来 ——
+    // 否则切完页（同源静态站，SPA 感的跳转其实是整页刷新，但预取/前进后退
+    // 缓存下菜单状态可能残留）或者只是想继续读页面时，面板还挡在那儿。
+    menu.addEventListener('click', (event) => {
+      if ((event.target as HTMLElement).closest('a')) setOpen(false);
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') setOpen(false);
+    });
+
+    document.addEventListener('click', (event) => {
+      if (!header.contains(event.target as Node)) setOpen(false);
+    });
+
+    // 横竖屏切换或者拖动窗口跨过断点回到桌面宽度时，重置状态 ——
+    // 桌面样式不看 data-menu-open，纯视觉不受影响，但下次切回窄屏时
+    // 汉堡图标不该停在"叉"的那一帧。
+    desktopQuery.addEventListener('change', (event) => {
+      if (event.matches) setOpen(false);
+    });
+  }
+</script>
