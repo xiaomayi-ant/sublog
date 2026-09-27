@@ -16,7 +16,7 @@ import { TYPE_LABELS, formatDate, getAllResearch } from '../lib/content';
 // 三条。一条看不出节奏，五条就成了另一个 Blog 索引。
 const recent = (await getAllResearch()).slice(0, 3);
 
-// 徽章两组：上面一组是内容本身，下面一组是同一批内容的另外两种读法。
+// 徽章两组：上面一组是内容本身，下面一组是同一批内容的另一种读法。
 // 组名承担了说明职责，所以每一枚不再各带一句注解 —— 那样就退回列表了。
 const badgeGroups = [
   {
@@ -24,15 +24,12 @@ const badgeGroups = [
     items: [
       { name: '文章', href: '/blog' },
       { name: '笔记', href: '/blog' },
-      { name: '实验', href: '/lab/river' },
+      { name: '实验', href: '/lab' },
     ],
   },
   {
     label: '读法',
-    items: [
-      { name: '图谱', href: '/graph' },
-      { name: '相册', href: '/albums' },
-    ],
+    items: [{ name: '图谱', href: '/graph' }],
   },
 ];
 ---

@@ -148,9 +148,8 @@ test('About and 404 are complete user-facing pages', async () => {
   assert.match(about, /href="\/blog\/[a-z]+\/[a-z0-9-]+"/, 'About 应当链到真实文章');
   assert.match(about, /href="\/blog"/, 'About 应当有回到 Blog 的出口');
 
-  // 两种读法的入口 —— About 承担导航，这是它存在的主要理由之一
+  // 另一种读法的入口 —— About 承担导航，这是它存在的主要理由之一
   assert.match(about, /href="\/graph"/, 'About 应当能去图谱');
-  assert.match(about, /href="\/albums"/, 'About 应当能去相册');
 
   // 站上唯一的站外去处落在这里；外链要带 rel
   assert.match(about, /href="https:\/\/github\.com\/xiaomayi-ant"[\s\S]{0,80}rel="noreferrer"/);
@@ -526,7 +525,7 @@ test('the signature belongs to the home page alone', async () => {
   assert.match(home, /class="foot-name"[^>]*>sumoer</, 'home should carry the name');
   assert.match(home, /class="foot-tagline"[^>]*>Vision: world peace</);
 
-  for (const route of ['/blog', '/about', '/projects', '/404', '/graph', '/albums']) {
+  for (const route of ['/blog', '/about', '/projects', '/404', '/graph', '/lab']) {
     const html = await readRoute(route);
     assert.doesNotMatch(html, /class="foot-name"/, `${route} must not repeat the signature`);
     assert.doesNotMatch(html, /Vision: world peace/, `${route} must not repeat the tagline`);
@@ -566,4 +565,70 @@ test('the primary nav is English-only, includes Home, and underlines the current
   assert.match(css, /nav\[[^\]]*\] a[^}]*:after[^}]*background:var\(--color-river\)/);
   assert.match(css, /aria-current=page\][^}]*:after[^}]*transform:scalex\(1\)/i);
   assert.match(css, /nav\[[^\]]*\] a[^}]*font-family:var\(--font-display\)/);
+});
+
+async function pathExists(relative) {
+  try {
+    await access(path.join(distRoot, relative));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Albums 已经彻底移除——老路径不该在导航或构建产物里留痕，避免半迁移状态
+test('albums is fully retired; lab takes its nav slot', async () => {
+  assert.equal(await pathExists('albums'), false, '/albums 不应再出现在构建产物里');
+
+  for (const route of ['/', '/blog', '/lab']) {
+    const html = await readRoute(route);
+    const nav = html.match(/<nav aria-label="主导航"[^>]*>[\s\S]*?<\/nav>/)?.[0];
+    assert.ok(nav, `${route} 应当渲染主导航`);
+    assert.doesNotMatch(nav, />Albums</, `${route} 的导航不应再出现 Albums`);
+    assert.doesNotMatch(nav, /href="\/albums"/, `${route} 的导航不应再链到 /albums`);
+    assert.match(nav, />Lab</, `${route} 的导航应当有 Lab`);
+    assert.match(nav, /href="\/lab"/, `${route} 的导航应当链到 /lab`);
+  }
+});
+
+// 扫全站，不是只扫某一页 —— 任何页面都可能用到 OSS 上的图（/about 就用了），
+// 而这条链路的错法全都是构建期无声的：拼错、指向私有前缀、忘带压缩参数。
+// 迁移自已删除的 album-contract.test.mjs——图片托管在站外这件事本身
+// 和相册无关，是站点通用的风险，理应留在通用契约里。
+async function allHtmlFiles(dir = distRoot) {
+  const out = [];
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) out.push(...(await allHtmlFiles(full)));
+    else if (entry.name.endsWith('.html')) out.push(full);
+  }
+  return out;
+}
+
+test('every off-site image URL sits under the public prefix with resize params', async () => {
+  const ossUrls = (html) =>
+    [...html.matchAll(/https:\/\/[a-z0-9-]+\.oss-[a-z0-9-]+\.aliyuncs\.com[^"'\s]*/g)].map((m) =>
+      m[0].replace(/&#38;/g, '&'),
+    );
+
+  const files = await allHtmlFiles();
+  let seen = 0;
+  for (const file of files) {
+    const route = path.relative(distRoot, file);
+    const html = await readFile(file, 'utf8');
+    for (const url of ossUrls(html)) {
+      seen += 1;
+      // bucket policy 只对 public/ 开了匿名读；拼到 private/ 线上就是一片 403
+      assert.ok(url.includes('/public/'), `${route} 的图片没落在 public/ 下：${url}`);
+      assert.doesNotMatch(url, /\/private\//, `${route} 的图片指向了私有前缀：${url}`);
+      // 忘了带处理参数 = 直接拉几百 KB 的源图，压缩这一整套就白做了
+      assert.match(url, /x-oss-process=image\//, `${route} 的图片没带压缩参数：${url}`);
+      const process = new URL(url).searchParams.get('x-oss-process');
+      assert.ok(
+        process.indexOf('resize') < process.indexOf('format'),
+        `缩放必须排在转格式前面：${process}`,
+      );
+    }
+  }
+  assert.ok(seen > 0, '至少应当有一个站外图片 URL —— 一个都没有说明图片没渲染出来');
 });

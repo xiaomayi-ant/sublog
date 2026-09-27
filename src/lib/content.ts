@@ -1,7 +1,7 @@
 // 文章内容的共享读取与格式化逻辑
 import { getCollection, type CollectionEntry } from 'astro:content';
 
-// 顺序即展示顺序：/albums 的卡片和 /blog 的分组都按它排。
+// 顺序即展示顺序：/blog 的分组按它排。
 // LLM → Harness → Eval → Notes 读作"模型本身 → 如何驾驭 → 如何评估 →
 // 由此想到的"，是一条从底层往上的线；原来的顺序没有这层意思。
 export const COLLECTIONS = ['llm', 'harness', 'eval', 'notes'] as const;
