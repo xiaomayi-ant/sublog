@@ -12,7 +12,19 @@ import Meta from '../../components/Meta.astro';
     <p class="lede">这里放还没定型的界面实验——不是文章，验证一个想法能不能立住。</p>
   </header>
 
-  <p class="pending meta">第一个实验（Jev 生成式 UI）还在搭，做完了链过来。</p>
+  <ol class="entries">
+    <li>
+      <a href="/lab/jev">
+        <span class="entry-no">02</span>
+        <span class="entry-body">
+          <span class="entry-title">Jev：一张工单，六个问题</span>
+          <span class="entry-note">回放一次 System One 调用——六个类型化问题并行问出去，答案直接进路由代码。数字来自公开教程，不是现场调用。</span>
+        </span>
+      </a>
+    </li>
+  </ol>
+
+  <p class="pending meta">01 是首页那条河（/lab/river），还在调，先不列。</p>
 </Base>
 
 <style>
@@ -30,6 +42,53 @@ import Meta from '../../components/Meta.astro';
     margin-top: var(--space-md);
     color: var(--color-ink-soft);
     font-size: var(--text-lg);
+  }
+
+  .entries {
+    list-style: none;
+    margin: var(--space-xl) 0 0;
+    padding: 0;
+    max-width: var(--measure);
+  }
+
+  .entries li + li {
+    border-top: 1px solid var(--color-line);
+  }
+
+  .entries a {
+    display: grid;
+    grid-template-columns: 3rem minmax(0, 1fr);
+    gap: var(--space-sm);
+    padding: var(--space-md) 0;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .entries a:hover .entry-title {
+    color: var(--color-river);
+  }
+
+  .entry-no {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    letter-spacing: 0.08em;
+    color: var(--color-ink-faint);
+    padding-top: 0.35em;
+  }
+
+  .entry-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+  }
+
+  .entry-title {
+    font-size: var(--text-lg);
+  }
+
+  .entry-note {
+    font-size: var(--text-sm);
+    color: var(--color-ink-soft);
   }
 
   .pending {

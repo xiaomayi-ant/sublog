@@ -1,0 +1,893 @@
+---
+// /lab/jev — Lab 02：Jev 的一次调用长什么样。
+//
+// 这是一次「回放」，不是现场调用：页面里所有数字都来自 DataCamp 那篇工单路由教程
+// 公布的结果（见页底来源），不是我们自己跑出来的。想做成现场调用过——2026-10-26
+// 实测 api.typesafe.ai 对浏览器跨域请求返回 "Disallowed CORS origin"，静态站上
+// 没有服务端可代理，所以这一版先把「一次调用的形状」立起来。
+//
+// 教程只打印了六个答案里的三个（queue / goodwill_risk / is_time_sensitive），
+// 另外三个参与了路由策略但没公布数值。页面里把它们如实标成「未公布」，不补数。
+import Base from '../../layouts/Base.astro';
+import Meta from '../../components/Meta.astro';
+
+// 工单原文（教程里的测试工单，逐字）
+const TICKET = [
+  'Export to CSV has been broken since Friday.',
+  "It works in Chrome, but half our team is on Safari and they can't pull reports at all.",
+  'We have a board meeting Thursday.',
+];
+
+// 六个问题：类型、英文原题（逐字）、选项/等级（逐字）。顺序按教程。
+const QUESTIONS = [
+  {
+    id: 'queue',
+    type: 'choice',
+    ask: 'Which queue should own this ticket',
+    zh: '这张工单该归哪条队列',
+    options: [
+      ['bug_triage', 'A defect in a specific feature, reproducible, goes into the backlog'],
+      ['incident_response', 'A live breakage affecting multiple users right now, needs a responder today'],
+      ['customer_success', 'The account needs managing, not the code'],
+    ],
+  },
+  {
+    id: 'goodwill_risk',
+    type: 'score',
+    ask: 'How much patience does this customer have left',
+    zh: '客户还剩多少耐心',
+    levels: [
+      'Reporting a problem, no sign of frustration',
+      'Mildly annoyed, still collaborative',
+      'Visibly out of patience, mentions the cost to their work',
+      'At the point of escalating over our heads or leaving',
+    ],
+  },
+  {
+    id: 'is_time_sensitive',
+    type: 'noul',
+    ask: 'The customer names a specific deadline',
+    zh: '客户点名了一个具体期限',
+  },
+  {
+    id: 'has_reproduction',
+    type: 'noul',
+    ask: 'The ticket contains enough detail to reproduce the problem',
+    zh: '工单里的信息够复现问题',
+  },
+  {
+    id: 'mentions_money',
+    type: 'noul',
+    ask: 'The customer mentions lost revenue, refunds, or cancelling',
+    zh: '提到了损失、退款或取消',
+  },
+  {
+    id: 'is_automated',
+    type: 'noul',
+    ask: 'This ticket is a machine-generated notification, not a person writing in',
+    zh: '这是机器发的通知，不是人写的',
+  },
+];
+
+// 教程公布的两次结果。SDK 那次是路由脚本实际用的；Playground 那次是作者先在网页上试的。
+// 没公布的字段一律 null，前端渲染成「未公布」。
+const REPLAY = {
+  model: 'jev-1.13.0',
+  // 六问一起发时的中位延迟，来自 DeepInfra 评测（32 次调用，笔记本上实测），
+  // 不是 DataCamp 教程的数据——教程没给延迟。
+  latencyMs: 343,
+  latencySource: 'DeepInfra 评测：六问一次调用 p50 343 ms',
+  usage: { input_tokens: 524, output_tokens: 78 },
+  runs: {
+    sdk: {
+      label: 'SDK 那次（路由脚本用的）',
+      queue: { choice: 'incident_response', confidence: 0.95, probabilities: null },
+      goodwill_risk: { score: 1.95 },
+      is_time_sensitive: { noul: 0.97 },
+      has_reproduction: null,
+      mentions_money: null,
+      is_automated: null,
+    },
+    playground: {
+      label: 'Playground 那次（网页上先试的）',
+      // 教程只说分布是 0.91 / 0.09 / 0，没说 0.09 落在哪个选项上。
+      queue: { choice: 'incident_response', confidence: 0.86, probabilities: { incident_response: 0.91 } },
+      goodwill_risk: { score: 1.93 },
+      is_time_sensitive: { noul: 0.97 },
+      has_reproduction: null,
+      mentions_money: null,
+      is_automated: null,
+    },
+  },
+  // 教程的路由策略，阈值逐字
+  policy: {
+    AUTO_ROUTE_CONFIDENCE: 0.75,
+    YES: 0.8,
+    FRUSTRATED: 2.0,
+  },
+  finalRoute: ['incident_response', 'today'],
+};
+
+// 同一次调用，用 HTTP 直接发是什么样（按官方 API 参考的字段拼出来；model 用教程里钉死的版本）
+const REQUEST_BODY = {
+  model: 'jev-1.13.0',
+  state: { ticket: TICKET.join(' ') },
+  questions: Object.fromEntries(
+    QUESTIONS.map((q) => {
+      if (q.type === 'choice') {
+        return [q.id, { type: 'choice', instructions: `${q.ask} in \`ticket\`?`, criteria: Object.fromEntries(q.options!) }];
+      }
+      if (q.type === 'score') {
+        return [q.id, { type: 'score', instructions: `${q.ask} in \`ticket\`?`, criteria: q.levels }];
+      }
+      return [q.id, { type: 'noul', instructions: `${q.ask} in \`ticket\`.` }];
+    }),
+  ),
+};
+const requestJson = JSON.stringify(REQUEST_BODY, null, 2);
+const replayJson = JSON.stringify({ questions: QUESTIONS, replay: REPLAY });
+---
+
+<Base
+  title="Jev：一张工单，六个问题"
+  description="Lab 02 · 回放一次 Jev 调用：一张支持工单，六个类型化问题并行问出去，答案直接进路由代码。数字来自公开教程，不是现场调用。"
+>
+  <article class="jev-lab" data-lab="jev">
+    <header class="page-head">
+      <Meta items={['Lab', '02', 'Jev', 'Replay']} />
+      <h1>一张工单，六个问题</h1>
+      <p class="lede">
+        Jev 不写字。你把状态和几个类型化的问题一起发过去，它把每个问题的答案同时算出来——
+        一个选项、一个分数、一个概率——你的代码拿着这些数字决定下一步。
+        下面是别人跑过的一次调用的回放。
+      </p>
+      <p class="caveat meta">
+        回放，不是现场调用。所有数字来自 DataCamp 的工单路由教程<sup><a href="#src-1">1</a></sup>；
+        六个答案里教程只公布了三个，没公布的这里也不补。
+      </p>
+    </header>
+
+    <section class="stage" aria-labelledby="stage-title">
+      <h2 id="stage-title" class="visually-hidden">调用回放</h2>
+
+      <div class="state" aria-label="state">
+        <p class="tag">state · ticket</p>
+        <blockquote class="ticket" lang="en">
+          {TICKET.map((line) => <p>{line}</p>)}
+        </blockquote>
+        <p class="ticket-zh">
+          CSV 导出从周五起就坏了。Chrome 能用，但我们一半的人用 Safari，他们完全拉不出报表。
+          周四有董事会。
+        </p>
+      </div>
+
+      <div class="controls">
+        <button type="button" class="ask" id="ask" data-state="idle">
+          <span class="ask-label">问 Jev</span>
+          <span class="ask-sub">六个问题，一次发出</span>
+        </button>
+        <div class="run-switch" role="radiogroup" aria-label="选择回放哪一次结果">
+          <label><input type="radio" name="run" value="sdk" checked /> SDK 那次</label>
+          <label><input type="radio" name="run" value="playground" /> Playground 那次</label>
+        </div>
+        <p class="status meta" id="status" aria-live="polite">待发送</p>
+      </div>
+
+      <ol class="questions" id="questions">
+        {QUESTIONS.map((q) => (
+          <li class="q" data-q={q.id} data-type={q.type}>
+            <div class="q-head">
+              <span class={`q-type q-type--${q.type}`}>{q.type}</span>
+              <code class="q-id">{q.id}</code>
+            </div>
+            <p class="q-ask" lang="en">{q.ask}</p>
+            <p class="q-zh">{q.zh}</p>
+            {q.type === 'choice' && (
+              <ul class="options">
+                {q.options!.map(([name, desc]) => (
+                  <li data-option={name}>
+                    <span class="opt-bar" aria-hidden="true"><span class="opt-fill"></span></span>
+                    <code class="opt-name">{name}</code>
+                    <span class="opt-desc" lang="en">{desc}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {q.type === 'score' && (
+              <div class="scale" aria-hidden="true">
+                <span class="scale-track"><span class="scale-mark"></span></span>
+                <ol class="scale-legend" start="0">
+                  {q.levels!.map((level) => <li lang="en">{level}</li>)}
+                </ol>
+              </div>
+            )}
+            {q.type === 'noul' && (
+              <div class="noul" aria-hidden="true">
+                <span class="noul-track"><span class="noul-fill"></span></span>
+                <span class="noul-ends"><span>no</span><span>yes</span></span>
+              </div>
+            )}
+            <p class="answer" data-answer>
+              <span class="answer-main">—</span>
+              <span class="answer-sub"></span>
+            </p>
+          </li>
+        ))}
+      </ol>
+    </section>
+
+    <section class="policy" aria-labelledby="policy-title" id="policy" hidden>
+      <h2 id="policy-title">然后是你的代码</h2>
+      <p>
+        Jev 给的是数字，不是决定。决定在教程作者自己写的四条规则里——阈值是明文，
+        能读、能改、能按出错代价调。下面逐条过一遍这次调用的答案：
+      </p>
+      <ol class="rules" id="rules">
+        <li data-rule="archive">
+          <code>is_automated &gt; 0.8</code> → 自动归档
+          <span class="rule-verdict" data-verdict></span>
+        </li>
+        <li data-rule="goodwill">
+          <code>goodwill_risk ≥ 2.0 &amp;&amp; mentions_money &gt; 0.8</code> → customer_success，人先看
+          <span class="rule-verdict" data-verdict></span>
+        </li>
+        <li data-rule="confidence">
+          <code>queue.confidence &lt; 0.75</code> → 送去所选队列，但人先看
+          <span class="rule-verdict" data-verdict></span>
+        </li>
+        <li data-rule="route">
+          否则按 <code>queue.choice</code> 路由；<code>is_time_sensitive &gt; 0.8</code> 则优先级为 today
+          <span class="rule-verdict" data-verdict></span>
+        </li>
+      </ol>
+      <p class="final">
+        最终：<code id="final-route">—</code>
+      </p>
+    </section>
+
+    <section class="why" aria-labelledby="why-title">
+      <h2 id="why-title">为什么挑这个案例</h2>
+      <p>
+        Jev 发布一个多月，能找到的用法不少：有人让它判断自己写过的二十七篇文章像不像 AI 写的<sup><a href="#src-3">3</a></sup>，
+        有人拿它给 agent 的工具调用把关、决定一笔 349 美元的退款该不该自动放行<sup><a href="#src-2">2</a></sup>，
+        官方自己的演示是一个智能家居助手，把几十个问题一次全问出去再丢掉没用的答案<sup><a href="#src-4">4</a></sup>。
+      </p>
+      <p>
+        挑工单路由，是因为它最「正」：官方快速上手用的例子就是一张工单<sup><a href="#src-5">5</a></sup>，
+        TypeSafe 自己公布的四类工作流评测里有客服一类，DeepInfra 测的五个任务里两个是路由。
+        而这一个教程把三种原语——Choice、Score、Noul——塞进同一次调用，
+        又把「置信度不够就转人」写成了代码里的一行阈值。一次调用看完，Jev 的全部形状就在里面了。
+      </p>
+      <p>
+        同一张工单跑了两次，上面的开关可以切：Playground 那次 queue 的概率是 0.91、置信度 0.86，
+        SDK 那次置信度是 0.95；耐心分一次 1.93、一次 1.95。选项没变，数字在动。
+        教程作者给的建议是先在二十张以上真实工单上校准阈值，再让它自动路由——
+        这两次之间的漂移就是理由。
+      </p>
+    </section>
+
+    <section class="request" aria-labelledby="request-title">
+      <h2 id="request-title">这一次调用，用 HTTP 直接发是什么样</h2>
+      <p class="meta">POST https://api.typesafe.ai/v1/systemone · Authorization: Bearer &lt;key&gt;</p>
+      <pre><code>{requestJson}</code></pre>
+      <p>
+        六个问题互相看不见：它们是并行、独立评估的，多问一个几乎不增加延迟。
+        六问一起发的中位延迟，DeepInfra 在笔记本上测到 343 ms<sup><a href="#src-2">2</a></sup>；
+        这次调用用了 524 个输入 token<sup><a href="#src-1">1</a></sup>，按官方定价不到万分之一美元。
+      </p>
+    </section>
+
+    <section class="not-done" aria-labelledby="not-done-title">
+      <h2 id="not-done-title">这一页没做的事</h2>
+      <ul>
+        <li>
+          <strong>没有现场调用。</strong>想过让访客填自己的 key 直接在浏览器里发请求——
+          2026 年 10 月 26 日实测，api.typesafe.ai 对来自本站域名的跨域预检返回
+          <code>Disallowed CORS origin</code>；静态站没有服务端可以代理，所以只能回放。
+        </li>
+        <li>
+          <strong>三个答案是空的。</strong>教程只打印了 queue、goodwill_risk、is_time_sensitive 三个值，
+          另外三个 Noul 参与了策略但没公布数值。页面不补数；最终路由是 (incident_response, today)
+          这一事实，只能反推出 is_automated 没过 0.8。
+        </li>
+        <li>
+          <strong>还没用我们自己的工单试过。</strong>拿到 key 之后的下一步：同样六个问题，
+          跑在二十张以上真实工单上，看置信度的分布，再定阈值。
+        </li>
+      </ul>
+    </section>
+
+    <footer class="sources">
+      <h2>来源</h2>
+      <ol>
+        <li id="src-1">Tom Farnschläder. "Jev Tutorial: Building a Ticket Router With TypeSafe AI's System One Model." <em>DataCamp</em>, 2026-09-24. <a href="https://www.datacamp.com/tutorial/jev-api-tutorial">datacamp.com/tutorial/jev-api-tutorial</a> ——工单原文、六个问题、路由策略与阈值、两次运行的数字、token 用量均出自此文。</li>
+        <li id="src-2">Stefan Fidanov. "TypeSafe Jev Review: Testing 5 Jobs on a Non-Chat Model." <em>DeepInfra</em>, 2026-10-15. <a href="https://deepinfra.com/blog/typesafe-jev-review">deepinfra.com/blog/typesafe-jev-review</a> ——六问一次调用 p50 343 ms、32 次调用中位约 280 ms、349 美元退款的工具调用门禁案例出自此文。</li>
+        <li id="src-3">Mike Taylor. "Mini-Vibe Check: TypeSafe's Jev Judged Everything I've Written in 0.7 Seconds." <em>Every</em>, 2026年9月。<a href="https://every.to/also-true-for-humans/mini-vibe-check-typesafe-s-jev-judged-everything-i-ve-written-in-0-7-seconds">every.to</a></li>
+        <li id="src-4">TypeSafe AI. "Smart Home Assistant Demo." <em>TypeSafe AI Docs</em>. <a href="https://docs.typesafe.ai/demos/smart-home">docs.typesafe.ai/demos/smart-home</a> ——投机式扇出（speculative fan-out）与 LLM 兜底的官方演示。</li>
+        <li id="src-5">TypeSafe AI. "Quick Start" 与 "API Reference." <em>TypeSafe AI Docs</em>. <a href="https://docs.typesafe.ai/introduction/quickstart">docs.typesafe.ai/introduction/quickstart</a>、<a href="https://docs.typesafe.ai/api">docs.typesafe.ai/api</a> ——请求体字段（type / instructions / criteria）与响应字段按此拼出。</li>
+      </ol>
+      <p class="meta">
+        延伸阅读：站内《Jev：不写字，只判断》与《Jev：三个问题原语》，
+        sumoer.fun/blog/llm/jev-decision-paradigm、sumoer.fun/blog/llm/jev-system-one-primitives
+      </p>
+    </footer>
+  </article>
+
+  <script is:inline type="application/json" id="jev-replay" set:html={replayJson} />
+
+  <script>
+    // 回放：按下按钮 → 六张卡同时进入「评估中」→ 到公布的延迟数后一起揭晓 → 策略逐条亮起。
+    // 所有数字来自 #jev-replay 里的公开数据；null 渲染成「未公布」，不补数。
+    const raw = document.getElementById('jev-replay')?.textContent ?? '{}';
+    const { replay } = JSON.parse(raw) as {
+      replay: {
+        model: string;
+        latencyMs: number;
+        latencySource: string;
+        runs: Record<string, Record<string, any>>;
+        policy: { AUTO_ROUTE_CONFIDENCE: number; YES: number; FRUSTRATED: number };
+        finalRoute: [string, string];
+      };
+    };
+
+    const ask = document.getElementById('ask') as HTMLButtonElement | null;
+    const status = document.getElementById('status');
+    const policy = document.getElementById('policy');
+    const finalRoute = document.getElementById('final-route');
+    const cards = [...document.querySelectorAll<HTMLElement>('.q[data-q]')];
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const fmt = (n: number) => n.toFixed(2);
+    const currentRun = () =>
+      (document.querySelector<HTMLInputElement>('input[name="run"]:checked')?.value ?? 'sdk');
+
+    function reset() {
+      for (const card of cards) {
+        card.classList.remove('is-thinking', 'is-answered', 'is-unpublished');
+        card.querySelector('.answer-main')!.textContent = '—';
+        card.querySelector('.answer-sub')!.textContent = '';
+        card.querySelectorAll<HTMLElement>('.opt-fill').forEach((el) => (el.style.width = '0'));
+        card.querySelectorAll<HTMLElement>('.noul-fill').forEach((el) => (el.style.width = '0'));
+        card.querySelectorAll<HTMLElement>('.scale-mark').forEach((el) => (el.style.left = '0'));
+        card.querySelectorAll('[data-option]').forEach((el) => el.classList.remove('is-chosen'));
+      }
+      if (policy) policy.hidden = true;
+      document.querySelectorAll<HTMLElement>('[data-rule]').forEach((li) => {
+        li.classList.remove('is-fired', 'is-passed');
+        li.querySelector('[data-verdict]')!.textContent = '';
+      });
+    }
+
+    function reveal(run: Record<string, any>) {
+      for (const card of cards) {
+        const id = card.dataset.q!;
+        const type = card.dataset.type!;
+        const a = run[id];
+        card.classList.remove('is-thinking');
+        const main = card.querySelector('.answer-main')!;
+        const sub = card.querySelector('.answer-sub')!;
+        if (a == null) {
+          card.classList.add('is-unpublished');
+          main.textContent = '未公布';
+          sub.textContent = '参与了策略，教程没打印这个值';
+          continue;
+        }
+        card.classList.add('is-answered');
+        if (type === 'choice') {
+          main.textContent = a.choice;
+          sub.textContent = `confidence ${fmt(a.confidence)}`;
+          card.querySelectorAll<HTMLElement>('[data-option]').forEach((li) => {
+            const name = li.dataset.option!;
+            const p = a.probabilities?.[name];
+            const fill = li.querySelector<HTMLElement>('.opt-fill')!;
+            if (name === a.choice) li.classList.add('is-chosen');
+            // 没公布分布时，只把选中项的条拉到 confidence 的长度，其余留空
+            fill.style.width = p != null ? `${p * 100}%` : name === a.choice ? `${a.confidence * 100}%` : '0';
+          });
+        } else if (type === 'score') {
+          main.textContent = fmt(a.score);
+          const levels = card.querySelectorAll('.scale-legend li').length;
+          sub.textContent = `0 到 ${levels - 1} 之间，落在第 ${Math.floor(a.score)} 和第 ${Math.ceil(a.score)} 档之间`;
+          const mark = card.querySelector<HTMLElement>('.scale-mark')!;
+          mark.style.left = `${(a.score / (levels - 1)) * 100}%`;
+        } else {
+          main.textContent = fmt(a.noul);
+          sub.textContent = a.noul >= 0.7 ? '偏 yes' : a.noul <= 0.3 ? '偏 no' : '拿不准';
+          card.querySelector<HTMLElement>('.noul-fill')!.style.width = `${a.noul * 100}%`;
+        }
+      }
+    }
+
+    function walkPolicy(run: Record<string, any>) {
+      if (!policy) return;
+      policy.hidden = false;
+      const P = replay.policy;
+      const verdict = (rule: string, fired: boolean, text: string) => {
+        const li = document.querySelector<HTMLElement>(`[data-rule="${rule}"]`)!;
+        li.classList.add(fired ? 'is-fired' : 'is-passed');
+        li.querySelector('[data-verdict]')!.textContent = text;
+      };
+      // 1. is_automated 没公布；最终路由不是 archive，只能反推它没过阈值
+      verdict('archive', false, run.is_automated == null ? '值未公布；最终没归档，可知 ≤ 0.8' : `${fmt(run.is_automated.noul)}，没过`);
+      // 2. goodwill_risk 公布了；mentions_money 没公布，但 goodwill 已经不满足
+      const gw = run.goodwill_risk.score;
+      verdict('goodwill', false, `goodwill_risk ${fmt(gw)} < ${P.FRUSTRATED.toFixed(1)}，第一个条件就不成立`);
+      // 3. 置信度
+      const conf = run.queue.confidence;
+      const low = conf < P.AUTO_ROUTE_CONFIDENCE;
+      verdict('confidence', low, `${fmt(conf)} ${low ? '<' : '≥'} ${P.AUTO_ROUTE_CONFIDENCE}，${low ? '转人先看' : '自动路由'}`);
+      // 4. 路由 + 优先级
+      const ts = run.is_time_sensitive.noul;
+      const today = ts > P.YES;
+      verdict('route', true, `${run.queue.choice}，is_time_sensitive ${fmt(ts)} ${today ? '>' : '≤'} ${P.YES} → ${today ? 'today' : 'normal'}`);
+      if (finalRoute) finalRoute.textContent = `(${run.queue.choice}, ${today ? 'today' : 'normal'})`;
+    }
+
+    function play() {
+      if (!ask) return;
+      const run = replay.runs[currentRun()];
+      reset();
+      ask.dataset.state = 'busy';
+      ask.disabled = true;
+      cards.forEach((c) => c.classList.add('is-thinking'));
+      if (status) status.textContent = `已发送 · 六个问题并行评估中（${replay.latencySource}）`;
+      const wait = reduceMotion ? 0 : replay.latencyMs * 4; // 真实延迟 343 ms 肉眼看不清，放慢 4 倍
+      window.setTimeout(() => {
+        reveal(run);
+        if (status) status.textContent = `${replay.model} 回了 · 真实延迟约 ${replay.latencyMs} ms，这里放慢了 4 倍`;
+        walkPolicy(run);
+        ask.dataset.state = 'done';
+        ask.disabled = false;
+        ask.querySelector('.ask-label')!.textContent = '再问一次';
+      }, wait);
+    }
+
+    ask?.addEventListener('click', play);
+    document.querySelectorAll<HTMLInputElement>('input[name="run"]').forEach((r) =>
+      r.addEventListener('change', () => {
+        if (ask?.dataset.state === 'done') play();
+      }),
+    );
+  </script>
+</Base>
+
+<style>
+  .jev-lab {
+    max-width: 68rem;
+  }
+
+  .page-head {
+    padding-top: var(--space-xl);
+    max-width: var(--measure);
+  }
+
+  h1 {
+    font-size: var(--text-3xl);
+    margin-top: var(--space-sm);
+  }
+
+  h2 {
+    font-size: var(--text-xl);
+    margin-top: var(--space-2xl);
+  }
+
+  .lede {
+    margin-top: var(--space-md);
+    color: var(--color-ink-soft);
+    font-size: var(--text-lg);
+  }
+
+  .caveat {
+    margin-top: var(--space-md);
+    color: var(--color-ember);
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  /* ---------- stage ---------- */
+  .stage {
+    margin-top: var(--space-xl);
+    display: grid;
+    grid-template-columns: minmax(0, 20rem) minmax(0, 1fr);
+    grid-template-areas:
+      'state questions'
+      'controls questions';
+    gap: var(--space-lg);
+    align-items: start;
+  }
+
+  @media (max-width: 52rem) {
+    .stage {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas:
+        'state'
+        'controls'
+        'questions';
+    }
+  }
+
+  .state {
+    grid-area: state;
+    border: 1px solid var(--color-line);
+    padding: var(--space-md);
+    background: var(--color-sky);
+  }
+
+  .tag {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-ink-soft);
+    margin: 0 0 var(--space-sm);
+  }
+
+  .ticket {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    line-height: 1.45;
+    color: var(--color-ink-on-water);
+  }
+
+  .ticket p {
+    margin: 0 0 var(--space-xs);
+  }
+
+  .ticket-zh {
+    margin: var(--space-sm) 0 0;
+    font-size: var(--text-sm);
+    color: var(--color-ink-soft);
+  }
+
+  .controls {
+    grid-area: controls;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .ask {
+    appearance: none;
+    border: 1px solid var(--color-ink);
+    background: var(--color-ink);
+    color: var(--color-bg);
+    padding: var(--space-sm) var(--space-md);
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-family: inherit;
+  }
+
+  .ask:disabled {
+    cursor: progress;
+    opacity: 0.7;
+  }
+
+  .ask-label {
+    font-size: var(--text-lg);
+  }
+
+  .ask-sub {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    letter-spacing: 0.06em;
+    opacity: 0.75;
+  }
+
+  .run-switch {
+    display: flex;
+    gap: var(--space-md);
+    font-size: var(--text-sm);
+    color: var(--color-ink-soft);
+  }
+
+  .run-switch label {
+    display: inline-flex;
+    gap: var(--space-2xs);
+    align-items: center;
+    cursor: pointer;
+  }
+
+  .status {
+    margin: 0;
+    min-height: 1.4em;
+  }
+
+  .questions {
+    grid-area: questions;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+    gap: var(--space-md);
+  }
+
+  .q {
+    border: 1px solid var(--color-line);
+    padding: var(--space-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    position: relative;
+    transition: border-color 0.3s ease, background-color 0.3s ease;
+  }
+
+  .q.is-thinking {
+    border-color: var(--color-river);
+    background: var(--color-river-soft);
+  }
+
+  .q.is-thinking::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.5) 50%, transparent 70%);
+    background-size: 250% 100%;
+    animation: shimmer 0.9s linear infinite;
+    pointer-events: none;
+  }
+
+  @keyframes shimmer {
+    from { background-position: 150% 0; }
+    to { background-position: -150% 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .q.is-thinking::after { animation: none; }
+  }
+
+  .q.is-answered {
+    border-color: var(--color-ink);
+  }
+
+  .q.is-unpublished {
+    border-style: dashed;
+    color: var(--color-ink-faint);
+  }
+
+  .q-head {
+    display: flex;
+    gap: var(--space-xs);
+    align-items: baseline;
+  }
+
+  .q-type {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 1px 6px;
+    border: 1px solid currentColor;
+  }
+
+  .q-type--choice { color: var(--color-river); }
+  .q-type--score { color: var(--color-ember); }
+  .q-type--noul { color: var(--color-ink-soft); }
+
+  .q-id {
+    font-size: var(--text-xs);
+    color: var(--color-ink-soft);
+  }
+
+  .q-ask {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--text-base);
+    line-height: 1.4;
+  }
+
+  .q-zh {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--color-ink-soft);
+  }
+
+  .options {
+    list-style: none;
+    margin: var(--space-xs) 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+
+  .options li {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2px;
+    position: relative;
+    padding-left: var(--space-xs);
+  }
+
+  .opt-bar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--color-line);
+  }
+
+  .opt-fill {
+    display: block;
+    width: 0;
+    height: 100%;
+    background: var(--color-river);
+    transition: width 0.6s ease;
+  }
+
+  .options li.is-chosen .opt-name {
+    color: var(--color-river);
+    font-weight: 600;
+  }
+
+  .opt-name {
+    font-size: var(--text-sm);
+  }
+
+  .opt-desc {
+    font-size: var(--text-xs);
+    color: var(--color-ink-faint);
+  }
+
+  .scale {
+    margin-top: var(--space-xs);
+  }
+
+  .scale-track {
+    display: block;
+    position: relative;
+    height: 3px;
+    background: var(--color-line);
+    margin: var(--space-sm) 0;
+  }
+
+  .scale-mark {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--color-ember);
+    transform: translate(-50%, -50%);
+    transition: left 0.6s ease;
+  }
+
+  .scale-legend {
+    margin: 0;
+    padding-left: 1.2em;
+    font-size: var(--text-xs);
+    color: var(--color-ink-faint);
+  }
+
+  .noul {
+    margin-top: var(--space-xs);
+  }
+
+  .noul-track {
+    display: block;
+    height: 3px;
+    background: var(--color-line);
+  }
+
+  .noul-fill {
+    display: block;
+    width: 0;
+    height: 100%;
+    background: var(--color-ink);
+    transition: width 0.6s ease;
+  }
+
+  .noul-ends {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--color-ink-faint);
+  }
+
+  .answer {
+    margin: auto 0 0;
+    padding-top: var(--space-xs);
+    border-top: 1px solid var(--color-line);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .answer-main {
+    font-family: var(--font-mono);
+    font-size: var(--text-lg);
+  }
+
+  .answer-sub {
+    font-size: var(--text-xs);
+    color: var(--color-ink-soft);
+  }
+
+  /* ---------- policy ---------- */
+  .rules {
+    padding-left: 1.4em;
+  }
+
+  .rules li {
+    margin: var(--space-sm) 0;
+    color: var(--color-ink-soft);
+  }
+
+  .rules li.is-fired {
+    color: var(--color-ink);
+  }
+
+  .rule-verdict {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    margin-top: 2px;
+  }
+
+  .rules li.is-fired .rule-verdict { color: var(--color-river); }
+  .rules li.is-passed .rule-verdict { color: var(--color-ink-faint); }
+
+  .final code {
+    font-size: var(--text-lg);
+  }
+
+  /* ---------- prose-ish sections ---------- */
+  .why p,
+  .request p,
+  .not-done li {
+    max-width: var(--measure);
+  }
+
+  .request pre {
+    max-width: var(--measure);
+    overflow-x: auto;
+    font-size: var(--text-xs);
+    line-height: 1.5;
+    border: 1px solid var(--color-line);
+    padding: var(--space-md);
+  }
+
+  .not-done ul {
+    padding-left: 1.2em;
+  }
+
+  .not-done li {
+    margin: var(--space-sm) 0;
+  }
+
+  .sources {
+    margin-top: var(--space-2xl);
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--color-line);
+    font-size: var(--text-sm);
+    color: var(--color-ink-soft);
+  }
+
+  .sources h2 {
+    margin-top: 0;
+    font-size: var(--text-base);
+  }
+
+  .sources li {
+    margin: var(--space-xs) 0;
+  }
+
+  .sources a {
+    color: var(--color-river);
+  }
+</style>
